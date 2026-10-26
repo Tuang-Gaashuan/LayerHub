@@ -1,0 +1,31 @@
+name: Validate source
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  go:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: source/go.mod
+          cache: false
+      - run: go test -mod=vendor ./...
+      - run: go vet -mod=vendor ./...
+      - run: go build -mod=vendor ./cmd/server
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --prefix source/qa/frontend-deps --ignore-scripts
+      - run: node --test source/qa/frontend.test.cjs source/qa/slicer-gizmo.test.mjs source/qa/face-placement.test.mjs source/qa/box-selection.test.mjs

@@ -1,0 +1,8 @@
+{
+  "host": "smtp.163.com",
+  "port": 465,
+  "security": "implicit_tls",
+  "username": "REPLACE_WITH_YOUR_SENDER@163.com",
+  "password": "REPLACE_WITH_SMTP_AUTHORIZATION_CODE",
+  "from_name": "LayerHub"
+}

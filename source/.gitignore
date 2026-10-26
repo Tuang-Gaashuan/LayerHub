@@ -1,0 +1,15 @@
+/bin/
+/data/
+/simulation-data/
+/qa/*-data/
+/qa/*-data.*/
+/qa/frontend-deps/node_modules/
+/web/source/
+*.sqlite*
+*.key
+*.lock
+*.log
+.env
+bootstrap-admin.txt
+master.key
+__pycache__/

@@ -1,0 +1,31 @@
+services:
+  layerhub:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: layerhub:0.1.0-alpha
+    platform: linux/amd64
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5181:5181"
+    environment:
+      LAYERHUB_DEVICE_MODE: "${LAYERHUB_DEVICE_MODE:-offline}"
+      LAYERHUB_ENABLE_PRINT_START: "${LAYERHUB_ENABLE_PRINT_START:-0}"
+      LAYERHUB_COOKIE_SECURE: "${LAYERHUB_COOKIE_SECURE:-0}"
+      LAYERHUB_ADMIN_USER: "admin"
+      LAYERHUB_MAX_UPLOAD_MB: "500"
+    volumes:
+      - layerhub_data:/var/lib/layerhub
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 1536m
+    stop_grace_period: 25s
+volumes:
+  layerhub_data:

@@ -1,0 +1,56 @@
+# Place in /etc/nginx/conf.d/layerhub.conf after replacing print.example.com
+# and issuing a certificate. Requires the NAS reverse forward on 127.0.0.1:15181.
+log_format layerhub_access '$remote_addr [$time_local] "$request_method $uri $server_protocol" $status $body_bytes_sent';
+limit_req_zone $binary_remote_addr zone=layerhub_login:10m rate=5r/m;
+
+server {
+    listen 80;
+    server_name print.example.com;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/letsencrypt; }
+    location / { return 301 https://$host$request_uri; }
+}
+server {
+    listen 443 ssl;
+    server_name print.example.com;
+    ssl_certificate /etc/letsencrypt/live/print.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/print.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    server_tokens off;
+    access_log /var/log/nginx/layerhub-access.log layerhub_access;
+    error_log /var/log/nginx/layerhub-error.log warn;
+    client_max_body_size 512m;
+    client_body_timeout 300s;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy same-origin always;
+    add_header X-Frame-Options DENY always;
+    proxy_http_version 1.1;
+    proxy_set_header Host $http_host;
+    proxy_set_header Connection "";
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 300s;
+    proxy_read_timeout 3600s;
+    proxy_buffering off;
+    proxy_next_upstream off;
+    proxy_intercept_errors off;
+    location ^~ /internal/ { return 404; }
+    location = /api/login {
+        limit_req zone=layerhub_login burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:15181;
+        error_page 502 504 =503 @nas_offline;
+    }
+    location / {
+        proxy_pass http://127.0.0.1:15181;
+        error_page 502 504 =503 @nas_offline;
+    }
+    location @nas_offline {
+        default_type application/json;
+        charset utf-8;
+        add_header Cache-Control no-store always;
+        add_header Retry-After 15 always;
+        return 503 '{"ok":false,"error":"NAS 暂时离线，请在连接恢复后核对操作结果。"}';
+    }
+}

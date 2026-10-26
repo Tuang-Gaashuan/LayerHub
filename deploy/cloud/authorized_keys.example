@@ -1,0 +1,3 @@
+# Replace the entire public key using the key GENERATED ON YOUR OWN NAS.
+# A private key must never be placed here or included in the distribution.
+restrict,port-forwarding,permitlisten="127.0.0.1:15181" ssh-ed25519 REPLACE_WITH_NAS_PUBLIC_KEY layerhub-nas-tunnel

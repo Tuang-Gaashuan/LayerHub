@@ -1,0 +1,23 @@
+[Unit]
+Description=LayerHub outbound SSH gateway tunnel
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=layerhub-tunnel
+Group=layerhub-tunnel
+ExecStart=/usr/bin/ssh -F /etc/layerhub-tunnel/ssh_config -N -T layerhub-cloud
+Restart=always
+RestartSec=10
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

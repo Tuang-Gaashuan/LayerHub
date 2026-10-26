@@ -1,0 +1,10 @@
+.print-summary{display:grid;gap:12px;padding:18px;border:1px solid var(--line);border-radius:12px;background:#f7f9fc;color:#465972}
+.print-summary>strong{color:var(--ink);font-size:calc(15px * var(--ui-text-scale,1.12));overflow-wrap:anywhere}
+.print-roll{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.print-roll i{display:inline-block;width:19px;height:19px;border:1px solid #8c98a7;border-radius:50%;box-shadow:inset 0 0 0 2px #ffffff70;flex-shrink:0}
+.print-flow-note{color:#34465f;line-height:1.8}
+#modal:has(#sliceQueueForm){width:590px;max-height:calc(100dvh - 28px)}
+#modal:has(#sliceQueueForm) #modalContent{display:flex;flex-direction:column;max-height:calc(100dvh - 30px)}
+#modal:has(#sliceQueueForm) .modal-body{overflow-y:auto;min-height:0}
+#sliceQueueForm .print-flow-note{padding:12px 14px;background:#eff4ff;border-radius:9px;font-size:calc(12px * var(--ui-text-scale,1.12))}
+.slice-spool-choice:has(:checked){border-color:#3159ed;background:#f1f5ff}

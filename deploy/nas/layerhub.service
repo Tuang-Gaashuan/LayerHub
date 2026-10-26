@@ -1,0 +1,25 @@
+[Unit]
+Description=LayerHub printer collaboration
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=layerhub
+Group=layerhub
+WorkingDirectory=/opt/layerhub/current
+EnvironmentFile=/etc/layerhub/layerhub.env
+ExecStart=/opt/layerhub/current/bin/layerhub
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=25
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/layerhub
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

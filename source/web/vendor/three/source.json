@@ -1,0 +1,8 @@
+{
+  "package": "three",
+  "version": "0.180.0",
+  "tarball": "https://registry.npmjs.org/three/-/three-0.180.0.tgz",
+  "shasum": "b930cabfb524f6d36bf63e874b4d866888b50487",
+  "addons": ["OrbitControls.js", "STLLoader.js", "TransformControls.js"],
+  "localAdaptation": "Addon imports point to the bundled three.module.min.js; addon behavior unchanged."
+}

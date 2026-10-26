@@ -1,0 +1,30 @@
+[Unit]
+Description=LayerHub optional cloud notification worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=layerhub-mail
+Group=layerhub-mail
+ExecStart=/usr/local/lib/layerhub-mail/worker
+EnvironmentFile=/etc/layerhub-mail/worker.env
+Restart=always
+RestartSec=10
+StateDirectory=layerhub-mail
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+MemoryMax=128M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

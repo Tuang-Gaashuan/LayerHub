@@ -1,0 +1,13 @@
+{
+  "status": "static_checks_passed",
+  "yaml_parse": true,
+  "loopback_publish": true,
+  "offline_default": true,
+  "print_start_off": true,
+  "dedicated_data_volume": true,
+  "nonroot_runtime": true,
+  "read_only_rootfs": true,
+  "no_new_privileges": true,
+  "docker_runtime_tested": false,
+  "reason": "No Docker engine available; no container build or live container startup was executed."
+}

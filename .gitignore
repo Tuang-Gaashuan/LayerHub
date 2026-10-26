@@ -1,0 +1,12 @@
+/binaries/
+/packages/
+**/data/
+**/simulation-data/
+**/node_modules/
+*.sqlite*
+*.key
+*.log
+.env
+master.key
+bootstrap-admin.txt
+__pycache__/

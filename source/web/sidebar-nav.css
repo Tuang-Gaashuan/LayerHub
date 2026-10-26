@@ -1,0 +1,20 @@
+.sidebar{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#dce2ed transparent}
+#menuBtn{display:inline-flex;flex-shrink:0;color:var(--ui-muted,#5e7087);border:1px solid #e7ebf2;background:#fff;width:32px;height:32px}
+#menuBtn:hover{background:#edf2ff;color:#3159ed;border-color:#d2ddf8}
+@media(min-width:761px){
+ html.nav-collapsed{--sidebar:68px}
+ .nav-collapsed .sidebar{padding:24px 10px 0}
+ .nav-collapsed .sidebar .brand{padding:0 4px;justify-content:center}
+ .nav-collapsed .sidebar .brand-mark{width:35px;height:38px;flex-shrink:0}
+ .nav-collapsed .sidebar .brand>span:last-child,.nav-collapsed .sidebar .workspace,.nav-collapsed .sidebar .nav-caption,.nav-collapsed .sidebar .team-card,.nav-collapsed .sidebar .sidebar-user>span,.nav-collapsed .sidebar .nav-count,.nav-collapsed .sidebar .end-icon{display:none}
+ .nav-collapsed .sidebar nav{margin-top:32px;gap:10px;flex-shrink:0}
+ .nav-collapsed .sidebar .nav-item{font-size:0;gap:0;padding:13px;justify-content:center}
+ .nav-collapsed .sidebar .nav-item .icon{width:19px;height:19px}
+ .nav-collapsed .sidebar .sidebar-user{justify-content:center;padding:14px 0}
+ .nav-collapsed .sidebar-bottom{padding-top:12px}
+ .nav-collapsed .slicer-workspace main{max-width:none}
+ .nav-motion .sidebar{transition:width .18s ease,padding .18s ease}
+ .nav-motion .app-shell{transition:margin-left .18s ease}
+}
+@media(max-width:760px){#menuBtn{border-color:transparent;background:transparent}.sidebar{padding-top:24px}}
+@media(prefers-reduced-motion:reduce){.nav-motion .sidebar,.nav-motion .app-shell{transition:none}}

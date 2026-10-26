@@ -1,0 +1,21 @@
+Host layerhub-cloud
+    HostName cloud.example.com
+    Port 22
+    User layerhub-relay
+    IdentityFile /var/lib/layerhub-tunnel/id_ed25519
+    IdentityAgent none
+    IdentitiesOnly yes
+    BatchMode yes
+    StrictHostKeyChecking yes
+    UserKnownHostsFile /etc/layerhub-tunnel/known_hosts
+    ExitOnForwardFailure yes
+    ConnectTimeout 15
+    ConnectionAttempts 1
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ForwardAgent no
+    ForwardX11 no
+    RequestTTY no
+    RemoteForward 127.0.0.1:15181 127.0.0.1:5181
+# Optional NAS SSH maintenance requires separately extending cloud PermitListen:
+#    RemoteForward 127.0.0.1:12222 127.0.0.1:22

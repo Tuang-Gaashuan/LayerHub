@@ -1,0 +1,27 @@
+:root,.appearance-preview{--ui-text-scale:1.12;--ui-muted:#5e7087;--muted:var(--ui-muted);--ui-weight-normal:400;--ui-weight-medium:500;--ui-font:'Segoe UI','Microsoft YaHei',system-ui,sans-serif}
+html[data-ui-size="compact"],.appearance-preview[data-ui-size="compact"]{--ui-text-scale:1}
+html[data-ui-size="large"],.appearance-preview[data-ui-size="large"]{--ui-text-scale:1.24}
+html[data-ui-contrast="strong"],.appearance-preview[data-ui-contrast="strong"]{--ui-muted:#34465d;--ink:#101d30}
+html[data-ui-weight="medium"],.appearance-preview[data-ui-weight="medium"]{--ui-weight-normal:500;--ui-weight-medium:600}
+html[data-ui-font="noto"],.appearance-preview[data-ui-font="noto"]{--ui-font:'Noto Sans SC Variable','Microsoft YaHei',sans-serif}
+html[data-ui-font="notoserif"],.appearance-preview[data-ui-font="notoserif"]{--ui-font:'Noto Serif SC Variable','SimSun',serif}
+html[data-ui-font="wenkai"],.appearance-preview[data-ui-font="wenkai"]{--ui-font:'LXGW WenKai','KaiTi',serif}
+html[data-ui-font="xiaowei"],.appearance-preview[data-ui-font="xiaowei"]{--ui-font:'ZCOOL XiaoWei','SimSun',serif}
+html[data-ui-font="kuaile"],.appearance-preview[data-ui-font="kuaile"]{--ui-font:'ZCOOL KuaiLe','Microsoft YaHei',sans-serif}
+html[data-ui-font="serif"],.appearance-preview[data-ui-font="serif"]{--ui-font:'SimSun','Songti SC',serif}
+html[data-ui-font="heiti"],.appearance-preview[data-ui-font="heiti"]{--ui-font:'SimHei','STHeiti','Microsoft YaHei',sans-serif}
+html[data-ui-font="kaiti"],.appearance-preview[data-ui-font="kaiti"]{--ui-font:'KaiTi','STKaiti',serif}
+html[data-ui-font="fangsong"],.appearance-preview[data-ui-font="fangsong"]{--ui-font:'FangSong','STFangsong',serif}
+html{font-family:var(--ui-font)}
+body{font-weight:var(--ui-weight-normal)}
+.appearance-fields{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.appearance-preview{margin-top:22px;border:1px solid var(--line);border-radius:12px;background:#f7f9fc;padding:20px;font-family:var(--ui-font);font-weight:var(--ui-weight-normal);color:var(--ink)}
+.appearance-preview strong{font-size:calc(16px * var(--ui-text-scale));font-weight:600}
+.appearance-preview p{font-size:calc(12px * var(--ui-text-scale));color:var(--ui-muted);margin:10px 0}
+.appearance-preview small{font-size:calc(11px * var(--ui-text-scale));color:var(--ui-muted)}
+.appearance-font-hint{font-size:calc(11px * var(--ui-text-scale));color:var(--ui-muted);line-height:1.8;margin:14px 0 0}
+.appearance-font-name{display:block;font-family:var(--ui-font);font-size:calc(10px * var(--ui-text-scale));color:var(--ui-muted);margin-bottom:12px}
+#modal:has(#appearanceForm){width:530px;max-height:calc(100dvh - 28px)}
+#modal:has(#appearanceForm) #modalContent{max-height:calc(100dvh - 30px);display:flex;flex-direction:column}
+#modal:has(#appearanceForm) .modal-body{min-height:0;overflow-y:auto}
+@media(max-width:480px){.appearance-fields{grid-template-columns:1fr}.appearance-preview{padding:16px}}

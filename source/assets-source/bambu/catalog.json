@@ -1,0 +1,237 @@
+{
+  "version": 3,
+  "researched_at": "2026-10-19",
+  "scope": "Bambu Lab FFF 3D printers; current and legacy equipment, excluding R1 laser cutter",
+  "revision_notes": [
+    "AMS lite redrawn as two coaxial spool pairs offset fore/aft in depth and height, using side-on circular faces and a diagonal white body.",
+    "Central inclined stand, dark desk feet and four dark feeder modules with yellow release buttons are now visible.",
+    "Approved AMS and AMS 2 Pro V2 geometry preserved.",
+    "AMS/AMS 2 Pro spool axes corrected to the printer width direction (X); circular spool faces lie in the YZ plane.",
+    "Deeper enclosure and transparent curved lid; front feeder row points in the same direction as printer door.",
+    "Rear ports and contact feet revised; no invented front display."
+  ],
+  "style": "Project-native isometric SVG, front-left three-quarter view; simplified identification illustrations, not mechanical CAD or product photography",
+  "count": 14,
+  "variant_count": 28,
+  "notes": [
+    "裸机图表现设备本体，不代表某机型一定存在裸机销售套装。",
+    "AMS 版本为一种代表性组合，不穷举兼容设备、转接器或安装方式。",
+    "A 系列本轮绘制 AMS lite；其他已支持的 AMS 配置可复用组件后续扩展。",
+    "H2D Pro 组合图同时绘制 AMS 2 Pro 与 AMS HT。",
+    "X1、X1 Carbon、X1E 和 P1P 标为存量机型，保留用于现有设备管理。",
+    "X1 族及 H2 族部分型号外壳相近，保留相似性，通过型号文字与内部结构辅助识别，避免虚构夸张外形。"
+  ],
+  "sources": {
+    "a2l": "https://blog.bambulab.com/bambu-lab-a2l-creative-playground-extra-large/",
+    "x2d": "https://blog.bambulab.com/xcellence-made-simple-bambu-lab-presents-the-x2d/",
+    "p2s": "https://blog.bambulab.com/the-icon-redefined-meet-the-p2s-a-completely-reengineered-version-of-the-ultra-productive-p1-series/",
+    "h2c": "https://blog.bambulab.com/bambu-lab-h2c-where-multi-material-vortek-system-meets-engineering-precision/",
+    "h2dpro": "https://blog.bambulab.com/bambu-lab-launches-h2d-pro-for-enterprise-manufacturing/",
+    "h2d": "https://blog.bambulab.com/bambu-lab-launches-h2d-to-rethink-personal-manufacturing/",
+    "p1": "https://bambulab.com/en-us/p1p",
+    "x1eol": "https://blog.bambulab.com/the-x1-series-is-eol-the-standard-it-set-will-remain-forever/",
+    "p1peol": "https://blog.bambulab.com/a-farewell-to-p1p/",
+    "ams_lite": "https://us.store.bambulab.com/products/ams-lite",
+    "ams_lite_rotary_holder": "https://asia.store.bambulab.com/products/ams-lite-rotary-spool-holder",
+    "ams_lite_official_photo": "https://store.bblcdn.com/s7/default/371a6eaf9bae47ba9c3b79bff389ff54/20231215-121317.jpg"
+  },
+  "models": [
+    {
+      "id": "a1-mini",
+      "name": "A1 mini",
+      "series": "A",
+      "kind": "mini",
+      "ams": "AMS lite",
+      "subtitle": "单悬臂 · 紧凑开放式",
+      "status": "current",
+      "variants": {
+        "bare": "assets/a1-mini-bare.svg",
+        "ams": "assets/a1-mini-ams.svg"
+      }
+    },
+    {
+      "id": "a1",
+      "name": "A1",
+      "series": "A",
+      "kind": "a1",
+      "ams": "AMS lite",
+      "subtitle": "双立柱 · 开放式",
+      "status": "current",
+      "variants": {
+        "bare": "assets/a1-bare.svg",
+        "ams": "assets/a1-ams.svg"
+      }
+    },
+    {
+      "id": "a2l",
+      "name": "A2L",
+      "series": "A",
+      "kind": "a2l",
+      "ams": "AMS lite",
+      "subtitle": "大幅面 · 开放式",
+      "status": "current",
+      "source": "https://blog.bambulab.com/bambu-lab-a2l-creative-playground-extra-large/",
+      "variants": {
+        "bare": "assets/a2l-bare.svg",
+        "ams": "assets/a2l-ams.svg"
+      }
+    },
+    {
+      "id": "p1p",
+      "name": "P1P",
+      "series": "P",
+      "kind": "p1p",
+      "ams": "AMS",
+      "subtitle": "开放式 CoreXY 框架",
+      "status": "legacy",
+      "source": "https://blog.bambulab.com/a-farewell-to-p1p/",
+      "variants": {
+        "bare": "assets/p1p-bare.svg",
+        "ams": "assets/p1p-ams.svg"
+      }
+    },
+    {
+      "id": "p1s",
+      "name": "P1S",
+      "series": "P",
+      "kind": "p1s",
+      "ams": "AMS",
+      "subtitle": "深色封闭机箱 · 小型按键屏",
+      "status": "current",
+      "source": "https://bambulab.com/en-us/p1p",
+      "variants": {
+        "bare": "assets/p1s-bare.svg",
+        "ams": "assets/p1s-ams.svg"
+      }
+    },
+    {
+      "id": "p2s",
+      "name": "P2S",
+      "series": "P",
+      "kind": "p2s",
+      "ams": "AMS 2 Pro",
+      "subtitle": "封闭机箱 · 大触控屏",
+      "status": "current",
+      "source": "https://blog.bambulab.com/the-icon-redefined-meet-the-p2s-a-completely-reengineered-version-of-the-ultra-productive-p1-series/",
+      "variants": {
+        "bare": "assets/p2s-bare.svg",
+        "ams": "assets/p2s-ams.svg"
+      }
+    },
+    {
+      "id": "x1",
+      "name": "X1",
+      "series": "X",
+      "kind": "x1",
+      "ams": "AMS",
+      "subtitle": "浅色机身 · 触控屏",
+      "status": "legacy",
+      "source": "https://blog.bambulab.com/the-x1-series-is-eol-the-standard-it-set-will-remain-forever/",
+      "variants": {
+        "bare": "assets/x1-bare.svg",
+        "ams": "assets/x1-ams.svg"
+      }
+    },
+    {
+      "id": "x1-carbon",
+      "name": "X1 Carbon",
+      "series": "X",
+      "kind": "x1c",
+      "ams": "AMS",
+      "subtitle": "银灰机身 · 深色顶盖",
+      "status": "legacy",
+      "source": "https://blog.bambulab.com/the-x1-series-is-eol-the-standard-it-set-will-remain-forever/",
+      "variants": {
+        "bare": "assets/x1-carbon-bare.svg",
+        "ams": "assets/x1-carbon-ams.svg"
+      }
+    },
+    {
+      "id": "x1e",
+      "name": "X1E",
+      "series": "X",
+      "kind": "x1e",
+      "ams": "AMS",
+      "subtitle": "企业机型 · 银灰外壳",
+      "status": "legacy",
+      "source": "https://blog.bambulab.com/the-x1-series-is-eol-the-standard-it-set-will-remain-forever/",
+      "variants": {
+        "bare": "assets/x1e-bare.svg",
+        "ams": "assets/x1e-ams.svg"
+      }
+    },
+    {
+      "id": "x2d",
+      "name": "X2D",
+      "series": "X",
+      "kind": "x2d",
+      "ams": "AMS 2 Pro",
+      "subtitle": "新一代 X 系列 · 双喷嘴",
+      "status": "current",
+      "source": "https://blog.bambulab.com/xcellence-made-simple-bambu-lab-presents-the-x2d/",
+      "variants": {
+        "bare": "assets/x2d-bare.svg",
+        "ams": "assets/x2d-ams.svg"
+      }
+    },
+    {
+      "id": "h2s",
+      "name": "H2S",
+      "series": "H",
+      "kind": "h2s",
+      "ams": "AMS 2 Pro",
+      "subtitle": "宽体封闭机箱 · 单喷嘴",
+      "status": "current",
+      "variants": {
+        "bare": "assets/h2s-bare.svg",
+        "ams": "assets/h2s-ams.svg"
+      }
+    },
+    {
+      "id": "h2d",
+      "name": "H2D",
+      "series": "H",
+      "kind": "h2d",
+      "ams": "AMS 2 Pro",
+      "subtitle": "宽体封闭机箱 · 双喷嘴",
+      "status": "current",
+      "source": "https://blog.bambulab.com/bambu-lab-launches-h2d-to-rethink-personal-manufacturing/",
+      "variants": {
+        "bare": "assets/h2d-bare.svg",
+        "ams": "assets/h2d-ams.svg"
+      }
+    },
+    {
+      "id": "h2d-pro",
+      "name": "H2D Pro",
+      "series": "H",
+      "kind": "h2dpro",
+      "ams": "AMS 2 Pro + AMS HT",
+      "subtitle": "企业机型 · 双喷嘴",
+      "status": "current",
+      "source": "https://blog.bambulab.com/bambu-lab-launches-h2d-pro-for-enterprise-manufacturing/",
+      "variants": {
+        "bare": "assets/h2d-pro-bare.svg",
+        "ams": "assets/h2d-pro-ams.svg"
+      }
+    },
+    {
+      "id": "h2c",
+      "name": "H2C",
+      "series": "H",
+      "kind": "h2c",
+      "ams": "AMS 2 Pro",
+      "subtitle": "Vortek 换热端系统",
+      "status": "current",
+      "source": "https://blog.bambulab.com/bambu-lab-h2c-where-multi-material-vortek-system-meets-engineering-precision/",
+      "variants": {
+        "bare": "assets/h2c-bare.svg",
+        "ams": "assets/h2c-ams.svg"
+      }
+    }
+  ],
+  "review_boards": [
+    "boards/ams-lite-review.png",
+    "boards/ams-lite-before-after.png"
+  ]
+}
