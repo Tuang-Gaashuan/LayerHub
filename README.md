@@ -4,7 +4,7 @@
 
 A self-hosted workspace for shared 3D printers: per-printer queues, spool inventory, private slicing projects, team snapshots and task notifications.
 
-**0.1.0-alpha: independent deployment testing.** The NAS owns the application/database and talks to LAN printers; a cloud host provides HTTPS through a restricted outbound SSH tunnel.
+**0.2.0-alpha: independent deployment testing.** The NAS owns the application/database and talks to LAN printers; a cloud host provides HTTPS through a restricted outbound SSH tunnel.
 
 ## Start here
 
@@ -39,9 +39,11 @@ python3 tools/package.py
 
 On Windows, run `powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1`, then `python tools/package.py`. This process-local execution-policy flag does not change the machine policy. Node.js 24 and the pinned jsdom test dependencies are needed only for frontend tests; see source/README.md.
 
-After building, the Docker template can use the generated Linux binary and local corresponding-source archive. The basic Docker image does not contain Studio's graphical runtime. Native Linux is the complete reference deployment. See the [validation record](validation/README.md) for tests actually executed versus static checks. The current application UI is primarily Chinese; deployment documentation is available in English and Chinese.
+After building, the Docker template can use the generated Linux binary and local corresponding-source archive. The basic Docker image does not contain Studio's graphical runtime. Native Linux is the complete reference deployment. See the [validation record](validation/README.md) for tests actually executed versus static checks. The application supports Simplified Chinese and English, including sign-in, printer controls and slicing. Choose Language in Personal account or on the sign-in form. [Language behavior](LANGUAGES.md).
 
 ## Current validation scope
+
+![English model workbench in an isolated offline workspace](validation/english-workbench.png)
 
 Hardware validation is concentrated on one X2D/0.4 mm/single-color PETG Basic configuration and its tested firmware/modules. Catalog artwork is not a compatibility claim. Other firmware, models and network conditions need independent validation. Multi-nozzle/multicolor start, motion/filament controls, mesh cutting and a desktop installer are outside this alpha's claims.
 

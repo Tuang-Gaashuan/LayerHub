@@ -161,7 +161,7 @@ func (w *Worker) Step(ctx context.Context) error {
 			all := true
 			for _, to := range w.State.Admins {
 				digest := sha256.Sum256([]byte(to))
-				m := Message{ID: fmt.Sprintf("nas-down-%d-%x", w.State.DownSince, digest[:8]), To: to, Subject: "LayerHub · NAS 云端通道持续离线", Text: "NAS 云端通道已持续不可用超过 3 分钟。请检查 NAS 是否挂起、供电和网络。\n此邮件不代表打印机停止打印，请勿重复提交任务。\n\n" + w.PublicURL}
+				m := Message{ID: fmt.Sprintf("nas-down-%d-%x", w.State.DownSince, digest[:8]), To: to, Subject: "LayerHub · NAS offline / NAS 云端通道持续离线", Text: "The NAS cloud connection has been unavailable for over 3 minutes. Check NAS sleep, power and networking.\nThis alert does not mean the printer stopped. Do not resubmit print jobs.\n\nNAS 云端通道已持续不可用超过 3 分钟。请检查 NAS 是否挂起、供电和网络。\n此邮件不代表打印机停止打印，请勿重复提交任务。\n\n" + w.PublicURL}
 				if sendErr := w.deliver(cfg, m); sendErr != nil {
 					all = false
 				}

@@ -4,7 +4,7 @@ root=pathlib.Path(__file__).resolve().parent.parent
 version=(root/'VERSION').read_text().strip();assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.]+)?',version)
 out=root/'packages';out.mkdir(exist_ok=True)
 source=root/'source/web/source/layerhub-source.tar.gz';assert source.is_file(),'Generate corresponding source first'
-docs=['README.md','README.zh-CN.md','LICENSE','THIRD_PARTY_NOTICES.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','SECURITY.md','CHANGELOG.md','VERSION']
+docs=['README.md','README.zh-CN.md','LICENSE','THIRD_PARTY_NOTICES.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION']
 start_cmd=r'''@echo off
 setlocal
 pushd "%~dp0" || exit /b 1
@@ -40,7 +40,7 @@ def entries(platform):
   if p.is_file():yield p,'web/'+p.relative_to(root/'source/web').as_posix()
  for folder in ['deploy','licenses','validation']:
   for p in sorted((root/folder).rglob('*')):
-   if p.is_file() and p.name!='.env' and (folder!='validation' or p.suffix in ['.json','.md']):yield p,p.relative_to(root).as_posix()
+   if p.is_file() and p.name!='.env' and (folder!='validation' or p.suffix in ['.json','.md','.png']):yield p,p.relative_to(root).as_posix()
  if platform=='windows':yield root/'binaries/windows-amd64/layerhub.exe','bin/layerhub.exe'
  else:
   for name in ['layerhub','layerhub-mail-worker']:yield root/'binaries/linux-amd64'/name,'bin/'+name

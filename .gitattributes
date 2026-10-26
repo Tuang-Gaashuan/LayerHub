@@ -3,7 +3,13 @@
 *.md text eol=lf
 *.go text eol=lf
 *.json text eol=lf
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.css text eol=lf
+*.html text eol=lf
 *.yaml text eol=lf
+VERSION text eol=lf
 *.cmd text eol=crlf
 *.png binary
 *.woff2 binary

@@ -1,0 +1,15 @@
+{
+  "fresh_workspace": true,
+  "offline_default": true,
+  "print_start_off": true,
+  "random_owner_created": true,
+  "private_paths_denied": true,
+  "source_offer_available": true,
+  "restart_preserves_accounts": true,
+  "english_errors": true,
+  "browser_language_initializes_new_account": true,
+  "explicit_account_language_survives_restart": true,
+  "real_devices_contacted": 0,
+  "mail_sent": 0,
+  "status": "passed"
+}

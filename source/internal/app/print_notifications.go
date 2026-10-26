@@ -56,7 +56,10 @@ func (s *Service) notifyPrintMilestone(tx *sql.Tx, j Job, phase, label, detail s
 	// Keep mail subjects single-line even if a previously registered device or
 	// filename contains line breaks. Bodies retain the useful task context.
 	singleLine := func(v string) string { return strings.Join(strings.Fields(v), " ") }
+	language := accountLanguage(tx, j.UserID)
+	label = languageText(language, label)
+	detail = languageText(language, detail)
 	subject := fmt.Sprintf("LayerHub · %s · %s", label, singleLine(j.Filename))
-	body := fmt.Sprintf("%s\n设备：%s\n任务：%s\n任务编号：%d\n\n%s", label, printer, j.Filename, j.ID, detail)
+	body := localizedFormat(language, "%s\n设备：%s\n任务：%s\n任务编号：%d\n\n%s", label, printer, j.Filename, j.ID, detail)
 	return s.notifyUser(tx, j.UserID, event, subject, body, now)
 }

@@ -218,7 +218,8 @@ func (s *Service) requestEmail(u User, value string) error {
 		if _, err = tx.Exec("INSERT INTO mail_challenges(user_id,id,email,hash,expires,requested) VALUES(?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET id=excluded.id,email=excluded.email,hash=excluded.hash,expires=excluded.expires,attempts=0,requested=excluded.requested", u.ID, id, email, s.otpHash(id, u.ID, email, code), now+600, now); err != nil {
 			return err
 		}
-		return s.queueMail(tx, u.ID, email, "verify", "verify:"+id, "LayerHub 邮箱绑定验证码", "你的 LayerHub 邮箱绑定验证码是："+code+"\n\n10 分钟内有效，最多可尝试 5 次。请勿把验证码交给他人。\n如果不是你本人操作，请忽略此邮件。\n\n"+s.Config.PublicURL, now, now+600)
+		language := accountLanguage(tx, u.ID)
+		return s.queueMail(tx, u.ID, email, "verify", "verify:"+id, languageText(language, "LayerHub 邮箱绑定验证码"), languageText(language, "你的 LayerHub 邮箱绑定验证码是：")+code+languageText(language, "\n\n10 分钟内有效，最多可尝试 5 次。请勿把验证码交给他人。\n如果不是你本人操作，请忽略此邮件。\n\n")+s.Config.PublicURL, now, now+600)
 	})
 }
 func (s *Service) verifyEmail(u User, code string) error {
@@ -491,7 +492,7 @@ func (s *Service) notifyUser(tx *sql.Tx, uid int64, event, subject, text string,
 	if err != nil {
 		return err
 	}
-	return s.queueMail(tx, uid, email, "notification", fmt.Sprintf("%s:user:%d", event, uid), subject, text+"\n\n打开 LayerHub 查看并确认：\n"+s.Config.PublicURL, now, now+86400)
+	return s.queueMail(tx, uid, email, "notification", fmt.Sprintf("%s:user:%d", event, uid), subject, text+"\n\n"+languageText(accountLanguage(tx, uid), "打开 LayerHub 查看并确认：")+"\n"+s.Config.PublicURL, now, now+86400)
 }
 func (s *Service) collectMail(at time.Time) error {
 	return s.transaction(func(tx *sql.Tx) error {
@@ -540,7 +541,9 @@ func (s *Service) collectMail(at time.Time) error {
 				label = "任务需要检查"
 			}
 			if label != "" {
-				if err = s.notifyUser(tx, j.UserID, fmt.Sprintf("job:%d:%d", j.ID, seq), "LayerHub · "+label, fmt.Sprintf("%s\n任务：%s\n任务编号：%d\n请在工作空间核对设备状态和耗材用量。", label, j.Filename, j.ID), now); err != nil {
+				language := accountLanguage(tx, j.UserID)
+				localizedLabel := languageText(language, label)
+				if err = s.notifyUser(tx, j.UserID, fmt.Sprintf("job:%d:%d", j.ID, seq), "LayerHub · "+localizedLabel, localizedFormat(language, "%s\n任务：%s\n任务编号：%d\n请在工作空间核对设备状态和耗材用量。", localizedLabel, j.Filename, j.ID), now); err != nil {
 					return err
 				}
 			}
@@ -591,7 +594,9 @@ func (s *Service) collectMail(at time.Time) error {
 				label = "打印机持续离线"
 			}
 			for _, uid := range ids {
-				if err = s.notifyUser(tx, uid, fmt.Sprintf("printer:%d:%d", p.ID, seq), "LayerHub · "+label, fmt.Sprintf("%s\n设备：%s\n请检查设备与 NAS 连接。邮件仅报告状态，不会重发打印或控制命令。", label, p.Name), now); err != nil {
+				language := accountLanguage(tx, uid)
+				localizedLabel := languageText(language, label)
+				if err = s.notifyUser(tx, uid, fmt.Sprintf("printer:%d:%d", p.ID, seq), "LayerHub · "+localizedLabel, localizedFormat(language, "%s\n设备：%s\n请检查设备与 NAS 连接。邮件仅报告状态，不会重发打印或控制命令。", localizedLabel, p.Name), now); err != nil {
 					return err
 				}
 			}

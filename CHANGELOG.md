@@ -1,3 +1,13 @@
+# 0.2.0-alpha
+
+- Simplified Chinese / English interface across sign-in, dashboard, materials, printer controls, queues, security and slicing.
+- Persistent account/browser language; locale-aware dates/numbers, server errors and future verification/job/material/device emails. NAS outage notices are bilingual.
+- Protected filenames/member names and unchanged protocol IDs, spool mappings and numerical settings.
+- Draft acknowledgment before language reload; failed/uncertain saves preserve the current page.
+- Locally shipped catalogs, placeholder/coverage checks and English workflow tests. No online translation service.
+
+新增完整中英文界面与账户语言偏好，覆盖登录、看板、设备、耗材、队列、切片和安全设置。日期、系统提示及后续邮件随账户语言显示，NAS 掉线告警为双语。用户内容及协议参数保持；语言切换前等待草稿保存，失败时保留页面。新增语言包检查及英文流程测试。
+
 # 0.1.0-alpha
 
 Initial independent-deployment alpha: three-tier roles and sessions, verified email notifications, per-printer queues and spool inventory; private STL/3MF geometry projects, real slicing and layer paths; versioned team snapshots; NAS application + restricted cloud HTTPS gateway templates; Windows/Linux amd64 packages, corresponding source, licenses and bilingual deployment/acceptance documentation.

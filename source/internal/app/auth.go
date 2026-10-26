@@ -65,9 +65,13 @@ func (s *Service) session(r *http.Request) (User, string, error) {
 	return u, cookie.Value, nil
 }
 func (s *Service) login(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Username, Password string }
+	var in struct{ Username, Password, Language string }
 	if err := decode(r, &in); err != nil {
 		fail(w, err)
+		return
+	}
+	if in.Language != "" && !validLanguage(in.Language) {
+		fail(w, invalid("请选择简体中文或 English"))
 		return
 	}
 	var u User
@@ -93,6 +97,20 @@ func (s *Service) login(w http.ResponseWriter, r *http.Request) {
 		if u, e = currentUser(tx, u.ID); e != nil {
 			return e
 		}
+		var language string
+		err := tx.QueryRow("SELECT language FROM user_languages WHERE user_id=?", u.ID).Scan(&language)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+		if in.Language != "" {
+			language = in.Language
+		} else if err == sql.ErrNoRows {
+			language = requestLanguage(r.Header.Get("Accept-Language"))
+		}
+		if e = saveLanguage(tx, u.ID, language); e != nil {
+			return e
+		}
+		u.Language = language
 		now := time.Now().Unix()
 		if _, e = tx.Exec("DELETE FROM sessions WHERE expires<=?", now); e != nil {
 			return e

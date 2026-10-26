@@ -6,7 +6,7 @@ const PRINTER_MODELS = [
     "name": "A1 mini",
     "series": "A",
     "ams": "AMS lite",
-    "subtitle": "单悬臂 · 紧凑开放式",
+    "subtitle": I18n.t("单悬臂 · 紧凑开放式"),
     "status": "current"
   },
   {
@@ -14,7 +14,7 @@ const PRINTER_MODELS = [
     "name": "A1",
     "series": "A",
     "ams": "AMS lite",
-    "subtitle": "双立柱 · 开放式",
+    "subtitle": I18n.t("双立柱 · 开放式"),
     "status": "current"
   },
   {
@@ -22,7 +22,7 @@ const PRINTER_MODELS = [
     "name": "A2L",
     "series": "A",
     "ams": "AMS lite",
-    "subtitle": "大幅面 · 开放式",
+    "subtitle": I18n.t("大幅面 · 开放式"),
     "status": "current"
   },
   {
@@ -30,7 +30,7 @@ const PRINTER_MODELS = [
     "name": "P1P",
     "series": "P",
     "ams": "AMS",
-    "subtitle": "开放式 CoreXY 框架",
+    "subtitle": I18n.t("开放式 CoreXY 框架"),
     "status": "legacy"
   },
   {
@@ -38,7 +38,7 @@ const PRINTER_MODELS = [
     "name": "P1S",
     "series": "P",
     "ams": "AMS",
-    "subtitle": "深色封闭机箱 · 小型按键屏",
+    "subtitle": I18n.t("深色封闭机箱 · 小型按键屏"),
     "status": "current"
   },
   {
@@ -46,7 +46,7 @@ const PRINTER_MODELS = [
     "name": "P2S",
     "series": "P",
     "ams": "AMS 2 Pro",
-    "subtitle": "封闭机箱 · 大触控屏",
+    "subtitle": I18n.t("封闭机箱 · 大触控屏"),
     "status": "current"
   },
   {
@@ -54,7 +54,7 @@ const PRINTER_MODELS = [
     "name": "X1",
     "series": "X",
     "ams": "AMS",
-    "subtitle": "浅色机身 · 触控屏",
+    "subtitle": I18n.t("浅色机身 · 触控屏"),
     "status": "legacy"
   },
   {
@@ -62,7 +62,7 @@ const PRINTER_MODELS = [
     "name": "X1 Carbon",
     "series": "X",
     "ams": "AMS",
-    "subtitle": "银灰机身 · 深色顶盖",
+    "subtitle": I18n.t("银灰机身 · 深色顶盖"),
     "status": "legacy"
   },
   {
@@ -70,7 +70,7 @@ const PRINTER_MODELS = [
     "name": "X1E",
     "series": "X",
     "ams": "AMS",
-    "subtitle": "企业机型 · 银灰外壳",
+    "subtitle": I18n.t("企业机型 · 银灰外壳"),
     "status": "legacy"
   },
   {
@@ -78,7 +78,7 @@ const PRINTER_MODELS = [
     "name": "X2D",
     "series": "X",
     "ams": "AMS 2 Pro",
-    "subtitle": "新一代 X 系列 · 双喷嘴",
+    "subtitle": I18n.t("新一代 X 系列 · 双喷嘴"),
     "status": "current"
   },
   {
@@ -86,7 +86,7 @@ const PRINTER_MODELS = [
     "name": "H2S",
     "series": "H",
     "ams": "AMS 2 Pro",
-    "subtitle": "宽体封闭机箱 · 单喷嘴",
+    "subtitle": I18n.t("宽体封闭机箱 · 单喷嘴"),
     "status": "current"
   },
   {
@@ -94,7 +94,7 @@ const PRINTER_MODELS = [
     "name": "H2D",
     "series": "H",
     "ams": "AMS 2 Pro",
-    "subtitle": "宽体封闭机箱 · 双喷嘴",
+    "subtitle": I18n.t("宽体封闭机箱 · 双喷嘴"),
     "status": "current"
   },
   {
@@ -102,7 +102,7 @@ const PRINTER_MODELS = [
     "name": "H2D Pro",
     "series": "H",
     "ams": "AMS 2 Pro + AMS HT",
-    "subtitle": "企业机型 · 双喷嘴",
+    "subtitle": I18n.t("企业机型 · 双喷嘴"),
     "status": "current"
   },
   {
@@ -110,7 +110,7 @@ const PRINTER_MODELS = [
     "name": "H2C",
     "series": "H",
     "ams": "AMS 2 Pro",
-    "subtitle": "Vortek 换热端系统",
+    "subtitle": I18n.t("Vortek 换热端系统"),
     "status": "current"
   }
 ];
@@ -126,12 +126,12 @@ function normalizePrinter(printer) {
     ? printer.configuration : /AMS/i.test(printer.model||'')?'ams':'bare';
   printer.modelId=model.id;
   printer.configuration=configuration;
-  printer.model=model.name+' · '+(configuration==='ams'?model.ams:'裸机');
+  printer.model=model.name+' · '+(configuration==='ams'?model.ams:I18n.t('裸机'));
   return printer;
 }
 function printerSupply(printer) {
   const model=printerModel(printer);
-  return model ? (printer.configuration==='ams'?model.ams:'外置单卷') : '配置待确认';
+  return model ? (printer.configuration==='ams'?model.ams:I18n.t('外置单卷')) : I18n.t('配置待确认');
 }
 function printerAsset(printer) {
   const model=printerModel(printer);

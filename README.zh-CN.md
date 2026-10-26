@@ -1,4 +1,4 @@
-# LayerHub 0.1.0-alpha · 外部部署测试包
+# LayerHub 0.2.0-alpha · 外部部署测试包
 
 [English](README.md) · [GitHub Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases)
 
@@ -6,9 +6,11 @@
 
 本包是独立的新部署，不接入开发者原有服务器或打印机。未包含账号、SSH 密钥、邮箱授权码、数据库、私人模型或切片引擎二进制。第一次启动会生成自己的所有者密码。
 
+界面支持简体中文与 English，可在登录页、顶部语言按钮及个人账户切换。账户偏好用于后续邮件；模型名和文件名保留原文，见 [语言说明](LANGUAGES.md)。
+
 ## 先从这里开始
 
-1. **只看界面/验证安装**：解压 `packages/LayerHub-0.1.0-alpha-windows-amd64.zip` 或 Linux 包，运行其中的启动脚本。默认 offline、远程启动关闭。
+1. **只看界面/验证安装**：解压 `packages/LayerHub-0.2.0-alpha-windows-amd64.zip` 或 Linux 包，运行其中的启动脚本。默认 offline、远程启动关闭。
 2. **部署真实架构**：阅读 [云服务器 → NAS → 打印机](01-部署指导-云服务器-NAS-打印机.md)，先通 NAS，再通云网关，最后只读接入打印机。
 3. **准备切片**：引擎不随包分发，按 [独立切片引擎准备](deploy/slicer/README.md) 安装固定版本。没有引擎仍可登录、管理队列/耗材、导入和查看模型。
 4. **提交结果**：按 [外部验收与反馈](02-外部验收与反馈.md) 记录结果。请勿公开备份和原始凭据。

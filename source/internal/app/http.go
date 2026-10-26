@@ -27,11 +27,11 @@ func reply(w http.ResponseWriter, status int, value any) {
 func fail(w http.ResponseWriter, err error) {
 	var e *apiError
 	if errors.As(err, &e) {
-		reply(w, e.Code, map[string]any{"ok": false, "error": e.Message})
+		reply(w, e.Code, map[string]any{"ok": false, "error": languageText(w.Header().Get("Content-Language"), e.Message)})
 		return
 	}
 	log.Printf("request failed: %T", err)
-	reply(w, 500, map[string]any{"ok": false, "error": "服务器处理失败，请查看服务日志"})
+	reply(w, 500, map[string]any{"ok": false, "error": languageText(w.Header().Get("Content-Language"), "服务器处理失败，请查看服务日志")})
 }
 func decode(r *http.Request, target any) error {
 	defer r.Body.Close()
@@ -351,6 +351,15 @@ func (s *Service) Handler() http.Handler {
 			if err == nil {
 				err = s.SetEquipment(u, in)
 			}
+		case "GET /api/account/language":
+			result = map[string]any{"ok": true, "language": accountLanguage(s.DB, u.ID)}
+		case "POST /api/account/language":
+			var in struct {
+				Language string `json:"language"`
+			}
+			if err = decode(r, &in); err == nil {
+				err = s.setLanguage(u, in.Language)
+			}
 		case "GET /api/account/sessions":
 			result, err = s.accountSessions(u, token)
 		case "POST /api/account/sessions/revoke":
@@ -528,6 +537,10 @@ func (s *Service) Handler() http.Handler {
 	// Reject cross-origin state changes, including login, before credential processing.
 	loginGate := make(chan struct{}, 4)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Content-Language", requestLanguage(r.Header.Get("Accept-Language")))
+			w.Header().Add("Vary", "Accept-Language")
+		}
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")

@@ -4,6 +4,8 @@ LayerHub original code and original schematic artwork: AGPL-3.0-only. Third-part
 
 ## Go dependencies
 
+Developer-only npm dependencies (jsdom, @babel/parser and parse5) are recorded in source/qa/frontend-deps/package-lock.json. Their installed packages are not bundled in runtime archives; their respective upstream licenses apply. Locale catalogs and compiled text patches are original project data.
+
 The matching dependency source is included in source/vendor/. License copies are retained both there and in licenses/go/.
 
 | Module | Version | License files |

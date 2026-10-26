@@ -22,6 +22,7 @@ type User struct {
 	Name     string `json:"name"`
 	Admin    bool   `json:"admin"`
 	Owner    bool   `json:"owner"`
+	Language string `json:"language,omitempty"`
 }
 type Member struct {
 	User

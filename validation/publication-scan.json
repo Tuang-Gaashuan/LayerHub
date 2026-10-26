@@ -1,6 +1,8 @@
 {
+  "version": "0.2.0-alpha",
   "status": "passed",
-  "files_scanned": 3521,
+  "files_scanned": 15417,
+  "archives_scanned": 5,
   "checks": [
     "production_endpoint",
     "production_mail",
@@ -9,22 +11,12 @@
     "private_key_material",
     "github_credential",
     "runtime_or_link_path",
-    "runtime_private_file"
-  ],
-  "excluded": [
-    "node_modules",
-    ".git",
-    "packages",
-    "generated source archive"
+    "runtime_private_file",
+    "archive_hash_and_members"
   ],
   "upstream_fixtures": {
-    "component": "modernc.org/sqlite v1.60.1",
-    "files": {
-      "source/vendor/modernc.org/sqlite/embed.db": "74be192f1e1efe9962b29e50a0325413a93b218ba21706d1b846b1fd4bd28948",
-      "source/vendor/modernc.org/sqlite/embed2.db": "f6c2c396abd1881d035bd709f16e0804809a3d08c0d35b9c1f2e4220e7593402"
-    },
-    "matched_original_module_cache": true,
-    "description": "Unmodified upstream sample databases, not LayerHub runtime data."
+    "source/vendor/modernc.org/sqlite/embed.db": "74be192f1e1efe9962b29e50a0325413a93b218ba21706d1b846b1fd4bd28948",
+    "source/vendor/modernc.org/sqlite/embed2.db": "f6c2c396abd1881d035bd709f16e0804809a3d08c0d35b9c1f2e4220e7593402"
   },
   "findings": [],
   "credentials_printed": false

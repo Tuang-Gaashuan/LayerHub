@@ -35,7 +35,7 @@ $env:LAYERHUB_ENABLE_PRINT_START='0'
 go test -mod=vendor ./...
 go vet -mod=vendor ./...
 npm ci --prefix qa/frontend-deps --ignore-scripts
-node --test qa/frontend.test.cjs qa/slicer-gizmo.test.mjs qa/face-placement.test.mjs qa/box-selection.test.mjs
+node --test qa/frontend.test.cjs qa/i18n.test.cjs qa/slicer-gizmo.test.mjs qa/face-placement.test.mjs qa/box-selection.test.mjs
 ```
 
 部分真实引擎实验默认跳过：它们需要部署者独立安装固定版本 Studio 及配置，不能将跳过当作实机通过。Go 测试使用临时数据和假设备；不要给测试传入真实 data/。
@@ -49,3 +49,5 @@ python3 tools/make-source.py
 它在 `web/source/layerhub-source.tar.gz` 生成明确白名单的源码包，包含 vendor/，排除运行数据、node_modules 及下载包自身。完整交付包已生成此文件及许可证副本。自行修改并发布时，重新生成对应源码，并更新 `web/source-offer.html` 的版本；该页面可从网页页脚及个人账户访问。
 
 发布部署流程见根目录中英文指南。完整仓库保留父级目录结构，根目录构建工具会同时生成 Linux/Windows 程序和对应源码。没有预置生产服务器地址、账号或凭据。
+
+界面支持简体中文与 English，登录页和个人账户均可切换。语言包开发流程见 [I18N.md](I18N.md)。修改文案后执行 `node qa/build-locales.cjs`，CI 使用 `--check` 检查漏翻和生成文件。

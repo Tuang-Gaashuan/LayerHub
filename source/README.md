@@ -23,7 +23,7 @@ On Windows build `bin/layerhub.exe`, set the same environment variables in Power
 go test -mod=vendor ./...
 go vet -mod=vendor ./...
 npm ci --prefix qa/frontend-deps --ignore-scripts
-node --test qa/frontend.test.cjs qa/slicer-gizmo.test.mjs qa/face-placement.test.mjs qa/box-selection.test.mjs
+node --test qa/frontend.test.cjs qa/i18n.test.cjs qa/slicer-gizmo.test.mjs qa/face-placement.test.mjs qa/box-selection.test.mjs
 ```
 
 Tests use disposable workspaces and fake devices. Optional real-engine experiments skip unless explicitly configured; skipping is not proof of hardware compatibility. Never supply a production data directory to tests.
@@ -35,3 +35,5 @@ python3 tools/make-source.py
 ```
 
 The explicit allowlist builds web/source/layerhub-source.tar.gz, including vendor/ but excluding runtime data, node_modules and the archive itself. A complete distribution already contains it and the license files. Modified hosted versions must update this download and the version shown by web/source-offer.html. The source/license page is accessible from the footer and personal account.
+
+Interface languages and translator workflow: [I18N.md](I18N.md). Compile/check catalog changes with `node qa/build-locales.cjs` and `node qa/build-locales.cjs --check` after installing the test dependencies.

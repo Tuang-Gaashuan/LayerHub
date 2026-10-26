@@ -22,3 +22,5 @@ Use a fresh, independent test workspace first. Record package version, OS/CPU ar
 Without hardware, finish 1–9 and mark 10–12 untested. Without the optional email worker, email delivery remains untested. Device completion, physical collection and actual material settlement are separate events.
 
 Suggested report: version/environment, model/firmware if relevant, reproduction steps, expected/actual behavior, impact on existing jobs, and redacted error codes/log excerpts. Sensitive reports belong in a private channel with the maintainer; never upload a whole data directory.
+
+Language acceptance / 语言验收：switch between English and 简体中文 on sign-in and in the account; check controls, slicing, user-name preservation and language after re-login. A failed draft save must prevent a language reload. Use consenting verified mail recipients only when testing actual delivery. / 检查登录、控制、切片和重新登录后的语言；用户名称保持，草稿保存失败不得刷新。真实投递只使用同意测试的已验证收件人。

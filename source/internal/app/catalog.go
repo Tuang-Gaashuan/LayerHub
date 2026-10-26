@@ -320,6 +320,7 @@ func (s *Service) Snapshot(u User) (map[string]any, error) {
 	if e != nil {
 		return nil, e
 	}
+	u.Language = accountLanguage(s.DB, u.ID)
 	printers, err := s.printers()
 	if err != nil {
 		return nil, err

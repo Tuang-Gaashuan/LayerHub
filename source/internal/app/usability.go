@@ -250,7 +250,8 @@ func (s *Service) observeStock(tx *sql.Tx, now int64, jobs []Job) error {
 			}
 		}
 		for _, uid := range ids {
-			if err = s.notifyUser(tx, uid, fmt.Sprintf("stock:%s:%d", sp.ID, seq), "LayerHub · 耗材可分配余量偏低", fmt.Sprintf("耗材：%s\n人工登记净余量：%d g\n任务预留：%d g\n当前可分配：%d g\n提醒阈值：%d g\n请核对库存，需要时补充或调整任务安排。", sp.Label, sp.Remaining, reserved, available, sp.LowThreshold), now); err != nil {
+			language := accountLanguage(tx, uid)
+			if err = s.notifyUser(tx, uid, fmt.Sprintf("stock:%s:%d", sp.ID, seq), languageText(language, "LayerHub · 耗材可分配余量偏低"), localizedFormat(language, "耗材：%s\n人工登记净余量：%d g\n任务预留：%d g\n当前可分配：%d g\n提醒阈值：%d g\n请核对库存，需要时补充或调整任务安排。", sp.Label, sp.Remaining, reserved, available, sp.LowThreshold), now); err != nil {
 				return err
 			}
 		}

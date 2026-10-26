@@ -5,7 +5,7 @@ root=project.parent if project.name=='source' and (project.parent/'deploy').is_d
 out=project/'web/source';out.mkdir(exist_ok=True)
 archive=out/'layerhub-source.tar.gz'
 allowed=['source','deploy','tools','licenses','validation','.github'] if root!=project else ['cmd','internal','web','vendor','qa','tools','assets-source','licenses']
-allowed += ['go.mod','go.sum','LICENSE','THIRD_PARTY_NOTICES.md','README.md','README.zh-CN.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','SECURITY.md','CHANGELOG.md','VERSION','.gitignore','.gitattributes']
+allowed += ['go.mod','go.sum','LICENSE','THIRD_PARTY_NOTICES.md','README.md','README.zh-CN.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION','.gitignore','.gitattributes']
 with tarfile.open(archive,'w:gz') as tar:
  for name in allowed:
   path=root/name

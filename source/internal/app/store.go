@@ -179,7 +179,7 @@ func Open(cfg Config, device Device) (*Service, error) {
 			s.Close()
 			return nil, e
 		}
-		if _, err = database.Exec("INSERT INTO users(username,name,password_hash,admin) VALUES(?,?,?,1)", cfg.AdminUser, "管理员", hash); err != nil {
+		if _, err = database.Exec("INSERT INTO users(username,name,password_hash,admin) VALUES(?,?,?,1)", cfg.AdminUser, cfg.AdminUser, hash); err != nil {
 			s.Close()
 			return nil, err
 		}
@@ -215,6 +215,10 @@ func Open(cfg Config, device Device) (*Service, error) {
 		printers[i] = p
 	}
 	device.Reconcile(ctx, printers)
+	if err = s.initLanguage(); err != nil {
+		s.Close()
+		return nil, err
+	}
 	if err = s.initSlicing(); err != nil {
 		s.Close()
 		return nil, err

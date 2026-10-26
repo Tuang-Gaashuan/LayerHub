@@ -9,9 +9,77 @@ const vm=require('node:vm');
 const {JSDOM}=require('./frontend-deps/node_modules/jsdom');
 const root=path.resolve(__dirname,'..');
 const read=name=>fs.readFileSync(path.join(root,'web',name),'utf8');
+const testLocale={t:v=>v,system:v=>v,language:()=>"zh-CN",locale:()=>"zh-CN",html:(s,...v)=>typeof s==="string"?s:s.map((p,i)=>p+(i<v.length?v[i]:"")).join(""),msg:(s,...v)=>s.map((p,i)=>p+(i<v.length?v[i]:"")).join("")};
 const reply=(status,value)=>({status,ok:status>=200&&status<300,json:async()=>value});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function settle(){for(let i=0;i<8;i++)await tick()}
+
+test('English navigation, account and material pages preserve user-created names',async t=>{
+ const a=await app(t,{language:'en'}),{w,$,state}=a;
+ assert.equal(w.document.documentElement.lang,'en');assert.equal(w.I18n.locale(),'en-US');
+ assert.equal($('[data-page="slicer"]').textContent.trim(),'Model workbench');
+ assert.match($('#pageContent').textContent,/Printers and jobs at a glance/);
+ state.snapshot.printers[0].name='关闭 <Printer>';state.snapshot.spools[0].label='选择 <Spool>';state.snapshot.members[0].name='模型工作台';state.snapshot.user.name='模型工作台';
+ await a.Remote.refresh();assert.match($('#pageContent').textContent,/关闭 <Printer>/);assert.equal($('#pageContent Printer'),null);
+ $('[data-page="materials"]').click();assert.match($('#pageContent').textContent,/Every spool has a purpose/);assert.match($('#pageContent').textContent,/选择 <Spool>/);
+ $('[data-page="queues"]').click();assert.match($('#pageContent').textContent,/Every printer has its own rhythm/);
+ $('[data-page="team"]').click();assert.match($('#pageContent').textContent,/Creating is better together/);assert.match($('#pageContent').textContent,/Workspace owner/);assert.doesNotMatch($('#pageContent').textContent,/空间所有者/);assert.match($('#pageContent').textContent,/模型工作台/);
+ $('#profileBtn').click();await settle();assert.match($('#modal').textContent,/Personal account/);assert.ok($('#accountLanguage'));
+ assert.equal(writes(a).length,0);
+});
+
+test('English printer settings keep physical control keys and numeric payloads unchanged',async t=>{
+ const a=await app(t,{language:'en'}),{$,w}=a;a.PrinterControl.open(1);await settle();
+ assert.match($('#controlRoot').textContent,/Monitor & control/);assert.match($('#controlRoot').textContent,/Chamber light/);
+ $('[data-equipment="fan:1"]').click();assert.match($('#equipmentDialog').textContent,/Fan speed/);
+ $('[data-setting-preset="75"]').click();assert.equal(writes(a).length,0);$('#equipmentForm').requestSubmit();await settle();
+ assert.deepEqual(JSON.parse(writes(a)[0].options.body),{printerId:1,key:'fan:1',value:75});
+ assert.equal(writes(a)[0].options.headers['Accept-Language'],'en');
+ assert.equal(w.document.querySelector('#equipmentDialog'),null);
+});
+
+test('English preparation retains spool IDs, color codes and per-material mapping',async t=>{
+ const a=await app(t,{language:'en'}),{$,w}=a;await a.PrinterControl.options(a.data.jobs.find(j=>j.id===4));await settle();
+ assert.match($('#modal').textContent,/Print preparation/);assert.match($('#modal').textContent,/Colors & feed|plate|Plate/);
+ const next=$('#prepareNext');if(next)next.click();await settle();
+ const candidate=$('input[name="spool-0"][value="white"]');assert.ok(candidate);choose(w,candidate);
+ assert.equal(candidate.value,'white');assert.match($('#modal').textContent,/#EEEAE2/i);assert.equal(writes(a).length,0);
+});
+
+test('English workbench labels and undo preserve object geometry and camera',async t=>{
+ const viewer=cameraViewer(),a=await multiWorkbench(t,{viewer,language:'en'}),{$,w}=a;
+ assert.match($('#sliceWorkbench').textContent,/Print configuration/);assert.match($('#sliceWorkbench').textContent,/Generate supports/);
+ $('[data-model="5"]').click();await settle();const camera=structuredClone(viewer.camera),before=workbenchState(a);
+ $('#sliceDuplicate').click();$('#sliceUndo').click();await settle();assert.deepEqual(workbenchState(a),before);assert.deepEqual(viewer.camera,camera);
+ $('#sliceObjectProcess').click();await settle();assert.match($('#modal').textContent,/Selected-object process/);assert.match($('#modal').textContent,/Inherit plate/);
+ assert.equal(writes(a).filter(c=>/jobs\/|slicing\/tasks/.test(c.url)).length,0);
+});
+
+test('language changes flush acknowledged drafts before saving the account preference and reloading',async t=>{
+ const a=await multiWorkbench(t),{$,w,state}=a;$('[data-model="5"]').click();await settle();numberInput(w,$('[data-place="x"]'),149);
+ const before=workbenchState(a);let reloaded=false;
+ await w.I18n.change('en',{reload:()=>{reloaded=true}});
+ const calls=writes(a),draft=calls.findIndex(c=>c.url==='/api/slicing/draft'),language=calls.findIndex(c=>c.url==='/api/account/language');
+ assert.ok(draft>=0&&language>draft);assert.equal(JSON.parse(calls[language].options.body).language,'en');assert.equal(w.localStorage.getItem('layerhub.language'),'en');assert.equal(reloaded,true);assert.deepEqual(workbenchState(a),before);
+ assert.equal(state.calls.filter(c=>/jobs\/dispatch|jobs\/start|slicing\/tasks/.test(c.url)).length,0);
+});
+
+test('unconfirmed draft saves block language reload and retain all local model edits',async t=>{
+ const a=await multiWorkbench(t),{$,w,state}=a;$('[data-model="5"]').click();await settle();numberInput(w,$('[data-place="x"]'),157);
+ const before=workbenchState(a),base=w.fetch;w.fetch=(url,options)=>url==='/api/slicing/draft'?Promise.reject(Error('unavailable')):base(url,options);let reloaded=false;
+ await assert.rejects(w.I18n.change('en',{reload:()=>{reloaded=true}}),/草稿/);
+ assert.equal(reloaded,false);assert.equal(w.localStorage.getItem('layerhub.language'),'zh-CN');assert.deepEqual(workbenchState(a),before);assert.equal(state.calls.filter(c=>c.url==='/api/account/language').length,0);
+});
+
+test('English catalogs keep substitution-like filenames literal and translate formatted system errors',async t=>{
+ const a=await app(t,{language:'en'}),{w}=a;
+ const name='<script>__lh_expr_1__ $1.gcode</script>';
+ assert.equal(w.I18n.msg`对象 ${name}：`,'Object '+name+':');
+ assert.equal(w.I18n.system('副本 2 与 3 距离不足，请自动排版或增大间距'),'Copies 2 and 3 are too close. Auto-arrange or increase spacing.');
+ assert.equal(w.I18n.system(undefined),undefined);assert.equal(w.I18n.system(42),42);
+ const original=w.fetch;w.fetch=(url,options)=>options?.method==='POST'?Promise.resolve(reply(400,{ok:false,error:'请选择有效的打印机'})):original(url,options);
+ await assert.rejects(a.Remote.request('/api/jobs/assign',{jobId:4,printerId:0}),/Choose a valid printer/);
+});
 
 test('settlement distinguishes exact estimates from reservations, records measured precision, and never sends printer commands',async t=>{
  const a=await app(t),{w,state,$}=a,original=w.fetch;
@@ -48,7 +116,7 @@ test('per-board material selection is undoable and old projects keep PETG Basic 
  $('#sliceUndo').click();assert.equal($('#sliceMaterial').value,'pla-basic');
  assert.equal(state.calls.filter(c=>c.url==='/api/jobs/dispatch').length,0);
 });
-function transport(fetch){const context=vm.createContext({fetch,AbortController,setTimeout,clearTimeout});vm.runInContext(read('transport.js')+'\nglobalThis.api=Transport;',context);return context.api}
+function transport(fetch){const context=vm.createContext({I18n:testLocale,fetch,AbortController,setTimeout,clearTimeout});vm.runInContext(read('transport.js')+'\nglobalThis.api=Transport;',context);return context.api}
 
 test('deadline includes response body; GET is safe to read again, POST outcome stays unknown',async()=>{
  for(const payload of [undefined,{action:'resume'}]){
@@ -211,8 +279,9 @@ function fixture(){
  return {ok:true,csrf:'test-csrf',user:{id:1,name:'测试员',username:'admin',admin:true,owner:true},printers:[printer],jobs:[{id:1,filename:'current.3mf',user:'测试员',userId:1,state:'paused',printer:1,created:'今天',grams:20,spoolId:'white',estimate:45},{id:4,filename:'color-demo.3mf',user:'测试员',userId:1,state:'queued',printer:1,created:'今天',grams:19,spoolId:'white',estimate:86}],spools:[spool('white','白色','#EEEAE2','1'),spool('blue','蓝色','#4778BC','2'),spool('short','红色','#CC3333','3',5),spool('petg','绿色','#33AA33','4',800,'PETG'),spool('external','黑色','#222222','external')],members:[{id:1,name:'测试员',username:'admin',admin:true,owner:true,role:'空间所有者',color:'blue'}],completed:0,notifications:[],occupiedSlots:[],capabilities:{deviceMode:'simulated',printStart:true,printerControl:true,projectPrint:true}};
 }
 const plate=(id,color,grams=19)=>({id,filaments:[{index:0,material:'PLA',color,grams}],seconds:5160,thumbnail:false});
-async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewer}={}){
+async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewer,language='zh-CN'}={}){
  const dom=new JSDOM(read('index.html'),{url:'http://localhost:5181/',runScripts:'outside-only'}),w=dom.window;
+ w.localStorage.setItem('layerhub.language',language);
  t.after(()=>w.close());
  w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','')};
  w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open')};
@@ -243,8 +312,8 @@ async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewe
 function change(w,el,value){if(el.type==='checkbox')el.checked=value;else el.value=value;el.dispatchEvent(new w.Event('change',{bubbles:true}))}
 function choose(w,el){el.checked=true;el.dispatchEvent(new w.Event('change',{bubbles:true}))}
 
-async function multiWorkbench(t,{recovery=null,deferSlice=false,viewer}={}){
- const a=await app(t,{viewer}),{w,state,$}=a,original=w.fetch;
+async function multiWorkbench(t,{recovery=null,deferSlice=false,viewer,language='zh-CN'}={}){
+ const a=await app(t,{viewer,language}),{w,state,$}=a,original=w.fetch;
  const models=[{id:5,filename:'cube.stl',triangles:12,bounds:{size:[20,20,10]}},{id:6,filename:'box.stl',triangles:12,bounds:{size:[40,12,18]}}],tasks=[];
  let resolveSlice;
  w.fetch=async(url,options={})=>{
@@ -258,7 +327,7 @@ async function multiWorkbench(t,{recovery=null,deferSlice=false,viewer}={}){
 }
 function submitForm(w,form){form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}))}
 function numberInput(w,el,value){el.value=String(value);el.dispatchEvent(new w.Event('input',{bubbles:true}));el.dispatchEvent(new w.Event('change',{bubbles:true}))}
-function batchPlanner(){const context=vm.createContext({crypto:require('node:crypto').webcrypto});vm.runInContext(read('slicer-copies.js')+read('slicer-plates.js')+read('slicer-batch.js')+';globalThis.batch=SlicerBatch;globalThis.plates=SlicerPlates;',context);return context}
+function batchPlanner(){const context=vm.createContext({I18n:testLocale,crypto:require('node:crypto').webcrypto});vm.runInContext(read('slicer-copies.js')+read('slicer-plates.js')+read('slicer-batch.js')+';globalThis.batch=SlicerBatch;globalThis.plates=SlicerPlates;',context);return context}
 function batchState(api,{size=[100,100,10],triangles=12,scale=1,rotation=[0,0,0]}={}){const options={x:138.25,y:128,scale,rotation,layer:.2,infill:20,material:'petg-basic',support:false,brim:false,color:'#FFFFFF',advanced:{wallLoops:3}},plate=api.plates.make('打印板 01',options);plate.modelId=5;plate.taskId=77;plate.options.copies=[{modelId:5,x:138.25,y:128,scale,rotation}];return {state:{plates:[plate],activePlate:0,activeCopy:0},models:[{id:5,filename:'bracket.stl',triangles,bounds:{size}}]}}
 
 test('batch planner fills new plates without resizing or touching existing plate results',()=>{
@@ -605,7 +674,7 @@ test('canvas tools are explicit, shortcuts ignore numeric fields and resetting a
 });
 
 test('bounds inspection highlights every close object and distinguishes bed edges and extra support clearance',()=>{
- const c=vm.createContext({});vm.runInContext(read('slicer-copies.js')+'\nthis.inspect=SlicerCopies.inspectBounds;',c);
+ const c=vm.createContext({I18n:testLocale,});vm.runInContext(read('slicer-copies.js')+'\nthis.inspect=SlicerCopies.inspectBounds;',c);
  const box=(x,y=50,w=20)=>({min:[x,y,0],max:[x+w,y+20,10]});
  assert.equal(c.inspect([box(40),box(65)],{}).length,0);
  let issues=c.inspect([box(40),box(64)],{});assert.deepEqual(Array.from(issues,i=>i.index),[0,1]);assert.equal(issues[0].reasons[0].peer,1);assert.equal(issues[1].reasons[0].peer,0);
@@ -643,7 +712,7 @@ test('advanced draft recovery retains custom options, while old fine-layer draft
  w.fetch=async(url,req={})=>{if(url==='/api/slicing')return reply(200,{ok:true,ready:true,models:[model],tasks:[]});if(url==='/api/slicing/projects')return reply(200,{ok:true,projects:[],draft:{modelId:5,options,activeCopy:0,revision:2},draftRevision:2});if(url==='/api/slicing/draft'){state.calls.push({url,options:req});saved=JSON.parse(req.body);return reply(200,{ok:true,revision:3})}return original(url,req)};
  $('[data-page="slicer"]').click();await settle();$('#draftRecover').click();await settle();assert.equal($('#sliceWalls').value,'3');assert.equal($('#sliceSupportType').value,'normal');assert.equal($('#sliceSupportAngle').value,'45');assert.equal($('#sliceProcessPreset').value,'custom');$('#sliceProcessReset').click();$('#sliceUndo').click();assert.equal($('#sliceTopThickness').value,'1.4');
  const infill=$('#sliceInfill');infill.value='25';infill.dispatchEvent(new w.Event('input',{bubbles:true}));$('#draftSaveNow').click();await settle();assert.deepEqual(saved.options.advanced,options.advanced);assert.equal(saved.options.layer,.16);
- const c=vm.createContext({});vm.runInContext(read('slicer-process.js')+'\nthis.process=SlicerProcess;',c);assert.equal(c.process.effective({layer:.12}).bottomThickness,.36);assert.equal(c.process.effective({layer:.16}).bottomThickness,.48);
+ const c=vm.createContext({I18n:testLocale,});vm.runInContext(read('slicer-process.js')+'\nthis.process=SlicerProcess;',c);assert.equal(c.process.effective({layer:.12}).bottomThickness,.36);assert.equal(c.process.effective({layer:.16}).bottomThickness,.48);
 });
 
 test('workbench undo and redo restore copies and settings, invalidate results and never write tasks',async t=>{
@@ -664,7 +733,7 @@ test('path preview is read-only, layer changes discard stale responses, and clos
 });
 
 test('edit history groups input, keeps immutable snapshots, clears redo and bounds history',()=>{
- const c=vm.createContext({});vm.runInContext(read('slicer-history.js')+'\nthis.h=SlicerHistory.create(2)',c);const h=c.h;
+ const c=vm.createContext({I18n:testLocale,});vm.runInContext(read('slicer-history.js')+'\nthis.h=SlicerHistory.create(2)',c);const h=c.h;
  h.reset({x:0});h.record({x:1},'drag');h.record({x:2},'drag');assert.equal(h.undo().x,0);assert.equal(h.redo().x,2);h.end();h.record({x:3});h.record({x:4});h.record({x:5});assert.equal(h.undo().x,4);assert.equal(h.undo().x,3);assert.equal(h.undo(),null);h.record({x:8});assert.equal(h.canRedo,false);
 });
 
@@ -1180,7 +1249,7 @@ test('late email status response cannot replace a different dialog',async t=>{
 
 
 test('per-printer timing uses fresh remaining time, keeps queue order, and never invents duration',()=>{
- const c=vm.createContext({});vm.runInContext(read('workspace-model.js')+'\nglobalThis.ws=Workspace;',c);const ws=c.ws;
+ const c=vm.createContext({I18n:testLocale,});vm.runInContext(read('workspace-model.js')+'\nglobalThis.ws=Workspace;',c);const ws=c.ws;
  const now=Date.UTC(2026,9,23,2,0),p={id:1,enabled:true,connected:true,updated:now/1000,state:'printing',remaining:'20 分钟'};
  const data={serverTime:now,printers:[p,{...p,id:2,state:'idle'}],jobs:[{id:1,printer:1,state:'printing',estimate:150,order:1},{id:2,printer:1,state:'queued',estimate:30,order:2},{id:3,printer:1,state:'queued',estimate:40,order:3},{id:4,printer:2,state:'queued',estimate:15,order:4}]};
  let q=ws.queue(data,1);assert.equal(q.rows[0].startAt,now+20*60000);assert.equal(q.rows[0].endAt,now+50*60000);assert.equal(q.rows[1].endAt,now+90*60000);assert.equal(ws.queue(data,2).rows[0].start,0);
