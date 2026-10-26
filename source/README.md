@@ -37,3 +37,5 @@ python3 tools/make-source.py
 The explicit allowlist builds web/source/layerhub-source.tar.gz, including vendor/ but excluding runtime data, node_modules and the archive itself. A complete distribution already contains it and the license files. Modified hosted versions must update this download and the version shown by web/source-offer.html. The source/license page is accessible from the footer and personal account.
 
 Interface languages and translator workflow: [I18N.md](I18N.md). Compile/check catalog changes with `node qa/build-locales.cjs` and `node qa/build-locales.cjs --check` after installing the test dependencies.
+
+Deployment checks / 部署自检：see [Diagnostics / 系统诊断](../DIAGNOSTICS.md). Use `--doctor` before startup; directory write probes require `--probe-write`.

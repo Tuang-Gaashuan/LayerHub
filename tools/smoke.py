@@ -39,6 +39,9 @@ with tempfile.TemporaryDirectory(prefix='layerhub-fresh-smoke-') as temp:
   csrf=api('/api/login',{'Username':credentials['username'],'Password':credentials['password']})['csrf']
   w=api('/api/workspace');assert w['user']['owner'] and not w['jobs'] and not w['printers'] and not w['capabilities']['printStart'] and w['capabilities']['teamProjects']
   assert api('/api/team-projects')['projects']==[] and api('/api/account/sessions')['total']==1
+  diagnostics=api('/api/diagnostics');assert diagnostics['schema']==1 and diagnostics['mode']=='runtime'
+  assert any(c['id']=='database' and c['status']=='ok' for c in diagnostics['checks'])
+  assert str(data) not in json.dumps(diagnostics)
   assert api('/api/account/language')['language']=='en'
   assert api('/api/account/language',{'language':'zh-CN'})['ok']
   assert api('/api/account/language')['language']=='zh-CN'
@@ -52,6 +55,6 @@ with tempfile.TemporaryDirectory(prefix='layerhub-fresh-smoke-') as temp:
   csrf=api('/api/login',{'Username':credentials['username'],'Password':credentials['password']})['csrf'];assert len(api('/api/workspace')['members'])==2
   assert api('/api/account/language')['language']=='zh-CN'
   api('/api/logout',{})
-  result={'fresh_workspace':True,'offline_default':True,'print_start_off':True,'random_owner_created':True,'private_paths_denied':True,'source_offer_available':True,'restart_preserves_accounts':True,'english_errors':True,'browser_language_initializes_new_account':True,'explicit_account_language_survives_restart':True,'real_devices_contacted':0,'mail_sent':0,'status':'passed'}
+  result={'fresh_workspace':True,'offline_default':True,'print_start_off':True,'random_owner_created':True,'private_paths_denied':True,'source_offer_available':True,'restart_preserves_accounts':True,'english_errors':True,'browser_language_initializes_new_account':True,'explicit_account_language_survives_restart':True,'runtime_diagnostics':'passed','real_devices_contacted':0,'mail_sent':0,'status':'passed'}
   a.report.parent.mkdir(parents=True,exist_ok=True);a.report.write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8');print(json.dumps(result))
  finally:stop()

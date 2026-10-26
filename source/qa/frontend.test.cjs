@@ -14,6 +14,43 @@ const reply=(status,value)=>({status,ok:status>=200&&status<300,json:async()=>va
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function settle(){for(let i=0;i<8;i++)await tick()}
 
+function diagnosticFixture(){return {ok:true,schema:1,version:'0.3.0-alpha',platform:'linux/amd64',checkedAt:Date.now(),mode:'runtime',privateToken:'NEVER-EXPORT-THIS',checks:[{id:'printer',group:'printers',status:'ok',label:'打印机',detail:'已有连接与遥测新鲜；不等于所有控制或打印均获授权。',printerId:1,observedAt:Date.now(),ip:'NEVER-EXPORT-IP',serial:'NEVER-EXPORT-SERIAL'},{id:'data_directory',group:'storage',status:'unknown',label:'数据目录',detail:'目录存在；没有执行写入测试。',fix:'可由服务账户运行 --doctor --probe-write 检查临时文件读写。'}]}}
+test('diagnostics separate the gateway and application, export only safe fields and never write',async t=>{
+ const a=await app(t),{$,w,state}=a,base=w.fetch;
+ w.fetch=(url,o)=>url==='/api/diagnostics'?(state.calls.push({url,options:o}),Promise.resolve(reply(200,diagnosticFixture()))):url==='/gateway-healthz'?(state.calls.push({url,options:o}),Promise.resolve(reply(200,{ok:true,role:'layerhub-gateway',schema:1}))):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();assert.match($('#diagnosticChain').textContent,/NAS 业务服务/);assert.match($('#diagnosticChain').textContent,/同源网关独立健康标记/);
+ assert.equal($('#diagnosticExport').disabled,false);const report=w.testing.Diagnostics.exportReport(),raw=JSON.stringify(report);
+ assert.equal(report.gatewayMarker,'ok');assert.equal(report.stale,false);assert.doesNotMatch(raw,/NEVER-EXPORT|localhost|csrf/);
+ assert.equal(writes(a).length,0);const root=$('#diagnosticsRoot');await stateTick(a,3000);assert.equal($('#diagnosticsRoot'),root);assert.equal(state.calls.filter(c=>c.url==='/api/diagnostics').length,1);
+ const now=w.Date.now;w.Date.now=()=>now()+61000;w.testing.Remote.paintConnection();assert.match($('#diagnosticSummary').textContent,/已过期/);assert.equal($('#diagnosticChecks .diagnostic-status.ok'),null);assert.equal(w.testing.Diagnostics.exportReport().stale,true);
+});
+test('gateway success with NAS failure stays distinct, and failed checks can be exported without raw errors',async t=>{
+ const a=await app(t),{$,w}=a,base=w.fetch;
+ w.fetch=(url,o)=>url==='/api/diagnostics'?Promise.resolve(reply(503,{ok:false,error:'PRIVATE-ENDPOINT-ERROR'})):url==='/gateway-healthz'?Promise.resolve(reply(200,{ok:true,role:'layerhub-gateway',schema:1})):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();assert.match($('#diagnosticChain').textContent,/云端可达，业务通道未确认/);assert.equal($('#diagnosticExport').disabled,false);
+ const raw=JSON.stringify(w.testing.Diagnostics.exportReport());assert.doesNotMatch(raw,/PRIVATE-ENDPOINT/);assert.match(raw,/"failure":true/);assert.match(raw,/"report":null/);assert.equal(writes(a).length,0);
+});
+test('direct access is not falsely classified as a cloud outage and English checks translate remedies',async t=>{
+ const a=await app(t,{language:'en'}),{$,w}=a,base=w.fetch;
+ w.fetch=(url,o)=>url==='/api/diagnostics'?Promise.resolve(reply(200,diagnosticFixture())):url==='/gateway-healthz'?Promise.resolve(reply(404,{ok:false})):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();assert.match($('#diagnosticChain').textContent,/direct local connection/);assert.match($('#diagnosticChecks').textContent,/Write access was not tested/);assert.doesNotMatch($('#pageContent').textContent,/[\u3400-\u9fff]/u);
+ assert.equal(w.testing.Diagnostics.exportReport().gatewayMarker,'unknown');assert.equal(writes(a).length,0);
+});
+test('late diagnostic responses cannot replace a different page, and members cannot open diagnostics',async t=>{
+ const a=await app(t),{$,w,state}=a,base=w.fetch;let finish;
+ w.fetch=(url,o)=>url==='/api/diagnostics'?new Promise(resolve=>{finish=()=>resolve(reply(200,diagnosticFixture()))}):url==='/gateway-healthz'?Promise.resolve(reply(404,{ok:false})):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();$('[data-page="board"]').click();finish();await settle();assert.equal($('#diagnosticsRoot'),null);
+ state.snapshot.user.admin=false;state.snapshot.user.owner=false;await a.Remote.refresh();assert.equal($('[data-page="diagnostics"]').hidden,true);$('[data-page="diagnostics"]').click();assert.equal($('#diagnosticsRoot'),null);assert.match($('#toast').textContent,/系统诊断仅对管理员开放/);assert.equal(writes(a).length,0);
+});
+async function stateTick(a,ms){await a.intervals.find(v=>v.ms===ms).fn();await settle()}
+
+test('diagnostics keep stable DOM between freshness changes and clear immediately when administrator access is lost',async t=>{
+ const a=await app(t),{$,w,state}=a,base=w.fetch;
+ w.fetch=(url,o)=>url==='/api/diagnostics'?Promise.resolve(reply(200,diagnosticFixture())):url==='/gateway-healthz'?Promise.resolve(reply(404,{ok:false})):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();const row=$('.diagnostic-check');w.testing.Remote.paintConnection();assert.equal($('.diagnostic-check'),row);
+ state.snapshot.user.admin=false;state.snapshot.user.owner=false;await a.Remote.refresh({renderPage:false});await settle();assert.equal($('#diagnosticsRoot'),null);assert.equal(w.testing.Diagnostics.exportReport(),null);assert.equal(writes(a).length,0);
+});
+
 test('English navigation, account and material pages preserve user-created names',async t=>{
  const a=await app(t,{language:'en'}),{w,$,state}=a;
  assert.equal(w.document.documentElement.lang,'en');assert.equal(w.I18n.locale(),'en-US');
@@ -305,7 +342,7 @@ async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewe
  const scripts=[...w.document.querySelectorAll('script[src]')].map(s=>read(s.getAttribute('src').replace('./','')));
  if(viewer)w.testViewer=viewer;
  const source=scripts.join('\n');
- w.eval((viewer?source.replace("import('./slicer-viewer.js')","Promise.resolve({createViewer:(host,callbacks)=>{window.testViewer.callbacks=callbacks;return window.testViewer}})"):source)+'\nwindow.testing={Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,ToolpathUI,get workbench(){return SlicerWorkbench.options()},get data(){return data}};');
+ w.eval((viewer?source.replace("import('./slicer-viewer.js')","Promise.resolve({createViewer:(host,callbacks)=>{window.testViewer.callbacks=callbacks;return window.testViewer}})"):source)+'\nwindow.testing={Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,ToolpathUI,get workbench(){return SlicerWorkbench.options()},get data(){return data}};');
  await settle();assert.equal(w.testing.Remote.ready(),true);
  return {w,...w.testing,state,intervals,$:selector=>w.document.querySelector(selector)};
 }

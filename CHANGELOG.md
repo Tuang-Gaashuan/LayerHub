@@ -14,6 +14,14 @@ Initial independent-deployment alpha: three-tier roles and sessions, verified em
 
 Hardware evidence covers one tested X2D firmware/module configuration. Catalog artwork does not establish compatibility. Multicolor/multi-nozzle start, motion/filament controls, per-object support, mesh cutting and a desktop installer are outside this release's claims.
 
+## 0.3.0-alpha — Deployment diagnostics / 部署与连接诊断
+
+- Add local `--doctor` inspection before startup, bilingual/JSON output and opt-in temporary-file write probes. No workspace initialization, device connections, slicing or SMTP tests.
+- Add administrator-only System diagnostics with separate browser, independent gateway, NAS application and printer evidence; distinguish unknowns, optional components, stale telemetry and control authorization restrictions.
+- Add redacted report export, explicit freshness expiry and actionable bilingual remedies. Results are cleared on permission loss; checks never retry commands.
+- Add a standalone Nginx `/gateway-healthz` marker and bilingual diagnostic guidance.
+- 新增部署自检、管理员连接诊断、脱敏导出与独立网关标记；不会启动打印或发送测试邮件。
+
 ## 简体中文
 
 首次外部部署测试交付，基于已经验证的 Go/SQLite 版本整理。

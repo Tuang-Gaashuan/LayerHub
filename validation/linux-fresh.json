@@ -9,6 +9,7 @@
   "english_errors": true,
   "browser_language_initializes_new_account": true,
   "explicit_account_language_survives_restart": true,
+  "runtime_diagnostics": "passed",
   "real_devices_contacted": 0,
   "mail_sent": 0,
   "status": "passed"

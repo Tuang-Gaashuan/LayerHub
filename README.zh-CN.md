@@ -7,12 +7,12 @@
 准备模型，安排队列，了解每一台机器正在做什么。
 
 [![源码检查](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![版本](https://img.shields.io/badge/version-0.2.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.2.0-alpha)
+[![版本](https://img.shields.io/badge/version-0.3.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha)
 [![开源许可](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
 [English](README.md) · **简体中文**
 
-[下载软件](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.2.0-alpha) · [部署指导](01-部署指导-云服务器-NAS-打印机.md) · [验证记录](validation/README.md) · [反馈问题](https://github.com/Tuang-Gaashuan/LayerHub/issues)
+[下载软件](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha) · [部署指导](01-部署指导-云服务器-NAS-打印机.md) · [验证记录](validation/README.md) · [反馈问题](https://github.com/Tuang-Gaashuan/LayerHub/issues)
 
 </div>
 
@@ -20,7 +20,7 @@ LayerHub 是一个可自行部署的 **3D 打印协作网页应用**。它把模
 
 软件和数据运行在 NAS 或局域网小主机上，由它连接打印机；可选的云服务器通过受限主动隧道提供 HTTPS 入口。成员使用浏览器即可访问。
 
-**当前版本为 0.2.0-alpha，面向独立部署测试。** 软件已支持简体中文与 English。实机验证目前集中于一套 X2D 配置，接入设备前请先阅读[兼容性与当前边界](#兼容性与当前边界)。
+**当前版本为 0.3.0-alpha，面向独立部署测试。** 软件已支持简体中文与 English。实机验证目前集中于一套 X2D 配置，接入设备前请先阅读[兼容性与当前边界](#兼容性与当前边界)。
 
 [功能介绍](#它能做什么) · [打印流程](#从模型到打印) · [部署架构](#云服务器--nas--打印机) · [快速试用](#先在本地试用) · [文档导航](#文档导航)
 
@@ -42,6 +42,7 @@ LayerHub 是一个可自行部署的 **3D 打印协作网页应用**。它把模
 | **私有工程与团队分享** | 保存个人工程、草稿和工艺预设，明确发布带版本的团队快照；成员复制成自己的工程后独立编辑。 |
 | **设备控制台** | 查看新鲜遥测、进度和供料信息，使用受支持的暂停/继续/停止、温度、风扇、灯光控制，以及摄像头预览和拍照。具体能力取决于机型、固件和权限。 |
 | **邮件通知** | 成员自愿绑定并验证邮箱；任务里程碑通知对应任务所有者。设备完工即可通知，无需等人工取件或结算。 |
+| **部署与连接诊断** | 服务启动前使用 `--doctor` 本地自检，管理员页面分段查看浏览器、网关、NAS 与打印机，并导出脱敏报告和修复建议。 |
 | **账户与个性化** | 所有者/管理员/成员三级权限，个人会话管理、权限记录、所有者备份恢复，以及双语、字体和阅读偏好。 |
 
 ### 同一个东西，多打几份
@@ -101,23 +102,23 @@ flowchart LR
 
 ## 先在本地试用
 
-从 [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.2.0-alpha) 下载 **Windows amd64 ZIP** 或 **Linux amd64 TAR.GZ**，同时下载 `SHA256SUMS` 并核对校验值。第一次试用请解压到新的文件夹。
+从 [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha) 下载 **Windows amd64 ZIP** 或 **Linux amd64 TAR.GZ**，同时下载 `SHA256SUMS` 并核对校验值。第一次试用请解压到新的文件夹。
 
 ### Windows
 
 在解压后的目录运行 `start.cmd`，也可以使用 PowerShell：
 
 ```powershell
-Expand-Archive .\LayerHub-0.2.0-alpha-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.2.0-alpha
+Expand-Archive .\LayerHub-0.3.0-alpha-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.3.0-alpha
 .\start.cmd
 ```
 
 ### Linux
 
 ```sh
-tar -xzf LayerHub-0.2.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.2.0-alpha
+tar -xzf LayerHub-0.3.0-alpha-linux-amd64.tar.gz
+cd LayerHub-0.3.0-alpha
 sh start.sh
 ```
 
@@ -170,7 +171,7 @@ sh start.sh
 | 界面语言与邮件规则 | [语言设置](LANGUAGES.md#简体中文) | [Languages](LANGUAGES.md) |
 | 源码开发 | [源码说明](source/README.zh-CN.md) | [Source README](source/README.md) |
 
-还可以查看[切片引擎准备](deploy/slicer/README.md)、[可选邮件配置](deploy/mail/README.md)、[更新记录](CHANGELOG.md)和[已执行的验证记录](validation/README.md)。
+还可以查看[部署与连接诊断](DIAGNOSTICS.md)、[切片引擎准备](deploy/slicer/README.md)、[可选邮件配置](deploy/mail/README.md)、[更新记录](CHANGELOG.md)和[已执行的验证记录](validation/README.md)。
 
 ## 从源码构建
 
@@ -207,7 +208,7 @@ python tools/package.py
 
 ## 验证现状与参与测试
 
-0.2.0-alpha 已完成 **178 项前端/几何/语言测试**、Go 测试与 `vet`、Windows/Linux amd64 构建、全新隔离工作区启动/重启检查，以及英文浏览器验证。语言更新中的控制和邮件生成使用假设备、本地队列测试，与早先有人在场的 X2D 真机打印验收分别记录。Docker 仍只做静态检查；全新双主机安装仍需独立验收。
+0.3.0-alpha 已完成 **183 项前端/几何/语言测试**、Go 测试与 `vet`、Windows/Linux amd64 构建、全新隔离工作区启动/重启检查，以及英文浏览器验证。语言更新中的控制和邮件生成使用假设备、本地队列测试，与早先有人在场的 X2D 真机打印验收分别记录。Docker 仍只做静态检查；全新双主机安装仍需独立验收。
 
 欢迎按[验收表](02-外部验收与反馈.md)测试，在 [Issues](https://github.com/Tuang-Gaashuan/LayerHub/issues) 提供版本、环境、复现步骤及预期/实际结果。没有打印机时，把依赖硬件的步骤标记为未测试即可。反馈时使用脱敏片段，不要上传数据库、备份、访问码或私人模型集合。
 

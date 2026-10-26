@@ -35,6 +35,12 @@ server {
     proxy_buffering off;
     proxy_next_upstream off;
     proxy_intercept_errors off;
+    # This marker checks the gateway itself, even when the NAS tunnel is down.
+    location = /gateway-healthz {
+        default_type application/json;
+        add_header Cache-Control no-store always;
+        return 200 '{"ok":true,"role":"layerhub-gateway","schema":1}';
+    }
     location ^~ /internal/ { return 404; }
     location = /api/login {
         limit_req zone=layerhub_login burst=5 nodelay;

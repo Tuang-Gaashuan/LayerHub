@@ -76,6 +76,21 @@ func (s *Service) Handler() http.Handler {
 		}
 		var result any = map[string]any{"ok": true}
 		switch r.Method + " " + r.URL.Path {
+		case "GET /api/diagnostics":
+			var report DiagnosticReport
+			report, err = s.Diagnostics(r.Context(), u)
+			if err == nil {
+				if s.secureCookie(r) {
+					for i := range report.Checks {
+						if report.Checks[i].ID == "secure_cookie" {
+							report.Checks[i].Status = "ok"
+							report.Checks[i].Detail = "当前请求会采用 Secure Cookie；未读取或导出会话值。"
+							report.Checks[i].Fix = ""
+						}
+					}
+				}
+				result = LocalizeDiagnosticReport(report, requestLanguage(r.Header.Get("Accept-Language")))
+			}
 		case "GET /api/slicing":
 			result, err = s.sliceWorkspace(u)
 		case "GET /api/slicing/compare":

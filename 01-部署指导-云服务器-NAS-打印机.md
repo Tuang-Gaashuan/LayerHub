@@ -1,6 +1,6 @@
 # 部署指导：云服务器 → NAS → 打印机
 
-[English deployment guide](DEPLOYMENT.md) · 版本 0.2.0-alpha · 2026-10-26
+[English deployment guide](DEPLOYMENT.md) · 版本 0.3.0-alpha · 2026-10-27
 
 本文面向**全新独立部署**。示例域名、IP 和公钥都是占位值。不要复制开发者的运行配置，也不要在已有 LayerHub 安装上直接执行首次安装脚本。
 
@@ -53,9 +53,9 @@ sudo systemctl enable --now ssh
 从 GitHub Releases 下载 Linux amd64 包和 SHA256SUMS 到 NAS，在解压前校验。只下载 Linux 包时，先从清单筛选这一项：
 
 ```sh
-grep 'LayerHub-0.2.0-alpha-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.2.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.2.0-alpha
+grep 'LayerHub-0.3.0-alpha-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.3.0-alpha-linux-amd64.tar.gz
+cd LayerHub-0.3.0-alpha
 sudo sh deploy/nas/install.sh
 curl --noproxy '*' http://127.0.0.1:5181/healthz
 sudo systemctl status layerhub --no-pager
@@ -248,3 +248,5 @@ NAS 本机健康 → 个人电脑 SSH 预览 → NAS 出站隧道 → 云端回�
 每一步保留脱敏结果，不因为前一步成功就跳过后面的条件。具体表格见 [外部验收清单](02-外部验收与反馈.md)。
 
 参考：[OpenSSH PermitListen / MaxSessions](https://man.openbsd.org/sshd_config)、[OpenSSH 公钥选项](https://man.openbsd.org/sshd.8)、[Docker Debian 安装](https://docs.docker.com/engine/install/debian/)、[Bambu Studio 源码与许可](https://github.com/bambulab/BambuStudio)。
+
+Deployment checks / 部署自检：see [Diagnostics / 系统诊断](DIAGNOSTICS.md). Use `--doctor` before startup; directory write probes require `--probe-write`.

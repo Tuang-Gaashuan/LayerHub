@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "binary_cli_exercised": true,
+  "fixtures": "temporary files only",
+  "prestart_no_workspace_created": true,
+  "explicit_temp_probe_cleaned": true,
+  "sqlite_not_opened_or_changed": true,
+  "invalid_flags_exit_2": true,
+  "invalid_database_exit_1": true,
+  "chinese_json_output": true,
+  "private_configuration_omitted": true,
+  "service_started": false,
+  "real_printer_commands": 0,
+  "test_emails": 0
+}

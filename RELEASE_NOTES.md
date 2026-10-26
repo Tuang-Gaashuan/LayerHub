@@ -1,16 +1,16 @@
-# LayerHub 0.2.0-alpha · English interface / 英文界面支持
+# LayerHub 0.3.0-alpha · Deployment diagnostics / 部署与连接诊断
 
-This release adds English and Simplified Chinese throughout the application: sign-in, dashboard, printer queues, inventory, printer controls, security settings and slicing. Language is available before sign-in and in Personal account. Account preferences determine future verification and job/material/printer emails; independent NAS outage notices are bilingual.
+Inspect a new deployment before starting it with `layerhub --doctor`, optionally using `--json`, `--language=zh-CN` and the explicit `--probe-write` temporary-file test. The default inspection does not create a workspace, open SQLite, run an engine or make network connections.
 
-Model names, filenames and member data remain unchanged. A language change waits for the workbench draft save to be acknowledged before reloading. Failed or uncertain saves preserve the current page. Protocol keys, numerical controls and material IDs retain their existing behavior.
+Administrators now have a System diagnostics page. Browser network, the independent cloud gateway marker, the NAS application and existing printer telemetry are evaluated separately. Unknown or simulated status is not presented as validated hardware connectivity. Results expire, and existing authorization restrictions/alerts have specific guidance. Reports omit addresses, paths, credentials, names, filenames and raw errors, including when the NAS path fails.
 
-本版补齐软件中英文界面，覆盖登录、看板、队列、耗材、设备控制、安全设置与切片；账户语言用于后续邮件。语言切换前确认工作台草稿保存，失败时保留页面。文件名、用户内容、控制参数和耗材映射保持。
+新增启动前本地自检、管理员系统诊断和脱敏报告。浏览器、云网关、NAS 与打印机分段展示，过期或未知状态不会继续显示正常。检查不启动打印、不执行切片、不发送设备指令或测试邮件；目录写入测试需明确加 --probe-write。
 
+- [Diagnostics / 诊断说明](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/DIAGNOSTICS.md)
 - [English deployment](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/DEPLOYMENT.md)
-- [中文入口](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/README.zh-CN.md)
-- [Language settings / 语言设置](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/LANGUAGES.md)
+- [中文部署](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/01-部署指导-云服务器-NAS-打印机.md)
 - [Validation / 验证范围](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/validation/README.md)
 
-Download the Windows/Linux amd64 archive plus SHA256SUMS, or build the matching source. Original project code and artwork are AGPL-3.0-only; third-party notices are retained. Packages contain no production credentials, private data, slicer engine binary or networking plugin. New installations stay offline with print start disabled.
+Go tests/vet, Windows/Linux builds and 183 frontend/geometry/language tests are covered by release validation. Existing printer compatibility boundaries remain: real-print evidence is concentrated on the attended X2D single-color PETG Basic setup. Optional components being discoverable does not prove actual slicing, video, SMTP delivery or control authorization. Docker remains statically checked only.
 
-Go tests/vet and Windows/Linux builds passed; 178 frontend/geometry/language tests passed. English hardware controls were exercised against fake devices only. The existing attended X2D print scope is unchanged. Docker remains statically checked only; independent fresh deployment acceptance is still required.
+Download the platform package and SHA256SUMS, or build matching source. Original project code and artwork are AGPL-3.0-only; third-party licenses are retained. New installations default to offline mode with print start disabled. Existing release assets remain unchanged.

@@ -16,6 +16,7 @@
     <button data-page="team" class="nav-item"><span data-icon="users"></span>团队成员</button>
   </nav>
   <div class="sidebar-bottom">
+    <button data-page="diagnostics" class="nav-item admin-only" hidden><span data-icon="activity"></span>系统诊断</button>
     <div class="team-card"><span class="team-card-icon" data-icon="sparkles"></span><strong>好创意，一起实现</strong><p>共享设备，让创造更进一步。</p><button id="inviteBtn">邀请伙伴 <span data-icon="arrow-up-right"></span></button></div>
     <button class="nav-item" id="guideBtn"><span data-icon="help"></span>使用指南<span data-icon="arrow-up-right" class="end-icon"></span></button>
     <div class="sidebar-user"><span class="avatar avatar-blue">G</span><span><strong id="userName">访客</strong><small id="userRole">尚未登录</small></span><button class="icon-button" id="accountBtn" aria-label="账户设置" data-icon="settings"></button></div>
@@ -39,6 +40,8 @@
 <link rel="stylesheet" href="./roles.css">
 <script src="./roles.js"></script>
 <script src="./remote.js"></script>
+<link rel="stylesheet" href="./diagnostics.css">
+<script src="./diagnostics.js"></script>
 <link rel="stylesheet" href="./account-security.css">
 <script src="./account-security.js"></script>
 <link rel="stylesheet" href="./print-flow.css">

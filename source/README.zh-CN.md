@@ -51,3 +51,5 @@ python3 tools/make-source.py
 发布部署流程见根目录中英文指南。完整仓库保留父级目录结构，根目录构建工具会同时生成 Linux/Windows 程序和对应源码。没有预置生产服务器地址、账号或凭据。
 
 界面支持简体中文与 English，登录页和个人账户均可切换。语言包开发流程见 [I18N.md](I18N.md)。修改文案后执行 `node qa/build-locales.cjs`，CI 使用 `--check` 检查漏翻和生成文件。
+
+Deployment checks / 部署自检：see [Diagnostics / 系统诊断](../DIAGNOSTICS.md). Use `--doctor` before startup; directory write probes require `--probe-write`.

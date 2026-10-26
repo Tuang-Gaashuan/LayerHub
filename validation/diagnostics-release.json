@@ -1,0 +1,65 @@
+{
+  "version": "0.3.0-alpha",
+  "date": "2026-10-27",
+  "frontend_geometry_language_tests": 183,
+  "go_tests": "passed",
+  "go_vet": "passed",
+  "windows_linux_amd64_builds": "passed",
+  "local_doctor": {
+    "windows": "passed",
+    "linux": "passed",
+    "workspace_initialization": false,
+    "sqlite_open_or_repair": false,
+    "network_connections": false,
+    "explicit_temp_probe": "passed_and_cleaned",
+    "redaction": "passed"
+  },
+  "runtime_api": {
+    "current_admin_required": true,
+    "members_and_anonymous_denied": true,
+    "writes_rejected": true,
+    "simulated_and_stale_or_future_telemetry": "not_counted_as_live",
+    "authorization_and_alerts": "separate_checks",
+    "printer_commands": 0,
+    "test_emails": 0,
+    "secure_cookie_policy": "current_request_with_existing_loopback_trust_only",
+    "untrusted_forwarded_headers": "not_accepted"
+  },
+  "browser": {
+    "chinese": "verified",
+    "english": "verified",
+    "redacted_download": "verified",
+    "narrow_layout": "verified",
+    "stable_dom_and_role_loss": "tested",
+    "result_expiry": "verified"
+  },
+  "isolated_gateway": {
+    "same_host_temporary_listeners": "passed",
+    "restricted_ssh": "passed",
+    "tls_verified": true,
+    "private_path_denial": "passed",
+    "marker_survives_tunnel_loss": true
+  },
+  "production_gateway": "marker_deployed_tls_and_access_rules_preserved",
+  "production_nas": {
+    "state": "deployed",
+    "database_query": "passed",
+    "slicer_files": "available_no_execution",
+    "video_executable": "found_no_camera_probe",
+    "mail_worker": "fresh_ready_no_delivery_test",
+    "printer_telemetry": "fresh_live",
+    "redaction": "verified",
+    "https_assets": "sha256_verified",
+    "anonymous_diagnostics": "denied",
+    "backup_created": true,
+    "print_start_setting": "preserved",
+    "printer_commands_sent": 0,
+    "test_emails_sent": 0,
+    "public_https_cookie_policy": "verified_secure",
+    "configuration_notices": [
+      "print_start_intentionally_enabled",
+      "directory_write_probe_not_requested"
+    ]
+  },
+  "docker_runtime": "not_executed"
+}

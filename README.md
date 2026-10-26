@@ -7,12 +7,12 @@
 Prepare models. Coordinate the queue. Know what is printing.
 
 [![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![Version](https://img.shields.io/badge/version-0.2.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.2.0-alpha)
+[![Version](https://img.shields.io/badge/version-0.3.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
 **English** · [简体中文](README.zh-CN.md)
 
-[Download](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.2.0-alpha) · [Deployment](DEPLOYMENT.md) · [Validation](validation/README.md) · [Feedback](https://github.com/Tuang-Gaashuan/LayerHub/issues)
+[Download](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha) · [Deployment](DEPLOYMENT.md) · [Validation](validation/README.md) · [Feedback](https://github.com/Tuang-Gaashuan/LayerHub/issues)
 
 </div>
 
@@ -20,7 +20,7 @@ LayerHub is a **self-hosted web application for teams sharing 3D printers**. It 
 
 The application and data live on your NAS or a small LAN computer. An optional cloud gateway gives your team HTTPS access through a restricted outbound tunnel. Your NAS connects to the printers locally; members use a browser.
 
-**Current release: 0.2.0-alpha, for independent deployment testing.** English and Simplified Chinese are available in the application. Hardware validation currently focuses on one X2D configuration; read [compatibility and scope](#compatibility-and-scope) before connecting a printer.
+**Current release: 0.3.0-alpha, for independent deployment testing.** English and Simplified Chinese are available in the application. Hardware validation currently focuses on one X2D configuration; read [compatibility and scope](#compatibility-and-scope) before connecting a printer.
 
 [Features](#what-you-can-do) · [Print workflow](#from-model-to-print) · [Architecture](#cloud--nas--printer) · [Quick start](#try-it-locally) · [Documentation](#documentation)
 
@@ -42,6 +42,7 @@ The application and data live on your NAS or a small LAN computer. An optional c
 | **Private and shared projects** | Save personal projects and drafts, reuse process presets, and explicitly publish versioned project snapshots to the team. Members copy snapshots into their own editable projects. |
 | **Printer console** | Inspect fresh telemetry, progress and supply information; use supported pause/resume/stop, temperature, fan and light controls, camera preview and snapshots. Availability depends on model, firmware and permissions. |
 | **Email notifications** | Members optionally bind and verify an email address. Job milestones go to the job owner; device completion can notify them before collection or material settlement. |
+| **Deployment diagnostics** | Run local `--doctor` checks without starting the service, or inspect browser/gateway/NAS/printer segments in the administrator page. Export redacted results with actionable guidance. |
 | **Accounts and preferences** | Workspace owner, administrator and member roles; personal session management, role history, owner-only backups, two interface languages and configurable reading preferences. |
 
 ### A workbench for repeated prints
@@ -101,23 +102,23 @@ For a local-only trial, use the application without a cloud gateway. A full depl
 
 ## Try it locally
 
-Download the **Windows amd64 ZIP** or **Linux amd64 TAR.GZ**, together with `SHA256SUMS`, from [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.2.0-alpha). Verify the checksum and extract the archive. Use a fresh directory for your first trial.
+Download the **Windows amd64 ZIP** or **Linux amd64 TAR.GZ**, together with `SHA256SUMS`, from [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha). Verify the checksum and extract the archive. Use a fresh directory for your first trial.
 
 ### Windows
 
 Run `start.cmd` in the extracted folder, or use PowerShell:
 
 ```powershell
-Expand-Archive .\LayerHub-0.2.0-alpha-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.2.0-alpha
+Expand-Archive .\LayerHub-0.3.0-alpha-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.3.0-alpha
 .\start.cmd
 ```
 
 ### Linux
 
 ```sh
-tar -xzf LayerHub-0.2.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.2.0-alpha
+tar -xzf LayerHub-0.3.0-alpha-linux-amd64.tar.gz
+cd LayerHub-0.3.0-alpha
 sh start.sh
 ```
 
@@ -170,7 +171,7 @@ Each new installation generates its own owner password and data encryption key. 
 | Interface languages and email behavior | [Languages](LANGUAGES.md) | [语言设置](LANGUAGES.md#简体中文) |
 | Source development | [Source README](source/README.md) | [源码说明](source/README.zh-CN.md) |
 
-Also see [slicer preparation](deploy/slicer/README.md), [optional email setup](deploy/mail/README.md), [release notes](CHANGELOG.md) and the [executed validation record](validation/README.md).
+Also see [deployment diagnostics](DIAGNOSTICS.md), [slicer preparation](deploy/slicer/README.md), [optional email setup](deploy/mail/README.md), [release notes](CHANGELOG.md) and the [executed validation record](validation/README.md).
 
 ## Build from source
 
@@ -207,7 +208,7 @@ The execution-policy flag applies only to that PowerShell process. Build outputs
 
 ## Validation and feedback
 
-The 0.2.0-alpha checks include **178 frontend/geometry/language tests**, Go tests and `vet`, Windows/Linux amd64 builds, disposable fresh-workspace and restart checks, and English browser verification. Language-update controls and email generation used fake devices/local queues; these are separate from the earlier attended X2D real-print validation. Docker remains static-only, and a fresh two-host installation still needs independent acceptance.
+The 0.3.0-alpha checks include **183 frontend/geometry/language tests**, Go tests and `vet`, Windows/Linux amd64 builds, disposable fresh-workspace and restart checks, and English browser verification. Language-update controls and email generation used fake devices/local queues; these are separate from the earlier attended X2D real-print validation. Docker remains static-only, and a fresh two-host installation still needs independent acceptance.
 
 To help test, follow [Testing](TESTING.md) and open an [issue](https://github.com/Tuang-Gaashuan/LayerHub/issues) with your version, environment, reproduction steps and expected/actual behavior. Mark hardware-dependent steps as untested when you have no printer. Share redacted excerpts rather than a database, backup, access code or personal model archive.
 
