@@ -2,7 +2,7 @@
 
 ## English
 
-`v0.1.0-beta` starts the new long-term mainline. The version number resets deliberately; it is the streamlined successor to `v0.4.0-alpha`, not a return to the original alpha implementation. Future feature work targets Beta. Alpha tags and their source/releases remain available for historical recovery.
+`v0.1.0-beta` starts the new long-term mainline. The version number resets deliberately; it is the streamlined successor to `v0.4.0-alpha`, not a return to the original alpha implementation. Most ongoing team/printer feature refinement targets Beta on `main`. Alpha's experimental built-in workbench will continue gradually on the independent `alpha` branch. Version tags and their source/releases remain fixed. See the [channel comparison](CHANNELS.md).
 
 ### What is removed
 
@@ -28,7 +28,7 @@ For rollback, preserve all new Beta work first and use the matching data snapsho
 
 ## 简体中文
 
-`v0.1.0-beta` 是以后持续维护的新主线，版本号有意从 0.1.0 重新开始，是 `v0.4.0-alpha` 的精简后继版本，不代表退回最初的 Alpha。Alpha 标签、源码与发布包保留，用于历史恢复。
+`v0.1.0-beta` 是以后持续维护的新主线，版本号有意从 0.1.0 重新开始，是 `v0.4.0-alpha` 的精简后继版本，不代表退回最初的 Alpha。团队与打印管理功能主要在 `main` 的 Beta 上完善；Alpha 内置工作台在独立 `alpha` 分支缓慢推进。已发布的版本标签、源码与发布包保持不变。详见[版本区别与维护政策](CHANNELS.md#简体中文)。
 
 移除：模型工作台、STL/工程几何导入、三维编辑、工艺预设、在线切片、共享模型快照，以及对应前端文件、Three.js、后端接口和后台切片代码。旧模型/工程接口返回 410，旧工作台书签回到看板。NAS 不再依赖切片引擎；旧 `LAYERHUB_SLICER_*` 配置被忽略，Beta 不会启动引擎。
 

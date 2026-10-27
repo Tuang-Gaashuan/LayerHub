@@ -5,14 +5,24 @@
 **English** · [简体中文](README.zh-CN.md)
 
 [![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![Version](https://img.shields.io/badge/version-0.1.0--beta-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta)
+[![Beta recommended](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta)
+[![Alpha experimental workbench](https://img.shields.io/badge/Alpha-experimental_workbench-d48a21)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
-[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Alpha → Beta](BETA_MIGRATION.md) · [Validation](validation/README.md)
+[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) · [Download Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Compare channels](CHANNELS.md) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Validation](validation/README.md)
 
 LayerHub is a self-hosted workspace for teams sharing 3D printers. Prepare and slice in **Bambu Studio**, then use LayerHub to assign a printer, confirm real spools, coordinate its queue, monitor progress and receive notifications.
 
-**Beta is the ongoing mainline.** This first release is `v0.1.0-beta`. Model workbench, geometry import, online slicing, 3D editing and shared model projects have been removed from the UI, APIs and runtime. Existing alpha releases remain available through their tags; historical workspace data is preserved for backup and rollback. See the [migration guide](BETA_MIGRATION.md).
+**Recommended setup: LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio).** Prepare and slice on your computer, then upload the sliced 3MF for team scheduling, printer control and notifications.
+
+## Beta and Alpha
+
+| Channel | Focus | Maintenance | Version tag | Download |
+|---|---|---|---|---|
+| **Beta · recommended** | Team printer management; upload already-sliced 3MF | Primary development on [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [Beta release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) |
+| **Alpha · experimental workbench** | Team printing with an integrated model workbench and online slicing | Gradual workbench development on [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
+
+Beta is the mainline for ongoing feature refinement. Its model workbench, geometry import, online slicing, 3D editing and shared model projects have been removed from the UI, APIs and runtime. Alpha retains those experimental features and will progress more slowly on its own branch. Both channels currently have prerelease status; their version numbers advance independently. Read the [full comparison and maintenance policy](CHANNELS.md) or the [Alpha → Beta migration guide](BETA_MIGRATION.md).
 
 ## What Beta includes
 

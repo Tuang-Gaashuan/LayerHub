@@ -4,11 +4,23 @@
 
 [English](README.md) · **简体中文**
 
-[下载 Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) · [部署指南](01-部署指导-云服务器-NAS-打印机.md) · [文件要求](IMPORTING.md) · [Alpha → Beta](BETA_MIGRATION.md) · [验证记录](validation/README.md)
+[![Beta 推荐使用](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta)
+[![Alpha 实验性工作台](https://img.shields.io/badge/Alpha-experimental_workbench-d48a21)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
+
+[下载 Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) · [下载 Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [版本区别](CHANNELS.md#简体中文) · [部署指南](01-部署指导-云服务器-NAS-打印机.md) · [文件要求](IMPORTING.md) · [验证记录](validation/README.md)
 
 LayerHub 是面向多人共用 3D 打印机的自部署网页应用。成员使用 **Bambu Studio 完成模型准备与切片**，再通过 LayerHub 分配设备、确认实际料卷、协调单机队列、查看进度并接收通知。
 
-**以后以 Beta 为持续更新主线，首版为 `v0.1.0-beta`。** 模型工作台、几何导入、在线切片、三维编辑和共享模型工程已从界面、接口及运行代码中移除。旧 Alpha 版本保留在历史标签中；已有工作区中的历史工程数据保留，随备份保存，不自动删除。迁移请阅读 [Beta 迁移说明](BETA_MIGRATION.md)。
+**推荐组合：LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio)。** 在电脑上完成模型准备与切片，再将已切片 3MF 上传到 LayerHub，进行团队排队、设备控制和通知。
+
+## Beta 与 Alpha 两条路线
+
+| 版本 | 定位 | 后续维护 | 版本标签 | 下载 |
+|---|---|---|---|---|
+| **Beta · 推荐使用** | 团队打印管理，只上传已切片 3MF | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) 为主要功能完善方向 | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [Beta 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) |
+| **Alpha · 实验性工作台** | 团队打印管理，含内置模型工作台与在线切片 | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) 保留工作台，缓慢推进 | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
+
+Beta 持续优先完善团队协作、队列、耗材、控制与通知，已移除模型工作台及相应编辑、几何导入、在线切片和共享模型工程代码。Alpha 保留这些实验功能，在独立分支继续逐步改进。两个版本目前都属于预发布，分别维护版本号。详见[版本区别与维护政策](CHANNELS.md#简体中文)；已有工作区的数据保留及切换步骤见 [Beta 迁移说明](BETA_MIGRATION.md)。
 
 ## Beta 保留的能力
 
