@@ -219,10 +219,6 @@ func Open(cfg Config, device Device) (*Service, error) {
 		s.Close()
 		return nil, err
 	}
-	if err = s.initSlicing(); err != nil {
-		s.Close()
-		return nil, err
-	}
 	if err = s.initMail(); err != nil {
 		s.Close()
 		return nil, err

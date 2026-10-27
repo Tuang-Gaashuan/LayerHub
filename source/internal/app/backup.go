@@ -433,12 +433,6 @@ func (s *Service) confirmRestore(u User, ticket, password string) error {
 		return err
 	}
 	var active int
-	if err := s.DB.QueryRow("SELECT COUNT(*) FROM slice_tasks WHERE state IN ('queued','running')").Scan(&active); err != nil {
-		return err
-	}
-	if active > 0 {
-		return conflict("请先取消或等待切片任务完成，再恢复备份")
-	}
 	if err := s.DB.QueryRow("SELECT COUNT(*) FROM jobs WHERE state IN ('uploading','starting','printing','paused','stopped','checking')").Scan(&active); err != nil {
 		return err
 	}

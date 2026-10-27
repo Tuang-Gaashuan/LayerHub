@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 type ImportReference struct {
@@ -47,7 +48,7 @@ func importReference(raw []byte) *ImportReference {
 			if len(out) == 32 {
 				break
 			}
-			if s = importLabel(s, "", 100); s != "" {
+			if s = referenceLabel(s); s != "" {
 				out = append(out, s)
 			}
 		}
@@ -67,85 +68,77 @@ func importReference(raw []byte) *ImportReference {
 	return r
 }
 
-type fileGeometryReview struct {
-	Available bool                `json:"available"`
-	Reason    string              `json:"reason,omitempty"`
-	Review    *modelImportSummary `json:"review,omitempty"`
-}
 type fileSliceReview struct {
 	Available bool       `json:"available"`
-	Reason    string     `json:"reason,omitempty"`
-	Info      *SliceInfo `json:"info,omitempty"`
+	Info      *SliceInfo `json:"info"`
 }
 type fileReview struct {
-	Schema    int                `json:"schema"`
-	SHA256    string             `json:"sha256"`
-	Bytes     int64              `json:"bytes"`
-	Geometry  fileGeometryReview `json:"geometry"`
-	Sliced    fileSliceReview    `json:"sliced"`
-	Reference *ImportReference   `json:"reference,omitempty"`
+	Schema    int              `json:"schema"`
+	Kind      string           `json:"kind"`
+	SHA256    string           `json:"sha256"`
+	Bytes     int64            `json:"bytes"`
+	Sliced    fileSliceReview  `json:"sliced"`
+	Reference *ImportReference `json:"reference,omitempty"`
 }
 
+func referenceLabel(value string) string {
+	value = strings.TrimSpace(strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.In(r, unicode.Cf) {
+			return -1
+		}
+		return r
+	}, value))
+	chars := []rune(value)
+	if len(chars) > 100 {
+		value = string(chars[:100])
+	}
+	return value
+}
 func inspectPrintFile(ctx context.Context, filename, digest string, size int64) (fileReview, error) {
-	out := fileReview{Schema: 1, SHA256: digest, Bytes: size}
-	z, e := zip.OpenReader(filename)
-	if e != nil {
-		return out, invalid("无法识别 3MF 压缩包")
+	out := fileReview{Schema: 2, Kind: "sliced-3mf", SHA256: digest, Bytes: size}
+	if err := ctx.Err(); err != nil {
+		return out, err
+	}
+	info, err := inspectSlice(filename)
+	if err != nil {
+		return out, invalid("Beta 仅接受已切片的 3MF 文件，请先在 Bambu Studio 完成切片并导出切片盘文件")
+	}
+	out.Sliced = fileSliceReview{Available: true, Info: &info}
+	z, err := zip.OpenReader(filename)
+	if err != nil {
+		return out, err
 	}
 	defer z.Close()
-	if len(z.File) > 10000 {
-		return out, invalid("3MF 文件条目过多")
-	}
-	seen := map[string]bool{}
 	for _, f := range z.File {
-		if e = ctx.Err(); e != nil {
-			return out, e
-		}
-		name := strings.TrimSuffix(f.Name, "/")
-		key := strings.ToLower(name)
-		if !mfPartName(name) || seen[key] || f.Mode()&os.ModeSymlink != 0 || !f.Mode().IsRegular() && !f.FileInfo().IsDir() {
-			return out, invalid("3MF 含不安全或重复路径")
-		}
-		seen[key] = true
-		if f.Name == "Metadata/project_settings.config" {
-			b, err := mfRead(ctx, f, 4<<20)
-			if err != nil {
-				return out, err
-			}
-			out.Reference = importReference(b)
-		}
-	}
-	if info, err := inspectSlice(filename); err == nil {
-		out.Sliced = fileSliceReview{Available: true, Info: &info}
-	} else {
-		out.Sliced.Reason = err.Error()
-	}
-	if size > maxProjectImportBytes {
-		out.Geometry.Reason = "工程 3MF 须在 32 MB 以内"
-	} else {
-		raw, err := os.ReadFile(filename)
-		if err != nil {
+		if err = ctx.Err(); err != nil {
 			return out, err
 		}
-		if p, err := parseModel3MF(ctx, raw); err == nil {
-			review := p.summary()
-			out.Geometry = fileGeometryReview{Available: true, Review: &review}
-		} else {
-			out.Geometry.Reason = err.Error()
+		if f.Name != "Metadata/project_settings.config" {
+			continue
 		}
-	}
-	if e = ctx.Err(); e != nil {
-		return out, e
+		if f.UncompressedSize64 > 4<<20 {
+			return out, invalid("3MF 元数据过大")
+		}
+		reader, e := f.Open()
+		if e != nil {
+			return out, invalid("3MF 元数据无法读取")
+		}
+		raw, e := io.ReadAll(io.LimitReader(reader, (4<<20)+1))
+		reader.Close()
+		if e != nil || len(raw) > 4<<20 {
+			return out, invalid("3MF 元数据损坏")
+		}
+		out.Reference = importReference(raw)
 	}
 	return out, nil
 }
 
 func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
-	if !s.modelImportBusy.CompareAndSwap(false, true) {
-		fail(w, conflict("正在解析另一个工程，请稍后重试"))
+	if !s.fileInspectBusy.CompareAndSwap(false, true) {
+		fail(w, conflict("正在检查另一个文件，请稍后重试"))
 		return
 	}
-	defer s.modelImportBusy.Store(false)
+	defer s.fileInspectBusy.Store(false)
 	limit := s.Config.MaxUpload
 	if limit <= 0 || limit > 500<<20 {
 		limit = 500 << 20
@@ -165,7 +158,6 @@ func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
 	defer func() { f.Close(); os.Remove(f.Name()) }()
 	h := sha256.New()
 	var size int64
-	filename := ""
 	found := false
 	for {
 		part, err := mr.NextPart()
@@ -182,7 +174,6 @@ func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		found = true
-		filename = part.FileName()
 		size, e = io.Copy(io.MultiWriter(f, h), io.LimitReader(part, limit+1))
 		part.Close()
 		if e != nil || size == 0 || size > limit {
@@ -202,9 +193,6 @@ func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		fail(w, e)
 		return
-	}
-	if len([]rune(filename)) > 120 {
-		result.Geometry = fileGeometryReview{Reason: "请选择文件名不超过 120 个字符的 3MF"}
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	reply(w, 200, map[string]any{"ok": true, "review": result})

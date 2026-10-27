@@ -1,0 +1,60 @@
+{
+  "version": "0.1.0-beta",
+  "date": "2026-10-27",
+  "status": "passed",
+  "channel": "beta",
+  "ongoing_mainline": true,
+  "scope": {
+    "model_workbench": "removed",
+    "geometry_and_stl_import": "removed",
+    "online_slicing_runtime": "removed",
+    "shared_model_projects": "removed",
+    "three_js": "removed",
+    "uploads": "actual_sliced_3mf_only",
+    "legacy_editor_apis": 410
+  },
+  "validation": {
+    "go_tests": "passed",
+    "go_vet": "passed",
+    "frontend_and_language_tests": {
+      "passed": 83,
+      "failed": 0
+    },
+    "windows_amd64_build": "passed",
+    "linux_amd64_build": "passed",
+    "windows_binary_fresh_restart_doctor_intake": "passed",
+    "linux_binary_fresh_restart_doctor_intake": "passed",
+    "legacy_rows_survive_reopen_and_backup": "passed",
+    "unsafe_archive_paths_and_casefold_duplicates": "rejected",
+    "browser_ui_zh_en": "passed",
+    "browser_report_download_schema": 2,
+    "browser_fixture": "offline_only",
+    "unselected_spool_and_no_automatic_print": "verified"
+  },
+  "migration": {
+    "backup_before_switch": true,
+    "fresh_idle_printer_guard": true,
+    "application_switches": 1,
+    "legacy_private_rows": "preserved_exactly",
+    "retired_assets": "404",
+    "editor_capabilities": false,
+    "print_start_configuration": "preserved",
+    "public_tls_inspection": "passed",
+    "inspection_business_side_effects": 0,
+    "secure_cookie_policy": "preserved",
+    "temporary_uploads": "cleaned"
+  },
+  "hardware_commands_sent": 0,
+  "test_emails_sent": 0,
+  "new_hardware_print_test": false,
+  "independent_acceptance_remaining": [
+    "Docker container runtime",
+    "Fresh two-host OS installation",
+    "Broader printer firmware, multicolor and dual-nozzle starts"
+  ],
+  "binary_sha256": {
+    "windows-amd64/layerhub.exe": "016be32f69df68df2194223eabad704a86b55fd0f1060b271309e7eeb135a872",
+    "linux-amd64/layerhub": "5cf4862620937602e22c15cf262fdb8ade6035eb358ce630666affb0a64559db",
+    "linux-amd64/layerhub-mail-worker": "483590c5850a17234fcb419c4ea86c3d0bd5a45ba47c2193750445c07fe766ba"
+  }
+}

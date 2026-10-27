@@ -2,7 +2,7 @@
 
 ## English
 
-Administrators can open **System diagnostics** in the sidebar. The page reads existing state and makes same-origin GET requests only. It does not send printer commands, start a print or slice, contact SMTP, change settings, or retry an unconfirmed operation.
+Administrators can open **System diagnostics** in the sidebar. The page reads existing state and makes same-origin GET requests only. It does not send printer commands, start a print, contact SMTP, change settings, or retry an unconfirmed operation.
 
 ### Read the chain separately
 
@@ -53,7 +53,7 @@ Run the binary in the extracted installation directory, as the **actual service 
 
 Use `--language=zh-CN` for Chinese output. Source-build binary locations differ; the configuration variables are the same. The program does not automatically load `.env` or `/etc/layerhub/layerhub.env`. A check run as root or with a different working directory/environment does not establish that the service user can access its files. Review your service's existing environment configuration locally without sharing its contents.
 
-`--doctor` does **not** start an HTTP listener, open or initialize SQLite, start background workers, run a slicing engine, or make network connections. It checks listener/mode configuration, existing files, bounded JSON profiles, executable discovery, optional FFmpeg, basic mail configuration and the SQLite file header. A readable header is not a database integrity check. An executable found on disk is not proof that its runtime libraries work.
+`--doctor` does **not** start an HTTP listener, open or initialize SQLite, start background workers, or make network connections. It checks listener/mode configuration, existing files, optional FFmpeg discovery, basic mail configuration and the SQLite file header. A readable header is not a database integrity check. An executable found on disk is not proof that its runtime libraries work.
 
 For an explicit directory write test:
 
@@ -73,7 +73,7 @@ Report a problem with the version, platform, relevant check IDs/statuses and you
 
 ## 简体中文
 
-管理员可在侧栏打开**系统诊断**。页面仅通过同源 GET 请求读取状态，不发送打印机指令，不启动打印或切片，不连接 SMTP，不修改设置，也不重试未确认操作。
+管理员可在侧栏打开**系统诊断**。页面仅通过同源 GET 请求读取状态，不发送打印机指令，不启动打印，不连接 SMTP，不修改设置，也不重试未确认操作。
 
 **分段看链路：**浏览器“在线”不等于公网可达；网关标记响应不等于 NAS 正常；业务服务返回诊断不等于可选组件全部就绪；实机遥测新鲜不等于控制和打印已获授权。逐台设备结果在“全部检查”中查看，模拟设备不会计作真实连接；已有授权限制与设备告警另行提示。
 
@@ -105,4 +105,4 @@ Cookie 检查区分静态开关与当前请求策略：直接 TLS 或已有可�
 
 退出码 **0** 表示没有 `error`，仍可能有警告或未知项；**1** 表示存在错误；**2** 表示命令用法无效。JSON 的 `ok: true` 仅表示成功生成报告，不表示整套系统通过验收。
 
-**下载脱敏报告**支持导出链路失败结果，不包含 IP、序列号、用户名、文件名、绝对路径、令牌、邮箱及原始异常。未取得业务响应、结果过期或浏览器离线时，报告标有 `stale: true`，网关结果单列。反馈时提供版本、平台、检查项编号/状态与复现步骤即可；真实邮件投递、切片结果和打印质量仍需独立验证。
+**下载脱敏报告**支持导出链路失败结果，不包含 IP、序列号、用户名、文件名、绝对路径、令牌、邮箱及原始异常。未取得业务响应、结果过期或浏览器离线时，报告标有 `stale: true`，网关结果单列。反馈时提供版本、平台、检查项编号/状态与复现步骤即可；真实邮件投递和打印质量仍需独立验证。

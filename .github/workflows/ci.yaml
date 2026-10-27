@@ -32,4 +32,4 @@ jobs:
           node-version: '24'
       - run: npm ci --prefix source/qa/frontend-deps --ignore-scripts
       - run: node source/qa/build-locales.cjs --check
-      - run: node --test source/qa/frontend.test.cjs source/qa/i18n.test.cjs source/qa/slicer-gizmo.test.mjs source/qa/face-placement.test.mjs source/qa/box-selection.test.mjs
+      - run: node --test source/qa/frontend.test.cjs source/qa/i18n.test.cjs

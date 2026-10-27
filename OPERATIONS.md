@@ -4,7 +4,7 @@
 
 ## Upgrade safely
 
-1. Use a maintenance window with freshly idle devices, no active slicing/uploads/starts/uncertain commands and no pending restore.
+1. Use a maintenance window with freshly idle devices, no active uploads/starts/uncertain commands and no pending restore.
 2. Export a workspace backup as the owner. Save environment settings and the installed version separately. Backups contain private data and device secrets.
 3. Stop the application, then back up the complete data directory and `/etc/layerhub`, preserving permissions and master.key.
 4. Stage a new version directory, verify hashes and switch current to matching frontend/backend files. Keep the old version.
@@ -28,3 +28,5 @@ Restores clear sessions and disable devices. Do not run native and Docker instan
 | Empty workspace after restart | Wrong data directory or named volume; locate the original before initializing again |
 
 Use `journalctl -u layerhub`, `journalctl -u layerhub-tunnel` and `nginx -t` locally. Redact logs before sharing. Reconnection is not confirmation that an uncertain print command executed; inspect job/device state before manual recovery.
+
+For Alpha → Beta scope, preserved legacy data and rollback, see [migration](BETA_MIGRATION.md).

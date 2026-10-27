@@ -1,7 +1,7 @@
 {
-  "version": "0.4.0-alpha",
+  "version": "0.1.0-beta",
   "status": "passed",
-  "binary_routes": "geometry_only_slice_only_and_both",
+  "binary_routes": "sliced_only_and_combined_accepted_unsliced_and_renamed_raw_rejected",
   "filename_independent": true,
   "reference_allowlist": "passed",
   "unsliced_queue_upload": "rejected_before_job",

@@ -84,14 +84,17 @@ func inspectSlice(filename string) (SliceInfo, error) {
 		return out, invalid("3MF 文件条目过多")
 	}
 	seen := map[string]bool{}
+	folded := map[string]bool{}
 	gcodes := map[int]bool{}
 	var sliceRaw, settings []byte
 	re := regexp.MustCompile(`^Metadata/plate_([1-9][0-9]*)\.gcode$`)
 	for _, f := range z.File {
-		if strings.Contains(f.Name, "\\") || strings.HasPrefix(f.Name, "/") || path.Clean(f.Name) != strings.TrimSuffix(f.Name, "/") || f.Mode()&os.ModeSymlink != 0 || !f.Mode().IsRegular() && !f.FileInfo().IsDir() || seen[f.Name] {
+		name := strings.TrimSuffix(f.Name, "/")
+		if name == "" || name == ".." || strings.HasPrefix(name, "../") || strings.ContainsAny(name, "\\:\x00?#") || strings.HasPrefix(name, "/") || path.Clean(name) != name || f.Mode()&os.ModeSymlink != 0 || !f.Mode().IsRegular() && !f.FileInfo().IsDir() || seen[f.Name] || folded[strings.ToLower(name)] {
 			return out, invalid("3MF 含不安全或重复路径")
 		}
 		seen[f.Name] = true
+		folded[strings.ToLower(strings.TrimSuffix(f.Name, "/"))] = true
 		if m := re.FindStringSubmatch(f.Name); m != nil {
 			id, _ := strconv.Atoi(m[1])
 			if id > 1000 || f.UncompressedSize64 == 0 || f.UncompressedSize64 > 1<<30 {

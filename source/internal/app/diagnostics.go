@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net"
 	"net/url"
@@ -14,7 +13,7 @@ import (
 	"time"
 )
 
-const BuildVersion = "0.4.0-alpha"
+const BuildVersion = "0.1.0-beta"
 
 // Diagnostics never include environment values, addresses, paths, user content,
 // raw errors or credentials. A successful inspection is not a print permission.
@@ -113,30 +112,6 @@ func InspectDeployment(c Config, probeWrite bool) DiagnosticReport {
 		r.add("source_offer", "server", "ok", "对应源码下载", "源码包与许可证文件可读；未核对其与程序的一致性。", "修改部署版本后重新生成对应源码包。")
 	} else {
 		r.add("source_offer", "server", "warning", "对应源码下载", "源码包或许可证缺失、不可读。", "使用完整发布包，或运行 tools/make-source.py 生成对应源码。")
-	}
-	if c.SlicerPath == "" && c.SlicerProfiles == "" {
-		r.add("slicer", "slicing", "optional", "切片引擎", "未配置可选切片引擎；仍可管理工作区和预览模型。", "需要切片时设置 LAYERHUB_SLICER_PATH 和 LAYERHUB_SLICER_PROFILES。")
-	} else {
-		_, engineErr := exec.LookPath(c.SlicerPath)
-		profilesOK := true
-		for _, name := range []string{"machine.json", "process.json", "filament.json"} {
-			f, e := os.Open(filepath.Join(c.SlicerProfiles, name))
-			if e != nil {
-				profilesOK = false
-				continue
-			}
-			raw, e := io.ReadAll(io.LimitReader(f, (4<<20)+1))
-			f.Close()
-			var v map[string]any
-			if e != nil || len(raw) > 4<<20 || json.Unmarshal(raw, &v) != nil || len(v) == 0 {
-				profilesOK = false
-			}
-		}
-		if c.SlicerPath != "" && c.SlicerProfiles != "" && engineErr == nil && profilesOK {
-			r.add("slicer", "slicing", "ok", "切片引擎", "启动文件与三份配置可用；未执行引擎或切片。", "首次安装仍需独立验证引擎运行库与真实切片结果。")
-		} else {
-			r.add("slicer", "slicing", "error", "切片引擎", "启动文件不可执行，或三份配置缺失、格式无效。", "检查引擎可执行权限和 machine/process/filament.json；参阅切片部署说明。")
-		}
 	}
 	if _, e := exec.LookPath("ffmpeg"); e == nil {
 		r.add("video", "camera", "ok", "视频组件", "PATH 中找到 FFmpeg；没有连接摄像头。", "实际画面还取决于设备视频权限和协议。")

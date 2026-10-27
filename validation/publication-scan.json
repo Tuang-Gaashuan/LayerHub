@@ -1,7 +1,7 @@
 {
-  "version": "0.4.0-alpha",
+  "version": "0.1.0-beta",
   "status": "passed",
-  "files_scanned": 15537,
+  "files_scanned": 15097,
   "archives_scanned": 5,
   "checks": [
     "production_endpoint",

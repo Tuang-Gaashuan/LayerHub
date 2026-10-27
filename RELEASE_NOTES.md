@@ -1,21 +1,14 @@
-# LayerHub 0.4.0-alpha · File intake and print preparation / 文件导入与打印准备
+# LayerHub v0.1.0-beta · Team printer management / 团队打印机管理
 
-This bundled release improves the route from Studio files to an editable project or a print queue. Both file entries now inspect actual 3MF contents. A file may offer editing, an existing slice, both, or neither; unsupported geometry does not hide a valid slice.
+Beta is the ongoing mainline. Prepare and slice in Bambu Studio; use LayerHub for teams, printers, per-device queues, physical spools, remote control and notifications.
 
-1. Explicit edit/print routes with cancellation and late-response isolation.
-2. Original printer, nozzle, plate, material, color, layer and infill references, compared with workbench defaults before geometry import.
-3. Per-plate material/color codes, time and weight preview.
-4. Rounded single-plate estimates in queue preparation; blank fields for unknown or multi-plate estimates instead of guessed defaults.
-5. Local personal-file inspection report export with clear sharing scope.
-6. Backend rejection of unsliced/invalid 3MF before queue creation or inventory reservation, bounded temporary inspection uploads and archive-link rejection.
+- Remove model workbench, geometry/STL import, online slicing, process presets and shared model projects, including their frontend assets, Three.js and backend/engine runtime.
+- Accept only actual sliced 3MF; reject raw G-code, STL and unsliced projects in both UI and backend.
+- Inspect files directly into a compact dashboard card, with colors, plate estimates and references. No import-purpose dialog remains.
+- Preserve accounts, roles, queues, inventory, controls, camera, email, diagnostics and backups. Existing alpha project rows remain in database backups; fresh Beta does not create editor tables.
+- Retire old model/project APIs with HTTP 410; send old workbench bookmarks to the dashboard. NAS engine configuration is no longer required or read.
+- Ship Windows/Linux amd64, corresponding AGPL source, bilingual guidance and an Alpha → Beta migration guide as one release.
 
-一次合并升级：按内容识别 3MF、保留切片或编辑几何的双入口、原工程参数对照、逐盘颜色与预计值预览、单盘预计值预填、检查报告导出，以及后端拒绝未切片工程进入打印队列。中英文界面、导入指南、部署包与源码同时更新。
+以后以 Beta 持续更新，首版 v0.1.0-beta。模型准备与切片交给 Bambu Studio，LayerHub 专注团队、打印机、队列、耗材、控制与通知。移除完整工作台前后端及引擎代码，只接收已切片 3MF，直接校验后安排任务；账号与历史业务保留，旧工程数据随数据库备份保留。云端—NAS—打印机部署及中英文文档同步精简。
 
-Geometry import still repacks objects, discards original X/Y placement and uses LayerHub process settings. References are not inherited configuration. Single-color/single-nozzle X2D hardware scope and existing print-start/authorization/freshness guards remain. No real print or SMTP delivery is needed for these file-workflow checks. Docker runtime and fresh two-host OS installation remain outside this validation.
-
-- [Import guide / 文件导入说明](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/IMPORTING.md)
-- [English deployment](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/DEPLOYMENT.md)
-- [中文部署](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/01-部署指导-云服务器-NAS-打印机.md)
-- [Validation / 验证范围](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/validation/README.md)
-
-Download the platform package and SHA256SUMS, or build matching source. Original code and artwork are AGPL-3.0-only; third-party licenses remain. New installations default to offline mode and print start disabled. Existing release assets are unchanged.
+The numbering resets for this new channel; alpha releases remain available for recovery. Read [migration](BETA_MIGRATION.md) before updating an existing installation. No new hardware, multicolor or dual-nozzle compatibility is claimed. Docker runtime and a fresh two-host OS installation still require independent acceptance.

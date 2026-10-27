@@ -1,228 +1,106 @@
-<div align="center">
-
 # LayerHub
 
-### A shared workspace for your 3D printers.
-
-Prepare models. Coordinate the queue. Know what is printing.
-
-[![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![Version](https://img.shields.io/badge/version-0.4.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
-[![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
+### Team printer management, from sliced file to finished print.
 
 **English** · [简体中文](README.zh-CN.md)
 
-[Download](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Deployment](DEPLOYMENT.md) · [Validation](validation/README.md) · [Feedback](https://github.com/Tuang-Gaashuan/LayerHub/issues)
+[![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
-</div>
+[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Alpha → Beta](BETA_MIGRATION.md) · [Validation](validation/README.md)
 
-LayerHub is a **self-hosted web application for teams sharing 3D printers**. It brings model preparation, slicing, per-printer queues, spool inventory, printer status and notifications into one workspace. Members keep their own projects, share selected snapshots, and see which machine and material a job needs.
+LayerHub is a self-hosted workspace for teams sharing 3D printers. Prepare and slice in **Bambu Studio**, then use LayerHub to assign a printer, confirm real spools, coordinate its queue, monitor progress and receive notifications.
 
-The application and data live on your NAS or a small LAN computer. An optional cloud gateway gives your team HTTPS access through a restricted outbound tunnel. Your NAS connects to the printers locally; members use a browser.
+**Beta is the ongoing mainline.** This first release is `v0.1.0-beta`. Model workbench, geometry import, online slicing, 3D editing and shared model projects have been removed from the UI, APIs and runtime. Existing alpha releases remain available through their tags; historical workspace data is preserved for backup and rollback. See the [migration guide](BETA_MIGRATION.md).
 
-**Current release: 0.4.0-alpha, for independent deployment testing.** English and Simplified Chinese are available in the application. Hardware validation currently focuses on one X2D configuration; read [compatibility and scope](#compatibility-and-scope) before connecting a printer.
-
-[Features](#what-you-can-do) · [Print workflow](#from-model-to-print) · [Architecture](#cloud--nas--printer) · [Quick start](#try-it-locally) · [Documentation](#documentation)
-
-## A look inside
-
-![LayerHub English model workbench](validation/english-workbench.png)
-
-*The actual English interface in an isolated offline workspace. The model workbench combines a large 3D canvas, collapsible settings, plate navigation and project tools. This screenshot shows an empty workspace, without a connected printer or slicing engine.*
-
-## What you can do
+## What Beta includes
 
 | Area | Capabilities |
 |---|---|
-| **Team dashboard** | See printer availability, active jobs and work waiting for attention. Open a machine's controls or its own queue. |
-| **Per-printer queues** | Assign a job to a specific printer, inspect that machine's waiting tasks, and review material and device readiness before starting. The next job does not start automatically. |
-| **Spool inventory** | Track individual rolls with material, color, remaining weight, shared/private ownership and printer/AMS slot mounting. Reserve material for jobs, then settle actual usage separately. |
-| **Model workbench** | Import STL or supported project 3MF geometry, place and rotate objects, select several at once, duplicate, arrange copies and work across multiple plates. |
-| **File inspection** | Content-based 3MF detection from either entry, independent edit/print routes, per-plate colors and estimates, original-setting comparisons and downloadable inspection reports. |
-| **Slicing and preview** | Use an independently installed engine, adjust supported process settings, inspect toolpaths, review time/material estimates and compare slice results. |
-| **Private and shared projects** | Save personal projects and drafts, reuse process presets, and explicitly publish versioned project snapshots to the team. Members copy snapshots into their own editable projects. |
-| **Printer console** | Inspect fresh telemetry, progress and supply information; use supported pause/resume/stop, temperature, fan and light controls, camera preview and snapshots. Availability depends on model, firmware and permissions. |
-| **Email notifications** | Members optionally bind and verify an email address. Job milestones go to the job owner; device completion can notify them before collection or material settlement. |
-| **Deployment diagnostics** | Run local `--doctor` checks without starting the service, or inspect browser/gateway/NAS/printer segments in the administrator page. Export redacted results with actionable guidance. |
-| **Accounts and preferences** | Workspace owner, administrator and member roles; personal session management, role history, owner-only backups, two interface languages and configurable reading preferences. |
+| Team dashboard | Printer availability, active work, per-machine queues and tasks awaiting attention |
+| Sliced 3MF intake | Inspect actual contents, preview plate/material colors and estimates, retain the original sliced process |
+| Per-printer scheduling | Confirm the destination and spool, reserve material, then prepare/transfer/start once; queue-only remains available |
+| Spool inventory | Individual rolls, shared/private ownership, colors, remaining weight and printer/AMS slot registration |
+| Printer console | Telemetry, supply status, supported controls, camera/video and snapshots according to device permissions |
+| Notifications | Optional verified member email; start, device-finished and other milestones notify the job owner |
+| Team and security | Workspace owner, administrator and member roles; session management, audit history and owner-only backups |
+| Reading preferences | English / Simplified Chinese, fonts and text appearance |
+| Deployment diagnostics | Local `--doctor`, separate browser/gateway/NAS/printer evidence and redacted reports |
 
-### A workbench for repeated prints
+## The workflow
 
-Preparing several copies should not mean uploading and positioning the same file over and over. The workbench supports:
+![Sliced 3MF inspection in Beta](validation/beta-intake-zh.png)
 
-- Multi-selection, duplication, batch copy quantities, automatic arrangement and previewed distribution across plates.
-- Move/rotate tools, 90° rotations and face-to-bed placement. Model resizing has a separate preview-and-apply flow to reduce accidental size changes.
-- Undo/redo that preserves the current camera view, collapsible sidebars, and project/draft persistence.
-- Layer height, infill, wall count, top/bottom thickness, normal/tree supports and selected object-specific process settings within the supported engine profiles.
-- Private process presets, slice-result comparison and toolpath preview before a job reaches the printer queue.
-
-Project 3MF import is a **geometry import**, with analysis and explicit confirmation. It does not promise to reproduce every setting from the originating slicer or execute embedded instructions. LayerHub is a focused browser workflow, not a complete replacement for every Bambu Studio editing tool.
-
-### Bring Studio files into the right workflow
-
-Choose a 3MF from either entry and inspect its contents before saving anything. Use an existing slice to keep its paths and process, or explicitly import geometry for editing and re-slicing. See original printer/material/process references beside workbench defaults, plus every sliced plate's colors, time and usage. Single-plate estimates prefill the queue form; missing values and multi-plate estimates stay blank. The backend rejects unsliced 3MF before it enters the print queue. [Import guide and limits](IMPORTING.md).
-
-![LayerHub 3MF file inspection](validation/file-intake-en.png)
-
-*Actual file inspection using a disposable demo archive in an offline workspace. No printer command is sent.*
-
-### Materials and completion stay understandable
-
-A spool is a physical roll, rather than just a material type. It can belong to the team or one member, carry a visible color, and be recorded on a printer or supply slot. Creating a job reserves its planned consumption; it does not immediately subtract the estimate from inventory.
-
-**Device finished → collection → material settlement** are separate events. A confirmed device completion can trigger the owner's email immediately. A person still confirms collection and the actual material usage, so an uncollected part or an unmeasured roll is not silently treated as settled.
-
-## From model to print
+This offline demo shows sliced plates and material colors in a compact file review. [English dashboard](validation/beta-dashboard-en.png).
 
 ```mermaid
 flowchart LR
-    Prepare[Import and arrange] --> Slice[Slice and preview]
-    Slice --> Print[Confirm printer and spool, then print]
-    Print --> Finish[Notify, collect and settle]
+    Studio[Bambu Studio: prepare and slice] --> File[Export sliced plate 3MF]
+    File --> Inspect[LayerHub: inspect file]
+    Inspect --> Queue[Confirm printer and spool]
+    Queue --> Print[Prepare, transfer and start]
+    Print --> Finish[Notify owner, collect and settle usage]
 ```
 
-After reviewing a slice, choose **Confirm and print** to continue through transfer and start without several extra confirmation dialogs. **Queue only** remains available when you want to schedule work for later. Device readiness, material mapping, permissions and the print-start setting are still checked.
+Only **already-sliced `.3mf` files**, including `.gcode.3mf`, are accepted. Detection uses archive contents; renaming an STL, raw G-code or unsliced project does not make it printable. Inspection creates no job, material reservation or printer command. Single-plate estimates prefill the queue form; missing and multi-plate values stay blank for deliberate confirmation. [File guidance](IMPORTING.md).
 
-An uncertain start or control result requires reconciliation with the machine. Reconnection does not silently repeat a print-start command.
+Printing does not start from file inspection. Device, queue, model, nozzle, build plate, material/feed mapping and authorization checks remain. Reconnection never silently repeats an uncertain start. Device completion can email the owner immediately, while physical collection and actual material settlement remain separate actions.
 
 ## Cloud → NAS → printer
 
 ```mermaid
 flowchart LR
-    Browser[Team browser] -->|HTTPS| Cloud[Cloud HTTPS gateway]
+    Browser[Team browser] -->|HTTPS| Cloud[Cloud gateway]
     NAS[NAS: LayerHub and SQLite] -->|Outbound restricted SSH tunnel| Cloud
-    Cloud -->|Private HTTP/API through tunnel| NAS
-    NAS -->|Local network| Printer[Printer]
-    NAS -->|Local process| Slicer[Optional slicing engine]
-    Mail[Optional cloud mail worker] -->|Private outbox access| NAS
-    Mail -->|SMTP| Email[Verified recipients]
+    Cloud -->|Private API through tunnel| NAS
+    NAS -->|LAN| Printer
 ```
 
-| Location | Responsibility |
-|---|---|
-| **Cloud server** | Nginx, HTTPS certificate and a restricted SSH relay. It can also run the optional SMTP worker. |
-| **NAS / LAN computer** | The single application instance, SQLite database, model files, inventory, queue and printer connections. Install the optional slicer and video components here. |
-| **Printer** | LAN access and firmware-specific permissions. The NAS must be able to reach it on the local network. |
-| **Member's computer** | A browser. No LayerHub desktop client is required. |
-
-The cloud is a gateway, not a second copy of the live workspace. Do not run two application instances against the same data directory. Closing the browser does not stop NAS background work; suspending the NAS does.
-
-For a local-only trial, use the application without a cloud gateway. A full deployment is described step by step in [Deployment](DEPLOYMENT.md).
+The NAS owns the live application and database and connects to the printer locally. The cloud provides HTTPS and the restricted relay, plus an optional mail worker. Bambu Studio runs on members' computers; no slicing engine is required on the NAS. Suspending the NAS interrupts its services even with autostart enabled.
 
 ## Try it locally
 
-Download the **Windows amd64 ZIP** or **Linux amd64 TAR.GZ**, together with `SHA256SUMS`, from [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha). Verify the checksum and extract the archive. Use a fresh directory for your first trial.
+Download a platform archive and `SHA256SUMS` from [v0.1.0-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta), verify the checksum and extract to a new directory.
 
-### Windows
-
-Run `start.cmd` in the extracted folder, or use PowerShell:
+Windows PowerShell:
 
 ```powershell
-Expand-Archive .\LayerHub-0.4.0-alpha-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.4.0-alpha
+Get-FileHash .\LayerHub-0.1.0-beta-windows-amd64.zip -Algorithm SHA256
+Expand-Archive .\LayerHub-0.1.0-beta-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.1.0-beta
 .\start.cmd
 ```
 
-### Linux
+Linux:
 
 ```sh
-tar -xzf LayerHub-0.4.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.4.0-alpha
+grep 'LayerHub-0.1.0-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.0-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.0-beta
 sh start.sh
 ```
 
-Open **http://127.0.0.1:5181/**. First-run credentials are generated in `data/bootstrap-admin.txt`; this initial account is the workspace owner. Change the password after signing in. Existing passwords and projects survive restarts.
+Open `http://127.0.0.1:5181/`. Fresh installations default to offline mode with print start disabled. Read the generated owner credentials from `data/bootstrap-admin.txt`; keep them private. Closing the launcher stops this local test service. For an existing installation, follow [migration](BETA_MIGRATION.md), not the fresh-only installer.
 
-The portable launcher starts in **offline mode with print start disabled**. You can explore the interface and model workbench without printer credentials. Real slicing requires an engine installed separately. Keep the launcher terminal open; **Ctrl+C** stops the application. The portable launcher does not install an autostart service.
+## Scope and deployment
 
-Choose English or 简体中文 on the sign-in form, from the header language button, or in **Personal account → Language**. Account language controls future notification emails. Workbench language changes wait for an acknowledged draft save; see [Language settings](LANGUAGES.md).
+Windows amd64 and Linux amd64 packages are supplied. Native Linux is the reference NAS deployment; Docker templates are provided but Docker runtime remains independently unverified. Optional camera/video and SMTP delivery require their respective components and permissions.
 
-## Compatibility and scope
+Hardware print evidence remains concentrated on the previously attended **X2D / 0.4 mm / single-color PETG Basic / first AMS** setup. Catalog illustrations do not establish control compatibility. Multicolor or dual-nozzle starts are not newly supported by Beta.
 
-| Capability | Current scope |
+| Guide | Purpose |
 |---|---|
-| **Server packages** | Windows amd64 and Linux amd64. Native Linux is the full reference deployment. Debian 13 / Ubuntu 24.04 are the deployment guide's reference systems. |
-| **Printer integration** | Bambu LAN integration is implemented. Real-print validation is concentrated on **X2D / 0.4 mm / single-color PETG Basic**, with its tested firmware and supply modules. Other combinations require independent validation. |
-| **Slicing** | The reference setup uses independently installed **Bambu Studio v02.08.02.61** and prepared profiles. The engine and networking plugin are not bundled. This is not a generic promise of compatibility with every slicer's CLI. |
-| **Camera and controls** | Depend on the device, firmware, LAN permissions and optional NAS video components. LAN Only/Developer Mode requirements must be checked for the specific operation. |
-| **Docker** | A base application template is included and statically checked. Image build/start were not executed in release validation; Studio's graphical runtime is not included. |
-| **Other printer brands** | Selected models have schematic artwork for interface preparation. That artwork does **not** establish a working device adapter or control compatibility. |
+| [Deployment](DEPLOYMENT.md) / [中文部署](01-部署指导-云服务器-NAS-打印机.md) | Cloud, NAS and printer responsibilities and installation |
+| [Importing](IMPORTING.md) | Sliced 3MF requirements and queue preparation |
+| [Alpha → Beta](BETA_MIGRATION.md) | Retired features, preserved data and rollback |
+| [Operations](OPERATIONS.md) / [中文运维](03-升级备份与排障.md) | Backups, maintenance and troubleshooting |
+| [Diagnostics](DIAGNOSTICS.md) | Local checks and connection evidence |
+| [Acceptance](TESTING.md) / [中文验收](02-外部验收与反馈.md) | Independent deployment and hardware validation |
+| [Language](LANGUAGES.md) | Account language and notification behavior |
 
-Multi-nozzle/multicolor print-start, unrestricted motion/filament controls, mesh cutting and a desktop installer are outside this alpha's validated claims. Other materials, firmware and network environments need separate acceptance tests.
+## Build and license
 
-### Printer illustrations
+Go 1.27, Node.js 24 and Python 3 are the build/test tools. Go dependencies are vendored. Run `sh tools/build.sh` or `tools/build.ps1`; see [source guidance](source/README.md). Runtime does not depend on Node, Python, Three.js or a slicing engine.
 
-LayerHub includes project-created schematic artwork for printer and supply-module configurations. These are interface illustrations, not official photographs or CAD models.
-
-| P1S + AMS | A1 + AMS lite | X2D + AMS 2 Pro | Prusa MK4S |
-|:---:|:---:|:---:|:---:|
-| <img src="source/web/assets/printers/p1s-ams.png" width="180" alt="Schematic P1S with AMS"> | <img src="source/web/assets/printers/a1-ams.png" width="180" alt="Schematic A1 with AMS lite"> | <img src="source/web/assets/printers/x2d-ams.png" width="180" alt="Schematic X2D with a supply module"> | <img src="source/web/assets/printers/prusa-mk4s.png" width="180" alt="Schematic Prusa MK4S"> |
-
-*Illustrated configurations are representative. See the validation scope above for what has actually been tested.*
-
-## Accounts, privacy and notifications
-
-- **Workspace owner:** exactly one enabled owner; grants administrator roles, transfers ownership and handles full backup/restore.
-- **Administrator:** manages ordinary members and operational tasks, without managing peer administrators or the owner.
-- **Member:** uses the shared workspace with account-scoped private models, projects and drafts. Team sharing is an explicit publication step.
-
-Members can review and revoke their other login sessions. Shared project snapshots are copied into independent private projects; editing a copy does not modify its source. Optional email binding requires verification, and members without a verified enabled address receive no mail.
-
-Each new installation generates its own owner password and data encryption key. The repository and packages contain no production workspace or credentials. See [Security](SECURITY.md) and [Operations](OPERATIONS.md) for deployment and backup responsibilities.
-
-## Documentation
-
-| Topic | English | 简体中文 |
-|---|---|---|
-| Cloud, NAS and printer deployment | [Deployment](DEPLOYMENT.md) | [部署指导](01-部署指导-云服务器-NAS-打印机.md) |
-| Independent acceptance and feedback | [Testing](TESTING.md) | [外部验收与反馈](02-外部验收与反馈.md) |
-| Upgrade, backup and troubleshooting | [Operations](OPERATIONS.md) | [升级备份与排障](03-升级备份与排障.md) |
-| Interface languages and email behavior | [Languages](LANGUAGES.md) | [语言设置](LANGUAGES.md#简体中文) |
-| Source development | [Source README](source/README.md) | [源码说明](source/README.zh-CN.md) |
-
-Also see [deployment diagnostics](DIAGNOSTICS.md), [slicer preparation](deploy/slicer/README.md), [optional email setup](deploy/mail/README.md), [release notes](CHANGELOG.md) and the [executed validation record](validation/README.md).
-
-## Build from source
-
-Requires **Go 1.27+ and Python 3**. Go dependencies are vendored; the browser runtime uses native JavaScript and bundled Three.js. Node.js 24 and the pinned npm dependencies are development/test tools, not application runtime requirements.
-
-```sh
-git clone https://github.com/Tuang-Gaashuan/LayerHub.git
-cd LayerHub
-sh tools/build.sh
-python3 tools/package.py
-```
-
-On Windows, replace the last two commands with:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/build.ps1
-python tools/package.py
-```
-
-The execution-policy flag applies only to that PowerShell process. Build outputs go into `binaries/`; portable packages go into `packages/`. They are generated artifacts, not files committed to the repository. Translation maintenance and test commands are in [source/I18N.md](source/I18N.md) and the [source README](source/README.md).
-
-### Repository map
-
-| Path | Contents |
-|---|---|
-| `source/` | Go HTTP application, SQLite persistence, JavaScript UI, vendored Go dependencies and tests |
-| `source/web/` | Browser interface, local language catalogs, Three.js and printer artwork |
-| `source/assets-source/` | Sources for the schematic printer illustrations |
-| `deploy/cloud/` | HTTPS gateway, certificate bootstrap and restricted SSH templates |
-| `deploy/nas/` | Fresh systemd installer, environment and outbound tunnel templates |
-| `deploy/slicer/`, `deploy/mail/`, `deploy/docker/` | Optional component setup and base container template |
-| `tools/` | Build, packaging and disposable smoke checks |
-| `validation/`, `licenses/` | Redacted validation records and retained third-party licenses |
-
-## Validation and feedback
-
-The 0.4.0-alpha checks include **189 frontend/geometry/language tests**, Go tests and `vet`, Windows/Linux amd64 builds, disposable fresh-workspace and restart checks, and English browser verification. Language-update controls and email generation used fake devices/local queues; these are separate from the earlier attended X2D real-print validation. Docker remains static-only, and a fresh two-host installation still needs independent acceptance.
-
-To help test, follow [Testing](TESTING.md) and open an [issue](https://github.com/Tuang-Gaashuan/LayerHub/issues) with your version, environment, reproduction steps and expected/actual behavior. Mark hardware-dependent steps as untested when you have no printer. Share redacted excerpts rather than a database, backup, access code or personal model archive.
-
-## License
-
-Original project code and artwork are **AGPL-3.0-only**. Third-party components retain their own licenses; see [LICENSE](LICENSE) and [Third-party notices](THIRD_PARTY_NOTICES.md).
-
-The deployed application provides a source/license page and corresponding-source archive, including vendored Go sources. Regenerate that archive when modifying a hosted release. LayerHub is an independent project; product names and trademarks belong to their owners, and no manufacturer endorsement is claimed.
+Original project code and schematic artwork are **AGPL-3.0-only**. Third-party dependencies retain their licenses; see [notices](THIRD_PARTY_NOTICES.md). Hosted deployments provide matching source through the footer. Public source/packages exclude accounts, databases, credentials, private uploads and backups. Report issues with redacted reproduction steps rather than a whole data directory.

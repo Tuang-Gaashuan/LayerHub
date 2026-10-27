@@ -42,17 +42,18 @@ with tempfile.TemporaryDirectory(prefix='layerhub-file-intake-') as temp:
   raw=archive(True,True);body,content=multipart(raw);request('/api/files/inspect',body,content,want=401)
   credentials=dict(line.split('=',1) for line in (data/'bootstrap-admin.txt').read_text().splitlines() if '=' in line)
   login=request('/api/login',json.dumps({'Username':credentials['username'],'Password':credentials['password']}).encode());csrf=login['csrf']
-  before=request('/api/workspace');models=request('/api/slicing')['models']
-  for geometry,sliced in [(True,True),(True,False),(False,True)]:
+  before=request('/api/workspace');assert before['capabilities']['sliced3MFOnly'] and not before['capabilities']['modelWorkbench'];request('/api/slicing',want=410)
+  for geometry,sliced in [(True,True),(False,True)]:
    raw=archive(geometry,sliced);body,content=multipart(raw);result=request('/api/files/inspect',body,content)['review']
-   assert result['schema']==1 and result['sha256']==hashlib.sha256(raw).hexdigest()
-   assert result['geometry']['available']==geometry and result['sliced']['available']==sliced
+   assert result['schema']==2 and result['kind']=='sliced-3mf' and result['sha256']==hashlib.sha256(raw).hexdigest()
+   assert 'geometry' not in result and result['sliced']['available']==sliced
    assert 'PRIVATE_MACRO_CANARY' not in json.dumps(result)
-  body,content=multipart(archive(True,False));request('/api/upload',body,content,want=400)
-  after=request('/api/workspace');assert before['jobs']==after['jobs'] and before['spools']==after['spools'] and models==request('/api/slicing')['models']
+  body,content=multipart(archive(True,False));request('/api/files/inspect',body,content,want=400);request('/api/upload',body,content,want=400)
+  body,content=multipart(b'; raw G-code renamed to 3MF');request('/api/files/inspect',body,content,want=400);request('/api/upload',body,content,want=400)
+  after=request('/api/workspace');assert before['jobs']==after['jobs'] and before['spools']==after['spools']
   assert not list((data/'uploads').glob('*'))
   version=request('/api/diagnostics')['version'];request('/api/logout',b'{}')
-  result={'version':version,'status':'passed','binary_routes':'geometry_only_slice_only_and_both','filename_independent':True,'reference_allowlist':'passed','unsliced_queue_upload':'rejected_before_job','temporary_uploads':'cleaned','business_data_unchanged':True,'real_devices_contacted':0,'mail_sent':0}
+  result={'version':version,'status':'passed','binary_routes':'sliced_only_and_combined_accepted_unsliced_and_renamed_raw_rejected','filename_independent':True,'reference_allowlist':'passed','unsliced_queue_upload':'rejected_before_job','temporary_uploads':'cleaned','business_data_unchanged':True,'real_devices_contacted':0,'mail_sent':0}
   a.report.parent.mkdir(parents=True,exist_ok=True);a.report.write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8');print(json.dumps(result))
  finally:
   process.terminate()

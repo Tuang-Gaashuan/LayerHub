@@ -35,10 +35,6 @@ The matching dependency source is included in source/vendor/. License copies are
 | `modernc.org/memory` | `v1.12.1` | LICENSE, LICENSE-GO, LICENSE-LOGO, LICENSE-MMAP-GO |
 | `modernc.org/sqlite` | `v1.60.1` | LICENSE, LICENSE-3RD-PARTY.md, LICENSE-SQLITE, LICENSE-SQLITE_VEC |
 
-## Web runtime
-
-- Three.js 0.180.0 and its OrbitControls / STLLoader / TransformControls: MIT; see source/web/vendor/three/LICENSE and source.json. Imports in addons point to the bundled modules.
-
 ## Fonts
 
 The following unmodified font files retain SIL OFL-1.1 notices under source/web/assets/fonts/:
@@ -48,10 +44,6 @@ The following unmodified font files retain SIL OFL-1.1 notices under source/web/
 - @fontsource/lxgw-wenkai 5.3.0 — OFL-1.1; LICENSE and source integrity metadata included.
 - @fontsource/zcool-kuaile 5.3.0 — OFL-1.1; LICENSE and source integrity metadata included.
 - @fontsource/zcool-xiaowei 5.3.0 — OFL-1.1; LICENSE and source integrity metadata included.
-
-## Slicer-derived data and optional engine
-
-The embedded PLA Basic / PETG HF configuration data are flattened/adapted from Bambu Studio profiles. The original upstream license is AGPL-3.0; upstream: https://github.com/bambulab/BambuStudio . Tested reference release: v02.08.02.61. Derived configuration changes do not modify the upstream engine. This distribution includes no Bambu Studio executable, AppImage, networking plugin or downloaded engine runtime. The optional engine must be acquired independently, retaining its own source/license obligations.
 
 ## Artwork and product names
 

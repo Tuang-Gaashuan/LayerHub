@@ -67,16 +67,15 @@ const I18n=(()=>{
  }
  async function change(next,{reload=()=>location.reload()}={}){
   if(!supported.includes(next))throw Error(t('请选择简体中文或 English'));
-  if(typeof uploading!=='undefined'&&uploading)throw Error(t('请先等待当前上传、切片提交或模型编辑完成。'));
-  if(typeof SlicerWorkbench!=='undefined'&&typeof page!=='undefined'&&page==='slicer')await SlicerWorkbench.beforeLanguageChange();
+  if(typeof uploading!=='undefined'&&uploading)throw Error(t('请先等待当前文件上传完成。'));
   if(typeof data!=='undefined'&&data.user){await Remote.request('/api/account/language',{language:next});}
-  // Do not reload until draft and account writes are acknowledged.
+  // Wait for the account write before reloading.
   saveBrowser(next);if(next!==language)reload();
  }
  function open(){
-  modal(t('语言设置'),html`<form id="languageForm"><label><span class="field-label">界面语言</span><select class="input" name="language" translate="no"><option value="zh-CN">简体中文</option><option value="en">English</option></select></label><p class="form-help">切换语言会重新载入页面。工作台草稿会先保存；未提交的表单请先保存。</p><p class="form-help">语言偏好会随账户保存在服务器，并用于之后生成的邮件。登录页也会记住此浏览器的选择。</p><p class="form-error" id="languageError" role="alert"></p></form>`,html`<button class="button" data-cancel>取消</button><button class="button primary" form="languageForm" type="submit">保存并切换语言</button>`);
+  modal(t('语言设置'),html`<form id="languageForm"><label><span class="field-label">界面语言</span><select class="input" name="language" translate="no"><option value="zh-CN">简体中文</option><option value="en">English</option></select></label><p class="form-help">切换语言会重新载入页面。请先保存未提交的表单，并等待文件上传完成。</p><p class="form-help">语言偏好会随账户保存在服务器，并用于之后生成的邮件。登录页也会记住此浏览器的选择。</p><p class="form-error" id="languageError" role="alert"></p></form>`,html`<button class="button" data-cancel>取消</button><button class="button primary" form="languageForm" type="submit">保存并切换语言</button>`);
   const form=document.querySelector('#languageForm');form.elements.language.value=language;
-  form.onsubmit=async event=>{event.preventDefault();const button=document.querySelector('[form="languageForm"]');button.disabled=true;document.querySelector('#languageError').textContent=t('正在保存草稿与语言…');try{await change(form.elements.language.value);if(form.elements.language.value===language)document.querySelector('#modal').close()}catch(e){document.querySelector('#languageError').textContent=system(e.message)||t('语言设置未能保存，请重试。');button.disabled=false}};
+  form.onsubmit=async event=>{event.preventDefault();const button=document.querySelector('[form="languageForm"]');button.disabled=true;document.querySelector('#languageError').textContent=t('正在保存语言…');try{await change(form.elements.language.value);if(form.elements.language.value===language)document.querySelector('#modal').close()}catch(e){document.querySelector('#languageError').textContent=system(e.message)||t('语言设置未能保存，请重试。');button.disabled=false}};
  }
  function accountSwitcher(){
   if(!document.querySelector('#realLogout')||document.querySelector('#accountLanguage'))return;

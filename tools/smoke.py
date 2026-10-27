@@ -37,8 +37,8 @@ with tempfile.TemporaryDirectory(prefix='layerhub-fresh-smoke-') as temp:
   launch();denied=api('/api/workspace',want=401);assert '登录' not in json.dumps(denied,ensure_ascii=False)
   credentials=dict(line.split('=',1) for line in (data/'bootstrap-admin.txt').read_text().splitlines() if '=' in line)
   csrf=api('/api/login',{'Username':credentials['username'],'Password':credentials['password']})['csrf']
-  w=api('/api/workspace');assert w['user']['owner'] and not w['jobs'] and not w['printers'] and not w['capabilities']['printStart'] and w['capabilities']['teamProjects']
-  assert api('/api/team-projects')['projects']==[] and api('/api/account/sessions')['total']==1
+  w=api('/api/workspace');assert w['user']['owner'] and not w['jobs'] and not w['printers'] and not w['capabilities']['printStart'] and w['capabilities']['sliced3MFOnly'] and not w['capabilities']['modelWorkbench']
+  assert api('/api/team-projects',want=410)['ok']==False and api('/api/account/sessions')['total']==1
   diagnostics=api('/api/diagnostics');assert diagnostics['schema']==1 and diagnostics['mode']=='runtime'
   assert any(c['id']=='database' and c['status']=='ok' for c in diagnostics['checks'])
   assert str(data) not in json.dumps(diagnostics)
@@ -48,7 +48,7 @@ with tempfile.TemporaryDirectory(prefix='layerhub-fresh-smoke-') as temp:
   api('/api/users',{'Username':'smoke_member','Name':'Disposable test member','Password':'DisposableSmoke2026','Admin':False})
   for path in ['/source-offer.html','/source/LICENSE.txt','/source/THIRD_PARTY_NOTICES.md','/i18n.js','/locales/en.generated.js']:
    with opener.open(base+path,timeout=10) as r:assert r.status==200 and r.read()
-  for path in ['/master.key','/data/master.key','/bootstrap-admin.txt','/.env']:
+  for path in ['/master.key','/data/master.key','/bootstrap-admin.txt','/.env','/slicer-workbench.js','/slicer-viewer.js','/team-library.js','/vendor/three/three.module.min.js']:
    try:opener.open(base+path,timeout=10);raise RuntimeError('Private path exposed')
    except urllib.error.HTTPError as e:assert e.code==404
   api('/api/logout',{});stop();launch();opener=client();csrf=None

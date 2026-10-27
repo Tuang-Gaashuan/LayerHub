@@ -22,7 +22,7 @@ if test -f "$bundle/bin/layerhub"; then
 fi
 test -f "$binary"
 test -f "$web/source/layerhub-source.tar.gz"
-target=/opt/layerhub/releases/v0.4.0-alpha
+target=/opt/layerhub/releases/v0.1.0-beta
 test ! -e "$target"
 useradd --system --user-group --home-dir /var/lib/layerhub --create-home --shell /usr/sbin/nologin layerhub
 install -d -m 755 /opt/layerhub /opt/layerhub/releases "$target" "$target/bin"

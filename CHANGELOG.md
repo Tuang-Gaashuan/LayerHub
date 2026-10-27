@@ -1,3 +1,9 @@
+# 0.1.0-beta — Team printer management / 团队打印机管理
+
+Start the Beta mainline. Remove the model/slicing workbench, its geometry/editor APIs, shared model snapshots, Three.js and NAS engine runtime. Accept only actual sliced 3MF. Inspection now finishes inline on the dashboard without a purpose chooser. Keep accounts, device control, queues, physical inventory, notifications, diagnostics and backups; retain legacy project rows without exposing editor APIs. Add bilingual migration/deployment guidance and beta packages. Alpha tags/releases remain available.
+
+Beta 成为持续维护主线：移除模型工作台及在线切片，只接受已切片 3MF，保留完整团队打印管理。历史工程数据保留备份，旧模型接口返回 410，不再依赖 NAS 切片引擎。
+
 # 0.4.0-alpha — File intake and print preparation / 文件导入与打印准备
 
 - Inspect 3MF contents from either file entry; independently identify editable geometry and valid sliced plates instead of trusting the filename.

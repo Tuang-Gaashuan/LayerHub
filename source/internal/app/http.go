@@ -36,9 +36,7 @@ func fail(w http.ResponseWriter, err error) {
 func decode(r *http.Request, target any) error {
 	defer r.Body.Close()
 	limit := int64(64 << 10)
-	if r.URL.Path == "/api/slicing/project" || r.URL.Path == "/api/slicing/draft" {
-		limit = 128 << 10
-	}
+
 	raw, e := io.ReadAll(io.LimitReader(r.Body, limit+1))
 	if e != nil || int64(len(raw)) > limit {
 		return invalid("请求内容过长")
@@ -74,6 +72,10 @@ func (s *Service) Handler() http.Handler {
 			fail(w, conflict("已安排恢复，请重启服务或在备份管理中取消"))
 			return
 		}
+		if r.URL.Path == "/api/slicing" || strings.HasPrefix(r.URL.Path, "/api/slicing/") || r.URL.Path == "/api/team-projects" || strings.HasPrefix(r.URL.Path, "/api/team-projects/") {
+			fail(w, &apiError{Code: http.StatusGone, Message: "模型工作台已在 Beta 中移除，请使用 Bambu Studio 切片后上传 3MF"})
+			return
+		}
 		var result any = map[string]any{"ok": true}
 		switch r.Method + " " + r.URL.Path {
 		case "GET /api/diagnostics":
@@ -91,168 +93,9 @@ func (s *Service) Handler() http.Handler {
 				}
 				result = LocalizeDiagnosticReport(report, requestLanguage(r.Header.Get("Accept-Language")))
 			}
-		case "GET /api/slicing":
-			result, err = s.sliceWorkspace(u)
-		case "GET /api/slicing/compare":
-			var ids []int64
-			if ids, err = comparisonIDs(r.URL.Query().Get("ids")); err == nil {
-				var comparison SliceComparison
-				comparison, err = s.compareSlices(r.Context(), u, ids)
-				result = map[string]any{"ok": true, "entries": comparison.Entries, "sameGeometry": comparison.SameGeometry}
-			}
-		case "GET /api/slicing/task":
-			id, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
-			var t SliceTask
-			t, err = s.slicerTask(u, id)
-			result = map[string]any{"ok": true, "task": t}
-		case "GET /api/slicing/projects":
-			result, err = s.slicerStorage(u)
-		case "GET /api/team-projects":
-			var before int64
-			if raw := r.URL.Query().Get("before"); raw != "" {
-				before, err = strconv.ParseInt(raw, 10, 64)
-				if err != nil || before <= 0 {
-					err = invalid("工程游标无效")
-					break
-				}
-			}
-			result, err = s.teamProjects(u, r.URL.Query().Get("scope"), strings.TrimSpace(r.URL.Query().Get("q")), before)
-		case "GET /api/team-projects/detail":
-			id, e := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
-			var version int64
-			if raw := r.URL.Query().Get("version"); raw != "" {
-				version, err = strconv.ParseInt(raw, 10, 64)
-			}
-			if e != nil || id <= 0 || err != nil || version < 0 {
-				err = invalid("共享工程或版本编号无效")
-				break
-			}
-			result, err = s.teamProjectDetail(u, id, version)
-		case "POST /api/team-projects/publish":
-			var in TeamPublish
-			if err = decode(r, &in); err == nil {
-				var id int64
-				var replayed bool
-				id, replayed, err = s.publishTeamProject(u, in)
-				var shared int64
-				if err == nil {
-					err = s.DB.QueryRow("SELECT project_id FROM team_project_versions WHERE id=?", id).Scan(&shared)
-				}
-				result = map[string]any{"ok": true, "versionId": id, "sharedId": shared, "replayed": replayed}
-			}
-		case "POST /api/team-projects/copy":
-			var in TeamCopy
-			if err = decode(r, &in); err == nil {
-				var p SlicerProject
-				var replayed bool
-				p, replayed, err = s.copyTeamProject(u, in)
-				result = map[string]any{"ok": true, "project": p, "replayed": replayed}
-			}
-		case "POST /api/team-projects/visibility":
-			var in TeamVisibility
-			if err = decode(r, &in); err == nil {
-				err = s.setTeamVisibility(u, in)
-			}
-		case "GET /api/slicing/presets":
-			var presets []ProcessPreset
-			presets, err = s.processPresets(u)
-			result = map[string]any{"ok": true, "presets": presets, "machine": "X2D · 0.4 mm"}
-		case "POST /api/slicing/presets":
-			var in PresetWrite
-			if err = decode(r, &in); err == nil {
-				var preset ProcessPreset
-				preset, err = s.saveProcessPreset(u, in)
-				result = map[string]any{"ok": true, "preset": preset}
-			}
-		case "POST /api/slicing/presets/archive":
-			var in PresetArchive
-			if err = decode(r, &in); err == nil {
-				err = s.archiveProcessPreset(u, in)
-			}
-		case "GET /api/slicing/project":
-			id, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
-			var p SlicerProject
-			p, err = s.slicerProject(u, id)
-			var origin any
-			if err == nil {
-				origin, err = s.teamCopyOrigin(u, id)
-			}
-			result = map[string]any{"ok": true, "project": p, "teamOrigin": origin}
-		case "POST /api/slicing/project":
-			var in ProjectWrite
-			if err = decode(r, &in); err == nil {
-				var p SlicerProject
-				p, err = s.saveSlicerProject(u, in)
-				result = map[string]any{"ok": true, "project": p}
-			}
-		case "POST /api/slicing/delete-project":
-			var in struct {
-				ID       int64 `json:"id"`
-				Revision int64 `json:"revision"`
-			}
-			if err = decode(r, &in); err == nil {
-				err = s.deleteSlicerProject(u, in.ID, in.Revision)
-			}
-		case "POST /api/slicing/draft", "POST /api/slicing/clear-draft":
-			var in DraftWrite
-			if err = decode(r, &in); err == nil {
-				var rev int64
-				rev, err = s.saveSlicerDraft(u, in, r.URL.Path == "/api/slicing/clear-draft")
-				result = map[string]any{"ok": true, "revision": rev}
-			}
-		case "GET /api/slicing/layers":
-			result, err = s.toolpathRequest(r.Context(), u, r.URL.Query().Get("id"), r.URL.Query().Get("layer"))
-			w.Header().Set("Cache-Control", "no-store")
-		case "POST /api/slicing/models":
-			s.uploadModel(w, r, u)
-			return
-		case "POST /api/slicing/import-3mf":
-			s.importModel3MF(w, r, u)
-			return
 		case "POST /api/files/inspect":
 			s.inspectFile(w, r)
 			return
-		case "GET /api/slicing/model", "GET /api/slicing/output", "GET /api/slicing/preview":
-			id, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
-			s.sliceFile(w, r, u, strings.TrimPrefix(r.URL.Path, "/api/slicing/"), id)
-			return
-		case "POST /api/slicing/tasks":
-			var in struct {
-				ClientVersion int        `json:"clientVersion"`
-				ModelID       int64      `json:"modelId"`
-				Options       SliceSetup `json:"options"`
-			}
-			if err = decode(r, &in); err == nil {
-				var id int64
-				if in.ClientVersion != 2 {
-					err = conflict("切片工作台已升级，请刷新页面后重新检查对象工艺")
-				} else {
-					id, err = s.queueSlice(u, in.ModelID, in.Options)
-				}
-				result = map[string]any{"ok": true, "taskId": id}
-			}
-		case "POST /api/slicing/cancel", "POST /api/slicing/delete-model":
-			var in struct {
-				ID int64 `json:"id"`
-			}
-			if err = decode(r, &in); err == nil {
-				if r.URL.Path == "/api/slicing/cancel" {
-					err = s.cancelSlice(u, in.ID)
-				} else {
-					err = s.deleteSliceModel(u, in.ID)
-				}
-			}
-		case "POST /api/slicing/promote":
-			var in struct {
-				ID        int64  `json:"id"`
-				PrinterID int64  `json:"printerId"`
-				SpoolID   string `json:"spoolId"`
-			}
-			if err = decode(r, &in); err == nil {
-				var id int64
-				id, err = s.promoteSlice(u, in.ID, in.PrinterID, in.SpoolID)
-				result = map[string]any{"ok": true, "jobId": id}
-			}
 		case "GET /api/notifications":
 			before, _ := strconv.ParseInt(r.URL.Query().Get("before"), 10, 64)
 			result, err = s.notificationPage(u, max(int64(0), before), r.URL.Query().Get("unread") == "1")
@@ -636,9 +479,9 @@ func (s *Service) upload(w http.ResponseWriter, r *http.Request, u User) {
 				return
 			}
 			ext := strings.ToLower(filepath.Ext(filename))
-			if ext != ".gcode" && ext != ".3mf" {
+			if ext != ".3mf" {
 				part.Close()
-				fail(w, invalid("只接受 .gcode 或 .3mf 文件"))
+				fail(w, invalid("Beta 仅接受已切片的 3MF 文件，请先在 Bambu Studio 完成切片并导出切片盘文件"))
 				return
 			}
 			bytes, err = io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(part, s.Config.MaxUpload+1))
@@ -703,5 +546,5 @@ func EnvConfig() Config {
 		}
 		return def
 	}
-	return Config{SlicerPath: os.Getenv("LAYERHUB_SLICER_PATH"), SlicerProfiles: os.Getenv("LAYERHUB_SLICER_PROFILES"), Address: value("LAYERHUB_ADDRESS", "127.0.0.1:5181"), DataDir: value("LAYERHUB_DATA_DIR", "data"), WebDir: value("LAYERHUB_WEB_DIR", "web"), AdminUser: value("LAYERHUB_ADMIN_USER", "admin"), AdminPassword: os.Getenv("LAYERHUB_ADMIN_PASSWORD"), DeviceMode: value("LAYERHUB_DEVICE_MODE", "offline"), EnablePrintStart: os.Getenv("LAYERHUB_ENABLE_PRINT_START") == "1", CookieSecure: os.Getenv("LAYERHUB_COOKIE_SECURE") == "1", MaxUpload: max, MailToken: os.Getenv("LAYERHUB_MAIL_TOKEN"), PublicURL: os.Getenv("LAYERHUB_PUBLIC_URL")}
+	return Config{Address: value("LAYERHUB_ADDRESS", "127.0.0.1:5181"), DataDir: value("LAYERHUB_DATA_DIR", "data"), WebDir: value("LAYERHUB_WEB_DIR", "web"), AdminUser: value("LAYERHUB_ADMIN_USER", "admin"), AdminPassword: os.Getenv("LAYERHUB_ADMIN_PASSWORD"), DeviceMode: value("LAYERHUB_DEVICE_MODE", "offline"), EnablePrintStart: os.Getenv("LAYERHUB_ENABLE_PRINT_START") == "1", CookieSecure: os.Getenv("LAYERHUB_COOKIE_SECURE") == "1", MaxUpload: max, MailToken: os.Getenv("LAYERHUB_MAIL_TOKEN"), PublicURL: os.Getenv("LAYERHUB_PUBLIC_URL")}
 }

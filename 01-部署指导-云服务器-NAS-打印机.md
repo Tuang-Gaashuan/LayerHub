@@ -1,6 +1,6 @@
 # 部署指导：云服务器 → NAS → 打印机
 
-[English deployment guide](DEPLOYMENT.md) · 版本 0.4.0-alpha · 2026-10-27
+[English deployment guide](DEPLOYMENT.md) · 版本 0.1.0-beta · 2026-10-27
 
 本文面向**全新独立部署**。示例域名、IP 和公钥都是占位值。不要复制开发者的运行配置，也不要在已有 LayerHub 安装上直接执行首次安装脚本。
 
@@ -9,7 +9,7 @@
 ```mermaid
 flowchart LR
     U[电脑或手机浏览器] -->|HTTPS 443| C[云服务器：Nginx 网关]
-    N[NAS：LayerHub + SQLite + 可选切片] -->|主动建立 SSH 22 隧道| C
+    N[NAS：LayerHub + SQLite] -->|主动建立 SSH 22 隧道| C
     C -->|经反向隧道转发网页/API| N
     N -->|局域网 MQTT TLS / FTPS / 摄像头| P[打印机]
     M[云端可选邮件工作器] -->|仅回环地址 + 私有令牌| C
@@ -18,7 +18,7 @@ flowchart LR
 | 位置 | 必须部署 | 可选 | 不应承担 |
 |---|---|---|---|
 | 云服务器 | OpenSSH 受限隧道账号、Nginx、HTTPS 证书 | 邮件工作器、SMTP 配置 | 连接打印机 LAN、存放主业务数据库、再运行一套实时应用 |
-| NAS | LayerHub、SQLite/数据目录、systemd 或 Docker、主动隧道 | 固定版本切片引擎、FFmpeg、SSH 维护入口 | 把打印机端口直接映射到公网 |
+| NAS | LayerHub、SQLite/数据目录、systemd 或 Docker、主动隧道 | FFmpeg、SSH 维护入口 | 把打印机端口直接映射到公网 |
 | 打印机 | 接入与 NAS 可互通的 LAN；按固件配置局域网权限 | Developer Mode、AMS、摄像头 | 安装 LayerHub 或开放公网访问 |
 
 浏览器关闭或电脑关机后，NAS 上的后台继续工作。NAS 挂起/关机将断开服务；开机自启不能让挂起中的机器保持联网。
@@ -40,7 +40,7 @@ NAS 与打印机同 LAN 时无需 Tailscale。电脑的系统代理只影响电�
 
 ## 2. 先在 NAS 启动 LayerHub
 
-建议 Debian 13 / Ubuntu 24.04、amd64。4GB 内存适合当前小规模测试，切片单任务；不要同时在多个服务中挂载同一个数据目录。
+建议 Debian 13 / Ubuntu 24.04、amd64。4GB 内存可用于小型打印团队，切片在成员电脑完成；不要同时在多个服务中挂载同一个数据目录。
 
 在 NAS 上安装基本工具：
 
@@ -53,9 +53,9 @@ sudo systemctl enable --now ssh
 从 GitHub Releases 下载 Linux amd64 包和 SHA256SUMS 到 NAS，在解压前校验。只下载 Linux 包时，先从清单筛选这一项：
 
 ```sh
-grep 'LayerHub-0.4.0-alpha-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.4.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.4.0-alpha
+grep 'LayerHub-0.1.0-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.0-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.0-beta
 sudo sh deploy/nas/install.sh
 curl --noproxy '*' http://127.0.0.1:5181/healthz
 sudo systemctl status layerhub --no-pager
@@ -80,7 +80,7 @@ ssh -N -L 5182:127.0.0.1:5181 nasadmin@192.168.50.10
 |---|---|
 | `/opt/layerhub/current` | 当前版本软链接，含 bin 与 web |
 | `/etc/layerhub/layerhub.env` | root 可读的服务环境 |
-| `/var/lib/layerhub/data` | 数据库、模型、上传文件和加密密钥；归 layerhub 用户 |
+| `/var/lib/layerhub/data` | 数据库、上传文件和加密密钥；归 layerhub 用户 |
 | `journalctl -u layerhub` | 服务日志；不应公开整段原始日志 |
 
 ## 3. 在 NAS 生成专用隧道密钥
@@ -200,7 +200,7 @@ LAYERHUB_COOKIE_SECURE=1
 LAYERHUB_PUBLIC_URL=https://print.example.com/
 ```
 
-确保设备仍未接入或已空闲、无活动切片/传输后，`sudo systemctl restart layerhub`，经公网 HTTPS 重新登录。Secure Cookie 开启后，直接访问 NAS 的 HTTP 地址不适合作为登录入口。
+确保设备仍未接入或已空闲、无活动传输/启动后，`sudo systemctl restart layerhub`，经公网 HTTPS 重新登录。Secure Cookie 开启后，直接访问 NAS 的 HTTP 地址不适合作为登录入口。
 
 ## 7. 最后连接打印机：先只读，再逐项控制
 
@@ -220,9 +220,8 @@ openssl s_client -connect 192.168.50.120:8883 -showcerts </dev/null \
 
 本版本 X2D 单喷嘴、单色、第一组 AMS 的既有验证不构成所有机型/固件兼容承诺。不要按照图鉴自动添加一批真实设备并发送测试指令。
 
-## 8. 可选：独立切片、邮件与维护
+## 8. 可选：邮件与维护
 
-- **切片**：阅读 `deploy/slicer/README.md`。引擎独立安装，不随包分发；不启用时仍能用 Bambu Studio 准备切片文件后上传。Docker 基础镜像没有 Studio 所需图形依赖；完整切片优先按原生 NAS 路径部署。
 - **邮件**：阅读 `deploy/mail/README.md`。云端工作器只通过本机 15181 的私有接口领取通知，SMTP 授权码不进网页。当前工作器校验的服务商为 163 / 465 / 隐式 TLS；未声明通用 SMTP 兼容。
 - **NAS 维护 SSH**：默认没有从云端到 NAS 的 shell 隧道。如确有需要，单独授权一个普通 NAS 维护账号，另配其密钥；将 `127.0.0.1:12222` 同时加到云端 `PermitListen`、公钥 `permitlisten` 和 NAS `RemoteForward` 后测试。仍只绑定云端回环地址，不开放公网 12222，不默认授权 root。
 - **避免挂起掉线**：在 NAS 桌面电源管理关闭自动挂起；无人值守主机可由维护者明确执行 `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target`。恢复时 unmask。此设置不会由安装器擅自修改；重启/断电仍中断服务。
@@ -239,14 +238,16 @@ docker compose -f deploy/docker/compose.yaml logs --tail=30
 docker compose -f deploy/docker/compose.yaml exec layerhub cat /var/lib/layerhub/data/bootstrap-admin.txt
 ```
 
-不要同时启动原生服务占用 5181。容器只将 5181 发布到 NAS 回环，SSH 隧道仍由 NAS 主机 systemd 管理。Docker 命名卷持久化数据库；**不要执行 `down -v`**，除非确定要删除该测试空间。此基础模板没有切片引擎，也没有自动启用邮件或真实打印。Docker 安装按 [官方 Debian 指南](https://docs.docker.com/engine/install/debian/) 进行；本次未在生产主机安装 Docker，容器实跑状态见测试报告。
+不要同时启动原生服务占用 5181。容器只将 5181 发布到 NAS 回环，SSH 隧道仍由 NAS 主机 systemd 管理。Docker 命名卷持久化数据库；**不要执行 `down -v`**，除非确定要删除该测试空间。此基础模板没有自动启用邮件或真实打印。Docker 安装按 [官方 Debian 指南](https://docs.docker.com/engine/install/debian/) 进行；本次未在生产主机安装 Docker，容器实跑状态见测试报告。
 
 ## 10. 按顺序验收
 
-NAS 本机健康 → 个人电脑 SSH 预览 → NAS 出站隧道 → 云端回环健康 → 公网 HTTPS 登录 → 成员隔离与备份 → 工程分享/复制 → 独立切片 → 打印机只读 → 现场基础控制 → 最后实体打印。
+NAS 本机健康 → 个人电脑 SSH 预览 → NAS 出站隧道 → 云端回环健康 → 公网 HTTPS 登录 → 成员隔离与备份 → 切片 3MF 校验 → 打印机只读 → 现场基础控制 → 最后实体打印。
 
 每一步保留脱敏结果，不因为前一步成功就跳过后面的条件。具体表格见 [外部验收清单](02-外部验收与反馈.md)。
 
 参考：[OpenSSH PermitListen / MaxSessions](https://man.openbsd.org/sshd_config)、[OpenSSH 公钥选项](https://man.openbsd.org/sshd.8)、[Docker Debian 安装](https://docs.docker.com/engine/install/debian/)、[Bambu Studio 源码与许可](https://github.com/bambulab/BambuStudio)。
 
 Deployment checks / 部署自检：see [Diagnostics / 系统诊断](DIAGNOSTICS.md). Use `--doctor` before startup; directory write probes require `--probe-write`.
+
+已有 Alpha 部署请按 [Beta 迁移说明](BETA_MIGRATION.md) 升级。切片由成员电脑上的 Bambu Studio 完成，NAS 不需要安装切片引擎。

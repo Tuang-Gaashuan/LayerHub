@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+func finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
+
 // Additive tables leave the version-3 integer inventory ledger readable by
 // older releases. Reported precision and the source are retained separately.
 const settlementSchema = `

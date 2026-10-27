@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md) · [Deployment](../DEPLOYMENT.md)
 
-Go HTTP + SQLite + native JavaScript/Three.js. Original code is AGPL-3.0-only; third-party notices are retained.
+Go HTTP + SQLite + native JavaScript. Original code is AGPL-3.0-only; third-party notices are retained.
 
 ## Build and run
 
@@ -23,10 +23,10 @@ On Windows build `bin/layerhub.exe`, set the same environment variables in Power
 go test -mod=vendor ./...
 go vet -mod=vendor ./...
 npm ci --prefix qa/frontend-deps --ignore-scripts
-node --test qa/frontend.test.cjs qa/i18n.test.cjs qa/slicer-gizmo.test.mjs qa/face-placement.test.mjs qa/box-selection.test.mjs
+node --test qa/frontend.test.cjs qa/i18n.test.cjs
 ```
 
-Tests use disposable workspaces and fake devices. Optional real-engine experiments skip unless explicitly configured; skipping is not proof of hardware compatibility. Never supply a production data directory to tests.
+Tests use disposable workspaces and fake devices. Beta tests verify sliced 3MF intake and retired editor APIs; no slicing engine is used. Never supply a production data directory to tests.
 
 ## Corresponding source
 

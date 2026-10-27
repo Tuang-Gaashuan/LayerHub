@@ -1,6 +1,6 @@
 # Deployment: cloud gateway → NAS → printer
 
-[简体中文](01-部署指导-云服务器-NAS-打印机.md) · 0.4.0-alpha · 2026-10-27
+[简体中文](01-部署指导-云服务器-NAS-打印机.md) · 0.1.0-beta · 2026-10-27
 
 This guide targets a **new, independent installation**. Replace every example host, address and key. Do not run the first-install script against an existing LayerHub workspace.
 
@@ -9,7 +9,7 @@ This guide targets a **new, independent installation**. Replace every example ho
 ```mermaid
 flowchart LR
     Browser -->|HTTPS 443| Cloud[Nginx on cloud]
-    NAS[LayerHub + SQLite + optional slicer] -->|Outbound SSH 22| Cloud
+    NAS[LayerHub + SQLite] -->|Outbound SSH 22| Cloud
     Cloud -->|HTTP/API over reverse tunnel| NAS
     NAS -->|LAN MQTT TLS / FTPS / camera| Printer
     Mail[Optional cloud mail worker] -->|Loopback + private token| Cloud
@@ -18,7 +18,7 @@ flowchart LR
 | Host | Required components | Optional components |
 |---|---|---|
 | Cloud | OpenSSH restricted relay account, Nginx, TLS certificate | Mail worker and SMTP credentials |
-| NAS | LayerHub application and SQLite, persistent private data, systemd or Docker, outbound SSH tunnel | Independently installed slicer, FFmpeg, separately authorized SSH maintenance |
+| NAS | LayerHub application and SQLite, persistent private data, systemd or Docker, outbound SSH tunnel | FFmpeg, separately authorized SSH maintenance |
 | Printer | Reachable LAN connection and firmware-specific LAN permissions | Developer Mode, AMS and camera as supported |
 
 The NAS owns the only live workspace. Do not run another cloud application against a copied/shared live database. Closing the browser does not stop background work; suspending the NAS does. Autostart cannot keep a suspended computer online.
@@ -33,15 +33,15 @@ Allow public TCP 443, TCP 80 for ACME/redirects, and appropriately restricted SS
 
 ## 1. Install the application on the NAS
 
-Reference systems: Debian 13 / Ubuntu 24.04, amd64. The supplied binaries are amd64 only. A 4GB machine is suitable for small tests with one slicing task at a time.
+Reference systems: Debian 13 / Ubuntu 24.04, amd64. The supplied binaries are amd64 only. A 4GB machine can be used for a small printer team; slicing runs on members' computers.
 
 ```sh
 sudo apt update
 sudo apt install -y openssh-client openssh-server ca-certificates curl python3 ffmpeg
 sudo systemctl enable --now ssh
-grep 'LayerHub-0.4.0-alpha-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.4.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.4.0-alpha
+grep 'LayerHub-0.1.0-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.0-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.0-beta
 sudo sh deploy/nas/install.sh
 curl --noproxy '*' http://127.0.0.1:5181/healthz
 sudo systemctl status layerhub --no-pager
@@ -62,7 +62,7 @@ Open `http://127.0.0.1:5182/`. Keep `LAYERHUB_COOKIE_SECURE=0`, device mode offl
 
 - `/opt/layerhub/current`: installed binary and web assets.
 - `/etc/layerhub/layerhub.env`: root-readable environment settings; the binary does not auto-load .env.
-- `/var/lib/layerhub/data`: database, uploads, model data and master.key, owned by the service account.
+- `/var/lib/layerhub/data`: database, uploads and master.key, owned by the service account.
 - `journalctl -u layerhub`: service logs. Share only redacted excerpts.
 
 ## 2. Generate a dedicated NAS tunnel key
@@ -180,7 +180,7 @@ LAYERHUB_COOKIE_SECURE=1
 LAYERHUB_PUBLIC_URL=https://print.example.com/
 ```
 
-Once devices are disconnected or freshly idle, with no active slices/transfers, restart `layerhub`. Sign in again through public HTTPS. With Secure cookies enabled, plain NAS HTTP is not a suitable login endpoint.
+Once devices are disconnected or freshly idle, with no active transfers/starts, restart `layerhub`. Sign in again through public HTTPS. With Secure cookies enabled, plain NAS HTTP is not a suitable login endpoint.
 
 ## 6. Connect the printer last
 
@@ -202,8 +202,7 @@ Existing X2D single-nozzle/single-color/first-AMS validation is not a compatibil
 
 ## Optional components
 
-- **Slicing**: see `deploy/slicer/README.md`. Install the pinned engine independently. The core Docker image does not contain Studio's graphical runtime dependencies; native NAS deployment is the reference for complete slicing. Without it, upload files sliced in your desktop slicer.
-- **Email**: see `deploy/mail/README.md`. The cloud worker uses loopback port 15181 plus a private relay token. SMTP secrets stay off the web frontend. This alpha worker validates 163 SMTP/465/implicit TLS; it is not a general SMTP-provider compatibility claim.
+- **Email**: see `deploy/mail/README.md`. The cloud worker uses loopback port 15181 plus a private relay token. SMTP secrets stay off the web frontend. This worker validates 163 SMTP/465/implicit TLS; it is not a general SMTP-provider compatibility claim.
 - **NAS SSH maintenance**: not enabled by default. If needed, explicitly authorize a separate regular NAS administrator and key. Add `127.0.0.1:12222` consistently to cloud PermitListen, the authorized-key permitlisten options and NAS RemoteForward. Keep it loopback-only; do not enable public port 12222 or assume root access.
 - **Suspension**: disable automatic suspend in the NAS desktop power settings. An administrator may explicitly mask sleep/suspend/hibernate targets with systemctl if desired; the installer does not change power policy automatically. Power loss/restarts still interrupt services.
 
@@ -219,10 +218,12 @@ docker compose -f deploy/docker/compose.yaml logs --tail=30
 docker compose -f deploy/docker/compose.yaml exec layerhub cat /var/lib/layerhub/data/bootstrap-admin.txt
 ```
 
-Do not start the native service on the same port. Docker publishes the app only on NAS loopback; the SSH tunnel stays on the host. The named volume persists data. Do not use `down -v` unless intentionally deleting a disposable workspace. This basic template includes neither slicer nor preconfigured email/real printing. Check the validation report for the distinction between static checks and an actual Docker run.
+Do not start the native service on the same port. Docker publishes the app only on NAS loopback; the SSH tunnel stays on the host. The named volume persists data. Do not use `down -v` unless intentionally deleting a disposable workspace. This template does not preconfigure email or real printing. Check the validation report for the distinction between static checks and an actual Docker run.
 
-Acceptance order: NAS health → private SSH browser preview → outbound tunnel → cloud loopback health → public HTTPS login → member isolation/backup → shared-project copying → slicing → printer read-only telemetry → attended basic controls → attended print.
+Acceptance order: NAS health → private SSH browser preview → outbound tunnel → cloud loopback health → public HTTPS login → member isolation/backup → sliced 3MF inspection → printer read-only telemetry → attended basic controls → attended print.
 
 References: [OpenSSH server configuration](https://man.openbsd.org/sshd_config), [authorized-key options](https://man.openbsd.org/sshd.8), [Docker installation](https://docs.docker.com/engine/install/debian/), [Bambu Studio](https://github.com/bambulab/BambuStudio).
 
 Deployment checks / 部署自检：see [Diagnostics / 系统诊断](DIAGNOSTICS.md). Use `--doctor` before startup; directory write probes require `--probe-write`.
+
+For existing Alpha installations, use [Beta migration](BETA_MIGRATION.md). Beta has no NAS slicing-engine dependency.

@@ -9,7 +9,6 @@ import (
 )
 
 type Config struct {
-	SlicerPath, SlicerProfiles                                     string
 	Address, DataDir, WebDir, AdminUser, AdminPassword, DeviceMode string
 	EnablePrintStart, CookieSecure                                 bool
 	MaxUpload                                                      int64
@@ -155,12 +154,7 @@ type Device interface {
 	Close()
 }
 type Service struct {
-	modelImportBusy atomic.Bool
-	pathMu          sync.Mutex
-	pathCache       map[[32]byte]*Toolpath
-	sliceWake       chan struct{}
-	sliceMu         sync.Mutex
-	sliceCancel     map[int64]context.CancelFunc
+	fileInspectBusy atomic.Bool
 	DB              *sql.DB
 	Config          Config
 	Device          Device
