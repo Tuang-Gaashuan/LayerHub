@@ -1,6 +1,7 @@
 package app
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -329,7 +330,23 @@ func TestHTTPStreamingBinaryUploadAndCSRF(t *testing.T) {
 	if response.StatusCode != 403 {
 		t.Fatal("mutation without CSRF accepted")
 	}
-	payload := append(bytes.Repeat([]byte{0, 13, 10, 127, 255, 65}, 40000), 13, 10)
+	entries := intakeFixture()
+	entries["Metadata/binary-test.bin"] = string(append(bytes.Repeat([]byte{0, 13, 10, 127, 255, 65}, 40000), 13, 10))
+	var archive bytes.Buffer
+	z := zip.NewWriter(&archive)
+	for name, content := range entries {
+		f, e := z.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Store})
+		if e != nil {
+			t.Fatal(e)
+		}
+		if _, e = f.Write([]byte(content)); e != nil {
+			t.Fatal(e)
+		}
+	}
+	if e := z.Close(); e != nil {
+		t.Fatal(e)
+	}
+	payload := archive.Bytes()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	part, _ := writer.CreateFormFile("file", "binary.gcode.3mf")

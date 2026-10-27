@@ -1,0 +1,54 @@
+{
+  "version": "0.4.0-alpha",
+  "date": "2026-10-27",
+  "status": "passed",
+  "bundled_upgrade": [
+    "content_based_3mf_inspection",
+    "independent_geometry_and_slice_routes",
+    "original_parameter_reference_and_comparison",
+    "per_plate_colors_time_and_weight",
+    "single_plate_estimate_prefill_unknown_values_blank",
+    "local_personal_inspection_report",
+    "backend_unsliced_queue_rejection_and_archive_link_rejection"
+  ],
+  "frontend_geometry_language_tests": 189,
+  "focused_import_tests_after_layout_adjustment": 13,
+  "go_tests": "passed",
+  "go_vet": "passed",
+  "windows_linux_amd64_builds": "passed",
+  "actual_binary_file_intake": {
+    "windows": "passed",
+    "linux": "passed",
+    "test_workspaces": "disposable_offline",
+    "temporary_uploads": "cleaned",
+    "business_data": "unchanged"
+  },
+  "browser": {
+    "chinese": "verified",
+    "english": "verified",
+    "geometry_settings_comparison": "verified",
+    "report_download": "verified",
+    "workbench_to_queue_route": "verified",
+    "rounded_estimates": "verified",
+    "demo_archive_only": true
+  },
+  "production": {
+    "state": "deployed",
+    "application_version": "verified_0.4.0-alpha",
+    "backup_created": true,
+    "application_restart_for_batch": 1,
+    "cloud_gateway_changed": false,
+    "configuration_and_print_start": "preserved",
+    "public_tls_inspection": "passed",
+    "public_asset_hashes": "verified",
+    "secure_cookie_policy": "preserved",
+    "inspection_created_jobs_models_reservations": 0,
+    "inspection_temporary_uploads": "cleaned",
+    "business_data": "unchanged",
+    "printer_commands_sent": 0,
+    "test_emails_sent": 0
+  },
+  "new_hardware_compatibility_claims": false,
+  "docker_runtime": "not_executed",
+  "fresh_two_host_os_installation": "not_executed"
+}

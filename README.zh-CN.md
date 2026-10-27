@@ -7,12 +7,12 @@
 准备模型，安排队列，了解每一台机器正在做什么。
 
 [![源码检查](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![版本](https://img.shields.io/badge/version-0.3.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha)
+[![版本](https://img.shields.io/badge/version-0.4.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![开源许可](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
 [English](README.md) · **简体中文**
 
-[下载软件](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha) · [部署指导](01-部署指导-云服务器-NAS-打印机.md) · [验证记录](validation/README.md) · [反馈问题](https://github.com/Tuang-Gaashuan/LayerHub/issues)
+[下载软件](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [部署指导](01-部署指导-云服务器-NAS-打印机.md) · [验证记录](validation/README.md) · [反馈问题](https://github.com/Tuang-Gaashuan/LayerHub/issues)
 
 </div>
 
@@ -20,7 +20,7 @@ LayerHub 是一个可自行部署的 **3D 打印协作网页应用**。它把模
 
 软件和数据运行在 NAS 或局域网小主机上，由它连接打印机；可选的云服务器通过受限主动隧道提供 HTTPS 入口。成员使用浏览器即可访问。
 
-**当前版本为 0.3.0-alpha，面向独立部署测试。** 软件已支持简体中文与 English。实机验证目前集中于一套 X2D 配置，接入设备前请先阅读[兼容性与当前边界](#兼容性与当前边界)。
+**当前版本为 0.4.0-alpha，面向独立部署测试。** 软件已支持简体中文与 English。实机验证目前集中于一套 X2D 配置，接入设备前请先阅读[兼容性与当前边界](#兼容性与当前边界)。
 
 [功能介绍](#它能做什么) · [打印流程](#从模型到打印) · [部署架构](#云服务器--nas--打印机) · [快速试用](#先在本地试用) · [文档导航](#文档导航)
 
@@ -38,6 +38,7 @@ LayerHub 是一个可自行部署的 **3D 打印协作网页应用**。它把模
 | **逐机任务队列** | 为任务选择具体打印机，了解每台机器各自的等待情况，启动前检查设备与耗材。下一项任务不会自动开打。 |
 | **逐卷耗材库** | 记录材质、颜色、余量、公共/个人归属和打印机/AMS 装载槽位；任务预留与实际用量结算分别处理。 |
 | **模型工作台** | 导入 STL 或受支持的工程 3MF 几何，摆放、旋转、多选、复制、自动排版，并在多个打印盘之间组织对象。 |
+| **文件检查** | 两个入口按内容识别 3MF，分别提供编辑与保留切片的路径，显示各盘颜色、预计值、原参数对照，并支持导出检查报告。 |
 | **在线切片与预览** | 调用独立安装的引擎，调整受支持的工艺参数，查看路径与时长/用量估算，对比切片结果。 |
 | **私有工程与团队分享** | 保存个人工程、草稿和工艺预设，明确发布带版本的团队快照；成员复制成自己的工程后独立编辑。 |
 | **设备控制台** | 查看新鲜遥测、进度和供料信息，使用受支持的暂停/继续/停止、温度、风扇、灯光控制，以及摄像头预览和拍照。具体能力取决于机型、固件和权限。 |
@@ -62,6 +63,14 @@ LayerHub 是一个可自行部署的 **3D 打印协作网页应用**。它把模
 耗材库中的一条记录代表一卷实物。它可以属于团队或个人，有明确颜色、剩余重量，并记录装在哪台打印机、哪个供料槽位上。创建任务时先预留计划用量，不会立即按照估算值扣库。
 
 **设备打印完成 → 人工取件 → 实际用量结算**分别记录。设备确认完工后即可给任务所有者发邮件；是否取件、实际使用多少耗材，仍由人确认，避免把未取走的成品或尚未测量的用量直接算作已结清。
+
+### 把 Studio 文件交给正确的流程
+
+从任一入口选择 3MF，保存前先按内容检查。可保留原切片的路径与工艺，也可明确选择导入几何后重新编辑、切片。原机型、材料和工艺参数与工作台默认值并列供核对，切片则按盘显示颜色、时间与用量。单盘预填预计值，缺失项和多盘预计值留空；后端拒绝把未切片的 3MF 加入打印队列。[导入说明与限制](IMPORTING.md)。
+
+![LayerHub 3MF file inspection](validation/file-intake-zh.png)
+
+*隔离工作区中使用演示文件的实际检查界面，没有发送设备指令。*
 
 ## 从模型到打印
 
@@ -102,23 +111,23 @@ flowchart LR
 
 ## 先在本地试用
 
-从 [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha) 下载 **Windows amd64 ZIP** 或 **Linux amd64 TAR.GZ**，同时下载 `SHA256SUMS` 并核对校验值。第一次试用请解压到新的文件夹。
+从 [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) 下载 **Windows amd64 ZIP** 或 **Linux amd64 TAR.GZ**，同时下载 `SHA256SUMS` 并核对校验值。第一次试用请解压到新的文件夹。
 
 ### Windows
 
 在解压后的目录运行 `start.cmd`，也可以使用 PowerShell：
 
 ```powershell
-Expand-Archive .\LayerHub-0.3.0-alpha-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.3.0-alpha
+Expand-Archive .\LayerHub-0.4.0-alpha-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.4.0-alpha
 .\start.cmd
 ```
 
 ### Linux
 
 ```sh
-tar -xzf LayerHub-0.3.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.3.0-alpha
+tar -xzf LayerHub-0.4.0-alpha-linux-amd64.tar.gz
+cd LayerHub-0.4.0-alpha
 sh start.sh
 ```
 
@@ -208,7 +217,7 @@ python tools/package.py
 
 ## 验证现状与参与测试
 
-0.3.0-alpha 已完成 **183 项前端/几何/语言测试**、Go 测试与 `vet`、Windows/Linux amd64 构建、全新隔离工作区启动/重启检查，以及英文浏览器验证。语言更新中的控制和邮件生成使用假设备、本地队列测试，与早先有人在场的 X2D 真机打印验收分别记录。Docker 仍只做静态检查；全新双主机安装仍需独立验收。
+0.4.0-alpha 已完成 **189 项前端/几何/语言测试**、Go 测试与 `vet`、Windows/Linux amd64 构建、全新隔离工作区启动/重启检查，以及英文浏览器验证。语言更新中的控制和邮件生成使用假设备、本地队列测试，与早先有人在场的 X2D 真机打印验收分别记录。Docker 仍只做静态检查；全新双主机安装仍需独立验收。
 
 欢迎按[验收表](02-外部验收与反馈.md)测试，在 [Issues](https://github.com/Tuang-Gaashuan/LayerHub/issues) 提供版本、环境、复现步骤及预期/实际结果。没有打印机时，把依赖硬件的步骤标记为未测试即可。反馈时使用脱敏片段，不要上传数据库、备份、访问码或私人模型集合。
 

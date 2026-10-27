@@ -1,0 +1,12 @@
+{
+  "version": "0.4.0-alpha",
+  "status": "passed",
+  "binary_routes": "geometry_only_slice_only_and_both",
+  "filename_independent": true,
+  "reference_allowlist": "passed",
+  "unsliced_queue_upload": "rejected_before_job",
+  "temporary_uploads": "cleaned",
+  "business_data_unchanged": true,
+  "real_devices_contacted": 0,
+  "mail_sent": 0
+}

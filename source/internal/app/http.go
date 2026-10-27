@@ -209,6 +209,9 @@ func (s *Service) Handler() http.Handler {
 		case "POST /api/slicing/import-3mf":
 			s.importModel3MF(w, r, u)
 			return
+		case "POST /api/files/inspect":
+			s.inspectFile(w, r)
+			return
 		case "GET /api/slicing/model", "GET /api/slicing/output", "GET /api/slicing/preview":
 			id, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
 			s.sliceFile(w, r, u, strings.TrimPrefix(r.URL.Path, "/api/slicing/"), id)
@@ -667,6 +670,14 @@ func (s *Service) upload(w http.ResponseWriter, r *http.Request, u User) {
 	if err = tmp.Close(); err != nil {
 		fail(w, err)
 		return
+	}
+	// The chooser is advisory. Enforce the same sliced-file boundary for API
+	// clients before creating a job or reserving any inventory.
+	if strings.EqualFold(filepath.Ext(filename), ".3mf") {
+		if _, err = inspectSlice(path); err != nil {
+			fail(w, err)
+			return
+		}
 	}
 	var in Schedule
 	if err = json.Unmarshal([]byte(fields["schedule"]), &in); err != nil {

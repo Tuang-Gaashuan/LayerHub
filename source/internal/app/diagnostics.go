@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const BuildVersion = "0.3.0-alpha"
+const BuildVersion = "0.4.0-alpha"
 
 // Diagnostics never include environment values, addresses, paths, user content,
 // raw errors or credentials. A successful inspection is not a print permission.

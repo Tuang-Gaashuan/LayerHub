@@ -7,12 +7,12 @@
 Prepare models. Coordinate the queue. Know what is printing.
 
 [![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![Version](https://img.shields.io/badge/version-0.3.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha)
+[![Version](https://img.shields.io/badge/version-0.4.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
 **English** · [简体中文](README.zh-CN.md)
 
-[Download](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha) · [Deployment](DEPLOYMENT.md) · [Validation](validation/README.md) · [Feedback](https://github.com/Tuang-Gaashuan/LayerHub/issues)
+[Download](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Deployment](DEPLOYMENT.md) · [Validation](validation/README.md) · [Feedback](https://github.com/Tuang-Gaashuan/LayerHub/issues)
 
 </div>
 
@@ -20,7 +20,7 @@ LayerHub is a **self-hosted web application for teams sharing 3D printers**. It 
 
 The application and data live on your NAS or a small LAN computer. An optional cloud gateway gives your team HTTPS access through a restricted outbound tunnel. Your NAS connects to the printers locally; members use a browser.
 
-**Current release: 0.3.0-alpha, for independent deployment testing.** English and Simplified Chinese are available in the application. Hardware validation currently focuses on one X2D configuration; read [compatibility and scope](#compatibility-and-scope) before connecting a printer.
+**Current release: 0.4.0-alpha, for independent deployment testing.** English and Simplified Chinese are available in the application. Hardware validation currently focuses on one X2D configuration; read [compatibility and scope](#compatibility-and-scope) before connecting a printer.
 
 [Features](#what-you-can-do) · [Print workflow](#from-model-to-print) · [Architecture](#cloud--nas--printer) · [Quick start](#try-it-locally) · [Documentation](#documentation)
 
@@ -38,6 +38,7 @@ The application and data live on your NAS or a small LAN computer. An optional c
 | **Per-printer queues** | Assign a job to a specific printer, inspect that machine's waiting tasks, and review material and device readiness before starting. The next job does not start automatically. |
 | **Spool inventory** | Track individual rolls with material, color, remaining weight, shared/private ownership and printer/AMS slot mounting. Reserve material for jobs, then settle actual usage separately. |
 | **Model workbench** | Import STL or supported project 3MF geometry, place and rotate objects, select several at once, duplicate, arrange copies and work across multiple plates. |
+| **File inspection** | Content-based 3MF detection from either entry, independent edit/print routes, per-plate colors and estimates, original-setting comparisons and downloadable inspection reports. |
 | **Slicing and preview** | Use an independently installed engine, adjust supported process settings, inspect toolpaths, review time/material estimates and compare slice results. |
 | **Private and shared projects** | Save personal projects and drafts, reuse process presets, and explicitly publish versioned project snapshots to the team. Members copy snapshots into their own editable projects. |
 | **Printer console** | Inspect fresh telemetry, progress and supply information; use supported pause/resume/stop, temperature, fan and light controls, camera preview and snapshots. Availability depends on model, firmware and permissions. |
@@ -56,6 +57,14 @@ Preparing several copies should not mean uploading and positioning the same file
 - Private process presets, slice-result comparison and toolpath preview before a job reaches the printer queue.
 
 Project 3MF import is a **geometry import**, with analysis and explicit confirmation. It does not promise to reproduce every setting from the originating slicer or execute embedded instructions. LayerHub is a focused browser workflow, not a complete replacement for every Bambu Studio editing tool.
+
+### Bring Studio files into the right workflow
+
+Choose a 3MF from either entry and inspect its contents before saving anything. Use an existing slice to keep its paths and process, or explicitly import geometry for editing and re-slicing. See original printer/material/process references beside workbench defaults, plus every sliced plate's colors, time and usage. Single-plate estimates prefill the queue form; missing values and multi-plate estimates stay blank. The backend rejects unsliced 3MF before it enters the print queue. [Import guide and limits](IMPORTING.md).
+
+![LayerHub 3MF file inspection](validation/file-intake-en.png)
+
+*Actual file inspection using a disposable demo archive in an offline workspace. No printer command is sent.*
 
 ### Materials and completion stay understandable
 
@@ -102,23 +111,23 @@ For a local-only trial, use the application without a cloud gateway. A full depl
 
 ## Try it locally
 
-Download the **Windows amd64 ZIP** or **Linux amd64 TAR.GZ**, together with `SHA256SUMS`, from [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.3.0-alpha). Verify the checksum and extract the archive. Use a fresh directory for your first trial.
+Download the **Windows amd64 ZIP** or **Linux amd64 TAR.GZ**, together with `SHA256SUMS`, from [Releases](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha). Verify the checksum and extract the archive. Use a fresh directory for your first trial.
 
 ### Windows
 
 Run `start.cmd` in the extracted folder, or use PowerShell:
 
 ```powershell
-Expand-Archive .\LayerHub-0.3.0-alpha-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.3.0-alpha
+Expand-Archive .\LayerHub-0.4.0-alpha-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.4.0-alpha
 .\start.cmd
 ```
 
 ### Linux
 
 ```sh
-tar -xzf LayerHub-0.3.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.3.0-alpha
+tar -xzf LayerHub-0.4.0-alpha-linux-amd64.tar.gz
+cd LayerHub-0.4.0-alpha
 sh start.sh
 ```
 
@@ -208,7 +217,7 @@ The execution-policy flag applies only to that PowerShell process. Build outputs
 
 ## Validation and feedback
 
-The 0.3.0-alpha checks include **183 frontend/geometry/language tests**, Go tests and `vet`, Windows/Linux amd64 builds, disposable fresh-workspace and restart checks, and English browser verification. Language-update controls and email generation used fake devices/local queues; these are separate from the earlier attended X2D real-print validation. Docker remains static-only, and a fresh two-host installation still needs independent acceptance.
+The 0.4.0-alpha checks include **189 frontend/geometry/language tests**, Go tests and `vet`, Windows/Linux amd64 builds, disposable fresh-workspace and restart checks, and English browser verification. Language-update controls and email generation used fake devices/local queues; these are separate from the earlier attended X2D real-print validation. Docker remains static-only, and a fresh two-host installation still needs independent acceptance.
 
 To help test, follow [Testing](TESTING.md) and open an [issue](https://github.com/Tuang-Gaashuan/LayerHub/issues) with your version, environment, reproduction steps and expected/actual behavior. Mark hardware-dependent steps as untested when you have no printer. Share redacted excerpts rather than a database, backup, access code or personal model archive.
 

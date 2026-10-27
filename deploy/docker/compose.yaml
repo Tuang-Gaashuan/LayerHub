@@ -3,7 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
-    image: layerhub:0.3.0-alpha
+    image: layerhub:0.4.0-alpha
     platform: linux/amd64
     init: true
     restart: unless-stopped

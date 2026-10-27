@@ -91,11 +91,12 @@ type importBoard struct {
 	Placements []ModelPlacement
 }
 type modelImport struct {
-	Digest   string
-	Sources  []importMesh
-	Boards   []importBoard
-	Skipped  int
-	HasGcode bool
+	Digest    string
+	Sources   []importMesh
+	Boards    []importBoard
+	Skipped   int
+	HasGcode  bool
+	Reference *ImportReference
 }
 type importBoardSummary struct {
 	Name      string `json:"name"`
@@ -108,16 +109,17 @@ type importSourceSummary struct {
 	Size      Point3 `json:"size"`
 }
 type modelImportSummary struct {
-	SHA256   string                `json:"sha256"`
-	Plates   []importBoardSummary  `json:"plates"`
-	Sources  []importSourceSummary `json:"sources"`
-	Objects  int                   `json:"objects"`
-	Skipped  int                   `json:"skipped"`
-	HasGcode bool                  `json:"hasGcode"`
+	SHA256    string                `json:"sha256"`
+	Plates    []importBoardSummary  `json:"plates"`
+	Sources   []importSourceSummary `json:"sources"`
+	Objects   int                   `json:"objects"`
+	Skipped   int                   `json:"skipped"`
+	HasGcode  bool                  `json:"hasGcode"`
+	Reference *ImportReference      `json:"reference,omitempty"`
 }
 
 func (p modelImport) summary() modelImportSummary {
-	r := modelImportSummary{SHA256: p.Digest, Skipped: p.Skipped, HasGcode: p.HasGcode, Sources: []importSourceSummary{}, Plates: []importBoardSummary{}}
+	r := modelImportSummary{SHA256: p.Digest, Skipped: p.Skipped, HasGcode: p.HasGcode, Reference: p.Reference, Sources: []importSourceSummary{}, Plates: []importBoardSummary{}}
 	for _, s := range p.Sources {
 		r.Sources = append(r.Sources, importSourceSummary{Name: s.Name, Triangles: len(s.Mesh.Vertices) / 3, Size: s.Mesh.Bounds.Size})
 	}
@@ -440,6 +442,11 @@ func parseModel3MF(ctx context.Context, raw []byte) (modelImport, error) {
 	}
 	if files["[Content_Types].xml"] == nil {
 		return fail("缺少 3MF 内容类型文件")
+	}
+	if entry := files["Metadata/project_settings.config"]; entry != nil {
+		if b, err := mfRead(ctx, entry, 4<<20); err == nil {
+			p.Reference = importReference(b)
+		}
 	}
 	rels, e := mfRead(ctx, files["_rels/.rels"], 1<<20)
 	if e != nil {

@@ -1,6 +1,6 @@
 # Deployment: cloud gateway → NAS → printer
 
-[简体中文](01-部署指导-云服务器-NAS-打印机.md) · 0.3.0-alpha · 2026-10-27
+[简体中文](01-部署指导-云服务器-NAS-打印机.md) · 0.4.0-alpha · 2026-10-27
 
 This guide targets a **new, independent installation**. Replace every example host, address and key. Do not run the first-install script against an existing LayerHub workspace.
 
@@ -39,9 +39,9 @@ Reference systems: Debian 13 / Ubuntu 24.04, amd64. The supplied binaries are am
 sudo apt update
 sudo apt install -y openssh-client openssh-server ca-certificates curl python3 ffmpeg
 sudo systemctl enable --now ssh
-grep 'LayerHub-0.3.0-alpha-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.3.0-alpha-linux-amd64.tar.gz
-cd LayerHub-0.3.0-alpha
+grep 'LayerHub-0.4.0-alpha-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.4.0-alpha-linux-amd64.tar.gz
+cd LayerHub-0.4.0-alpha
 sudo sh deploy/nas/install.sh
 curl --noproxy '*' http://127.0.0.1:5181/healthz
 sudo systemctl status layerhub --no-pager

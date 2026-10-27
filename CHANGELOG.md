@@ -1,3 +1,22 @@
+# 0.4.0-alpha — File intake and print preparation / 文件导入与打印准备
+
+- Inspect 3MF contents from either file entry; independently identify editable geometry and valid sliced plates instead of trusting the filename.
+- Offer explicit existing-slice and editable-geometry routes; unsupported geometry does not hide a valid sliced route. Neither choice starts a printer from the inspector.
+- Show per-plate material/color codes, time/weight estimates and original parameter references; compare reference values with workbench defaults before geometry import.
+- Prefill rounded single-plate queue estimates; leave missing and multi-plate estimates blank. No automatic spool selection or actual stock deduction.
+- Export personal inspection reports locally; require authenticated CSRF-protected inspection, bounded temporary uploads and cleanup. Cancelled/late reads cannot replace drafts or other pages.
+- Reject unsliced/invalid 3MF queue uploads on the backend and reject archive links. Existing import digest/receipt checks and print-start guards remain.
+- Ship complete Chinese/English UI, import guidance and updated deployment packages in one bundled release.
+- 本次合并内容识别、双入口、原参数对照、逐盘颜色与预计值、报告导出及后端队列校验，一并更新中英文文档；不新增机型、多色或双喷嘴启动能力。
+
+# 0.3.0-alpha — Deployment diagnostics / 部署与连接诊断
+
+- Add local `--doctor` inspection before startup, bilingual/JSON output and opt-in temporary-file write probes. No workspace initialization, device connections, slicing or SMTP tests.
+- Add administrator-only System diagnostics with separate browser, independent gateway, NAS application and printer evidence; distinguish unknowns, optional components, stale telemetry and control authorization restrictions.
+- Add redacted report export, explicit freshness expiry and actionable bilingual remedies. Results are cleared on permission loss; checks never retry commands.
+- Add a standalone Nginx `/gateway-healthz` marker and bilingual diagnostic guidance.
+- 新增部署自检、管理员连接诊断、脱敏导出与独立网关标记；不会启动打印或发送测试邮件。
+
 # 0.2.0-alpha
 
 - Simplified Chinese / English interface across sign-in, dashboard, materials, printer controls, queues, security and slicing.
@@ -13,14 +32,6 @@
 Initial independent-deployment alpha: three-tier roles and sessions, verified email notifications, per-printer queues and spool inventory; private STL/3MF geometry projects, real slicing and layer paths; versioned team snapshots; NAS application + restricted cloud HTTPS gateway templates; Windows/Linux amd64 packages, corresponding source, licenses and bilingual deployment/acceptance documentation.
 
 Hardware evidence covers one tested X2D firmware/module configuration. Catalog artwork does not establish compatibility. Multicolor/multi-nozzle start, motion/filament controls, per-object support, mesh cutting and a desktop installer are outside this release's claims.
-
-## 0.3.0-alpha — Deployment diagnostics / 部署与连接诊断
-
-- Add local `--doctor` inspection before startup, bilingual/JSON output and opt-in temporary-file write probes. No workspace initialization, device connections, slicing or SMTP tests.
-- Add administrator-only System diagnostics with separate browser, independent gateway, NAS application and printer evidence; distinguish unknowns, optional components, stale telemetry and control authorization restrictions.
-- Add redacted report export, explicit freshness expiry and actionable bilingual remedies. Results are cleared on permission loss; checks never retry commands.
-- Add a standalone Nginx `/gateway-healthz` marker and bilingual diagnostic guidance.
-- 新增部署自检、管理员连接诊断、脱敏导出与独立网关标记；不会启动打印或发送测试邮件。
 
 ## 简体中文
 

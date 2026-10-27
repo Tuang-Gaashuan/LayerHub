@@ -15,6 +15,36 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function settle(){for(let i=0;i<8;i++)await tick()}
 
 function diagnosticFixture(){return {ok:true,schema:1,version:'0.3.0-alpha',platform:'linux/amd64',checkedAt:Date.now(),mode:'runtime',privateToken:'NEVER-EXPORT-THIS',checks:[{id:'printer',group:'printers',status:'ok',label:'打印机',detail:'已有连接与遥测新鲜；不等于所有控制或打印均获授权。',printerId:1,observedAt:Date.now(),ip:'NEVER-EXPORT-IP',serial:'NEVER-EXPORT-SERIAL'},{id:'data_directory',group:'storage',status:'unknown',label:'数据目录',detail:'目录存在；没有执行写入测试。',fix:'可由服务账户运行 --doctor --probe-write 检查临时文件读写。'}]}}
+
+async function intakeApp(t,{language='zh-CN',multi=false,geometry=false}={}){
+ const a=await app(t,{language}),{w,state}=a,base=w.fetch;
+ const file=new w.File(['fixture'],'<img src=x>-project.3mf');
+ const review={schema:1,sha256:'a'.repeat(64),bytes:7,geometry:{available:geometry,reason:'工程包含修改器、负体积或支撑辅助体，暂不能作为普通模型导入；请在 Studio 移除辅助体或导出实体 STL。',review:{sha256:'a'.repeat(64),plates:[],sources:[],objects:0}},sliced:{available:true,info:{model:'X2D',plates:[{id:1,seconds:3701,filaments:[{material:'PETG',color:'#FFFFFF',usedGrams:12.1,grams:13,index:0}]},...(multi?[plate(2,'#3159ed')]:[])]}},reference:{printer:'<img src=x> A1 mini',layer:'0.08',materials:['PLA'],colors:['#3159ed','red;background:url(https://example.invalid/x)']}};
+ w.fetch=(url,options={})=>{if(url==='/api/files/inspect'){state.calls.push({url,options});return Promise.resolve(reply(200,{ok:true,review}))}return base(url,options)};
+ return {...a,file,review};
+}
+test('content inspection offers independent routes, renders exact color codes and escapes original metadata',async t=>{
+ const a=await intakeApp(t),{$,w}=a;await a.FileIntake.open(a.file);
+ assert.equal($('#intakeGeometry').disabled,true);assert.equal($('#intakeSlice').disabled,false);assert.match($('#fileIntakePanel').textContent,/负体积|修改器/);assert.match($('#fileIntakePanel').textContent,/#FFFFFF/);assert.match($('#fileIntakePanel').textContent,/12.10 g/);assert.match($('#fileIntakePanel').textContent,/<img src=x>/);assert.equal($('#fileIntakePanel img'),null);assert.equal($('#fileIntakePanel [style*="url"]'),null);
+ assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/files/inspect');assert.match(w.testing.FileIntake.reference(a.review.reference,true),/0.20 mm/);
+});
+test('a single sliced plate prefills rounded estimates but never chooses a spool or creates a job',async t=>{
+ const a=await intakeApp(t),{$}=a;await a.FileIntake.open(a.file);$('#intakeSlice').click();await settle();$('#uploadBtn').click();
+ const form=$('#uploadScheduleForm');assert.equal(form.elements.estimate.value,'62');assert.equal(form.elements.grams.value,'13');assert.equal(form.querySelector('[name=spoolId]:checked'),null);assert.match($('#modalContent').textContent,/向上取整/);assert.equal(writes(a).filter(c=>c.url!=='/api/files/inspect').length,0);
+});
+test('multiple plates show each color and leave estimates explicit until print preparation',async t=>{
+ const a=await intakeApp(t,{multi:true}),{$}=a;await a.FileIntake.open(a.file);assert.equal(a.w.document.querySelectorAll('.intake-plate').length,2);assert.match($('#fileIntakePanel').textContent,/#3159ed/);$('#intakeSlice').click();await settle();$('#uploadBtn').click();assert.match($('#modalContent').textContent,/多盘/);assert.equal($('#uploadScheduleForm').elements.estimate.value,'');assert.equal($('#uploadScheduleForm').elements.grams.value,'');
+});
+test('English file inspection and scheduling translate system text while preserving user file and metadata names',async t=>{
+ const a=await intakeApp(t,{language:'en'}),{$}=a;await a.FileIntake.open(a.file);assert.match($('#fileIntakePanel').textContent,/Use existing slice/);assert.match($('#fileIntakePanel').textContent,/A1 mini/);assert.doesNotMatch($('#fileIntakePanel').textContent,/查看原工程参数|安排打印|分钟|原工程参数/);$('#intakeSlice').click();await settle();$('#uploadBtn').click();assert.match($('#modalContent').textContent,/rounded up/);
+});
+test('inspection cancellation aborts its upload and late results cannot reopen a modal or replace the board',async t=>{
+ const a=await intakeApp(t),{$,w}=a;let finish,options;w.fetch=(url,o)=>{options=o;return new Promise(r=>finish=()=>r(reply(200,{ok:true,review:a.review})))};
+ const pending=a.FileIntake.open(a.file);$('#modal [data-cancel]').click();assert.equal(options.signal.aborted,true);finish();await pending;assert.equal($('#modal').open,false);assert.equal($('#intakeSlice'),null);assert.ok($('#boardRoot'));
+});
+test('inspection report export is local and old-account cache cannot prefill a different account',async t=>{
+ const a=await intakeApp(t),{$,w}=a;let downloads=0;w.URL.createObjectURL=()=>{downloads++;return 'blob:test'};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=function(){assert.equal(this.download,'layerhub-file-review.json')};await a.FileIntake.open(a.file);$('#intakeExport').click();assert.equal(downloads,1);assert.equal(writes(a).length,1);a.w.testing.data.user.id=2;assert.equal(a.FileIntake.forFile(a.file),null);assert.deepEqual({...a.FileIntake.estimates(a.file)},{});$('#intakeSlice').click();assert.equal($('#pickedName').textContent.includes(a.file.name),false);
+});
 test('diagnostics separate the gateway and application, export only safe fields and never write',async t=>{
  const a=await app(t),{$,w,state}=a,base=w.fetch;
  w.fetch=(url,o)=>url==='/api/diagnostics'?(state.calls.push({url,options:o}),Promise.resolve(reply(200,diagnosticFixture()))):url==='/gateway-healthz'?(state.calls.push({url,options:o}),Promise.resolve(reply(200,{ok:true,role:'layerhub-gateway',schema:1}))):base(url,o);
@@ -342,7 +372,7 @@ async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewe
  const scripts=[...w.document.querySelectorAll('script[src]')].map(s=>read(s.getAttribute('src').replace('./','')));
  if(viewer)w.testViewer=viewer;
  const source=scripts.join('\n');
- w.eval((viewer?source.replace("import('./slicer-viewer.js')","Promise.resolve({createViewer:(host,callbacks)=>{window.testViewer.callbacks=callbacks;return window.testViewer}})"):source)+'\nwindow.testing={Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,ToolpathUI,get workbench(){return SlicerWorkbench.options()},get data(){return data}};');
+ w.eval((viewer?source.replace("import('./slicer-viewer.js')","Promise.resolve({createViewer:(host,callbacks)=>{window.testViewer.callbacks=callbacks;return window.testViewer}})"):source)+'\nwindow.testing={FileIntake,Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,ToolpathUI,get workbench(){return SlicerWorkbench.options()},get data(){return data}};');
  await settle();assert.equal(w.testing.Remote.ready(),true);
  return {w,...w.testing,state,intervals,$:selector=>w.document.querySelector(selector)};
 }
@@ -549,6 +579,7 @@ async function importWorkbench(t,{lostCommit=false,deferReview=false,rejectRevie
  const project={id:7,name:'导入工程',revision:1,modelId:5,options:{...setup,copies:[{modelId:5,x:100,y:120,rotation:[0,0,0],scale:1}]},activeCopy:0,plates:[{id:'import-one',name:'第一盘',modelId:5,activeCopy:0,options:{...setup,copies:[{modelId:5,x:100,y:120,rotation:[0,0,0],scale:1}]}},{id:'import-two',name:'第二盘',modelId:6,activeCopy:0,options:{...setup,copies:[{modelId:6,x:140,y:120,rotation:[0,0,0],scale:1}]}},{id:'import-empty',name:'备用盘',modelId:0,activeCopy:0,options:{...setup,copies:[]}}]};
  const review={sha256:'a'.repeat(64),objects:2,skipped:1,hasGcode:true,plates:[{name:'<img src=x>',objects:1,triangles:12},{name:'第二盘',objects:1,triangles:12},{name:'备用盘',objects:0,triangles:0}],sources:[{name:'<private>',size:[20,20,10],triangles:12},{name:'box',size:[12,40,18],triangles:12}]};
  w.fetch=async(url,options={})=>{
+  if(url==='/api/files/inspect'){state.calls.push({url,options});const result={ok:true,review:{schema:1,sha256:review.sha256,geometry:rejectReview?{available:false,reason:'该文件只有切片路径，请另存工程 3MF'}:{available:true,review},sliced:{available:true,info:state.slice}}};if(deferReview)return new Promise(r=>resolveReview=()=>r(reply(200,result)));return reply(200,result)}
   if(url==='/api/slicing/import-3mf'){state.calls.push({url,options});const mode=options.body.get('mode');if(mode==='review'){if(rejectReview)return reply(400,{ok:false,error:'该文件只有切片路径，请另存工程 3MF'});if(deferReview)return new Promise(r=>resolveReview=()=>r(reply(200,{ok:true,review})));return reply(200,{ok:true,review})}commits++;if(lostCommit&&commits===1)throw Error('connection lost after commit');return reply(201,{ok:true,project,replayed:commits>1})}
   if(url==='/api/slicing/project?id=7')return reply(200,{ok:true,project});return original(url,options);
  };
@@ -556,23 +587,23 @@ async function importWorkbench(t,{lostCommit=false,deferReview=false,rejectRevie
  return {...a,chooseFiles,file:new w.File(['fixture'],'工程.3mf'),resolve:()=>resolveReview(),project};
 }
 test('3MF import review escapes names, explains replacement settings and requires explicit agreement before committing',async t=>{
- const a=await importWorkbench(t),{w,$}=a;a.chooseFiles([a.file]);await settle();assert.match($('#modalContent').textContent,/重新排版/);assert.match($('#modalContent').textContent,/温度和自定义工艺不继承/);assert.match($('#modalContent').textContent,/G-code 不会导入或执行/);assert.match($('#modalContent').textContent,/跳过 1/);assert.match($('#modalContent').textContent,/<img src=x>/);assert.equal($('#import3mfPanel img'),null);assert.equal($('#import3mfCommit').disabled,true);assert.equal(writes(a).filter(c=>c.url==='/api/slicing/import-3mf').length,1);
+ const a=await importWorkbench(t),{w,$}=a;a.chooseFiles([a.file]);await settle();assert.ok($('#intakeSlice'));$('#intakeGeometry').click();await settle();assert.match($('#modalContent').textContent,/重新排版/);assert.match($('#modalContent').textContent,/温度和自定义工艺不继承/);assert.match($('#modalContent').textContent,/G-code 不会导入或执行/);assert.match($('#modalContent').textContent,/跳过 1/);assert.match($('#modalContent').textContent,/<img src=x>/);assert.equal($('#import3mfPanel img'),null);assert.equal($('#import3mfCommit').disabled,true);assert.equal(writes(a).filter(c=>c.url==='/api/files/inspect').length,1);
  submitForm(w,$('#import3mfPanel'));await settle();assert.equal(writes(a).length,1);choose(w,$('#import3mfAgree'));submitForm(w,$('#import3mfPanel'));await settle();const commits=writes(a).filter(c=>c.url==='/api/slicing/import-3mf'&&c.options.body.get('mode')==='commit');assert.equal(commits.length,1);assert.equal(commits[0].options.body.get('acknowledge'),'geometry-only');assert.equal(commits[0].options.body.get('sha256'),'a'.repeat(64));assert.equal(w.document.querySelectorAll('[data-plate]').length,3);assert.equal(writes(a).some(c=>/slicing\/(tasks|promote)|jobs\/(start|send)/.test(c.url)),false);
 });
 test('3MF review cancellation leaves the current plate and numeric edits untouched',async t=>{
  const a=await importWorkbench(t),{w,$}=a;$('[data-model="5"]').click();numberInput(w,$('[data-place="x"]'),155);a.chooseFiles([a.file]);await settle();$('#modal [data-cancel]').click();await settle();assert.equal($('#modal').open,false);assert.equal($('[data-place="x"]').value,'155');assert.equal(w.document.querySelectorAll('[data-plate]').length,1);assert.equal(writes(a).filter(c=>c.url==='/api/slicing/import-3mf'&&c.options.body.get('mode')==='commit').length,0);
 });
 test('an uncertain 3MF import retries with the same receipt key and never automatically resubmits',async t=>{
- const a=await importWorkbench(t,{lostCommit:true}),{w,$}=a;a.chooseFiles([a.file]);await settle();choose(w,$('#import3mfAgree'));submitForm(w,$('#import3mfPanel'));await settle();assert.match($('#import3mfError').textContent,/没有收到导入确认/);assert.match($('#import3mfCommit').textContent,/核对并重试/);const first=writes(a).filter(c=>c.url==='/api/slicing/import-3mf'&&c.options.body.get('mode')==='commit');assert.equal(first.length,1);submitForm(w,$('#import3mfPanel'));submitForm(w,$('#import3mfPanel'));await settle();const calls=writes(a).filter(c=>c.url==='/api/slicing/import-3mf'&&c.options.body.get('mode')==='commit');assert.equal(calls.length,2);assert.equal(calls[0].options.body.get('requestKey'),calls[1].options.body.get('requestKey'));assert.equal(w.document.querySelectorAll('[data-plate]').length,3);
+ const a=await importWorkbench(t,{lostCommit:true}),{w,$}=a;a.chooseFiles([a.file]);await settle();$('#intakeGeometry').click();await settle();choose(w,$('#import3mfAgree'));submitForm(w,$('#import3mfPanel'));await settle();assert.match($('#import3mfError').textContent,/没有收到导入确认/);assert.match($('#import3mfCommit').textContent,/核对并重试/);const first=writes(a).filter(c=>c.url==='/api/slicing/import-3mf'&&c.options.body.get('mode')==='commit');assert.equal(first.length,1);submitForm(w,$('#import3mfPanel'));submitForm(w,$('#import3mfPanel'));await settle();const calls=writes(a).filter(c=>c.url==='/api/slicing/import-3mf'&&c.options.body.get('mode')==='commit');assert.equal(calls.length,2);assert.equal(calls[0].options.body.get('requestKey'),calls[1].options.body.get('requestKey'));assert.equal(w.document.querySelectorAll('[data-plate]').length,3);
 });
 test('a late 3MF review cannot replace another page or create a project after leaving',async t=>{
- const a=await importWorkbench(t,{deferReview:true}),{w,$}=a;a.chooseFiles([a.file]);await settle();const reviewCall=writes(a).find(c=>c.url==='/api/slicing/import-3mf');$('[data-page="board"]').click();await settle();assert.equal(reviewCall.options.signal.aborted,true);a.resolve();await settle();assert.equal($('#import3mfPanel'),null);assert.equal($('#modal').open,false);assert.equal(writes(a).filter(c=>c.url==='/api/slicing/import-3mf').length,1);
+ const a=await importWorkbench(t,{deferReview:true}),{w,$}=a;a.chooseFiles([a.file]);await settle();const reviewCall=writes(a).find(c=>c.url==='/api/files/inspect');$('[data-page="board"]').click();await settle();assert.equal(reviewCall.options.signal.aborted,true);a.resolve();await settle();assert.equal($('#import3mfPanel'),null);assert.equal($('#modal').open,false);assert.equal(writes(a).filter(c=>c.url==='/api/files/inspect').length,1);
 });
 test('3MF geometry rejection explains how to obtain an editable project and does not affect the current model',async t=>{
- const a=await importWorkbench(t,{rejectReview:true}),{w,$}=a;$('[data-model="5"]').click();a.chooseFiles([a.file]);await settle();assert.match($('#modalContent').textContent,/只有切片路径/);assert.match($('#modalContent').textContent,/另存包含模型的工程/);assert.equal($('#import3mfCommit'),null);assert.equal(w.document.querySelectorAll('[data-copy]').length,1);assert.equal(writes(a).filter(c=>c.url==='/api/slicing/import-3mf').length,1);
+ const a=await importWorkbench(t,{rejectReview:true}),{w,$}=a;$('[data-model="5"]').click();a.chooseFiles([a.file]);await settle();assert.match($('#modalContent').textContent,/只有切片路径/);assert.match($('#modalContent').textContent,/导出实体 STL/);assert.equal($('#import3mfCommit'),null);assert.equal(w.document.querySelectorAll('[data-copy]').length,1);assert.equal(writes(a).filter(c=>c.url==='/api/files/inspect').length,1);
 });
 test('3MF import enforces one project at a time and the file size limit before uploading',async t=>{
- const a=await importWorkbench(t),{w,$}=a;assert.match($('#sliceInput').accept,/\.3mf/);a.chooseFiles([a.file,new w.File(['stl'],'a.stl')]);await settle();assert.match($('#sliceMessage').textContent,/单独导入/);a.chooseFiles([{name:'big.3mf',size:33*1024*1024}]);await settle();assert.match($('#toast').textContent,/32 MB/);assert.equal(writes(a).filter(c=>c.url==='/api/slicing/import-3mf').length,0);
+ const a=await importWorkbench(t),{w,$}=a;assert.match($('#sliceInput').accept,/\.3mf/);a.chooseFiles([a.file,new w.File(['stl'],'a.stl')]);await settle();assert.match($('#sliceMessage').textContent,/单独导入/);a.chooseFiles([{name:'big.3mf',size:501*1024*1024}]);await settle();assert.match($('#toast').textContent,/500 MB/);assert.equal(writes(a).filter(c=>c.url==='/api/slicing/import-3mf').length,0);
 });
 test('multiple boards preserve independent process and object settings; saves include empty active board and all sources',async t=>{
  const a=await multiWorkbench(t),{w,$}=a;$('[data-model="5"]').click();numberInput(w,$('[data-place="x"]'),100);change(w,$('#sliceProcessPreset'),'strong');

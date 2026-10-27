@@ -1,5 +1,20 @@
 # Release validation / 发布验证
 
+## 0.4.0-alpha · File intake / 文件导入
+
+The file-workflow batch is delivered as one version. Its new acceptance record is [file-intake-release.json](file-intake-release.json). Historical diagnostic/gateway and real-print records below retain their original scope.
+
+- 189 frontend/geometry/language tests passed. Focused import/inspection tests passed again after modal-width adjustments.
+- Full exported-source Go tests and vet passed; Windows/Linux amd64 application and mail-worker builds passed.
+- Actual-binary inspection smoke tests cover geometry-only, slice-only and combined archives, digest matching, reference-field allowlisting, unsliced queue rejection and temporary-file cleanup in disposable offline workspaces. Reports: [Windows](file-intake-windows.json), [Linux](file-intake-linux.json).
+- Browser checks cover Chinese and English inspection, geometry parameter comparison, local JSON report download, switching from the workbench to sliced-file scheduling and rounded estimates. Screenshots use a disposable demo, never a real print file: [中文](file-intake-zh.png), [English](file-intake-en.png).
+- Queue/upload tests use fake devices; no real print-start, temperature/fan/light command, inventory settlement or SMTP test is part of this batch.
+- Existing Docker static-only and fresh two-host OS installation limitations remain. This release makes no new printer/firmware, multicolor or dual-nozzle compatibility claim.
+
+本次将内容识别、双入口、参数对照、逐盘颜色与预计值、报告导出及后端队列校验作为一个版本交付。189 项前端/几何/语言测试、完整 Go 测试与 vet、Windows/Linux 构建均通过。实际程序测试使用独立离线工作区；浏览器核对了中英文、报告下载、跨入口和预填值。生产更新与保留数据的结果见本版 JSON；下方诊断/网关和历史实机证据保留原有验证范围。
+
+# Previous validation baseline / 既有验证基线
+
 0.3.0-alpha · 2026-10-27. Tests used the exported source or binaries rebuilt from it. Disposable release tests used no live workspace, printer commands or SMTP deliveries. The separately guarded production rollout is recorded in diagnostics-release.json; it backs up existing data and preserves account preferences, tasks and print settings.
 
 | Check | Result / scope |

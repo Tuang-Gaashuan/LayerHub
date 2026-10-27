@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"io"
 	"math"
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -87,7 +88,7 @@ func inspectSlice(filename string) (SliceInfo, error) {
 	var sliceRaw, settings []byte
 	re := regexp.MustCompile(`^Metadata/plate_([1-9][0-9]*)\.gcode$`)
 	for _, f := range z.File {
-		if strings.Contains(f.Name, "\\") || strings.HasPrefix(f.Name, "/") || path.Clean(f.Name) != strings.TrimSuffix(f.Name, "/") || f.Mode()&060000 != 0 || seen[f.Name] {
+		if strings.Contains(f.Name, "\\") || strings.HasPrefix(f.Name, "/") || path.Clean(f.Name) != strings.TrimSuffix(f.Name, "/") || f.Mode()&os.ModeSymlink != 0 || !f.Mode().IsRegular() && !f.FileInfo().IsDir() || seen[f.Name] {
 			return out, invalid("3MF 含不安全或重复路径")
 		}
 		seen[f.Name] = true
