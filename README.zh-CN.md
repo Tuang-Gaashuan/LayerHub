@@ -6,7 +6,7 @@
 
 准备模型，安排队列，了解每一台机器正在做什么。
 
-[![源码检查](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
+[![源码检查](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=alpha)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
 [![版本](https://img.shields.io/badge/version-0.4.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![开源许可](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
@@ -15,6 +15,21 @@
 [下载软件](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [部署指导](01-部署指导-云服务器-NAS-打印机.md) · [验证记录](validation/README.md) · [反馈问题](https://github.com/Tuang-Gaashuan/LayerHub/issues)
 
 </div>
+
+## Alpha 路线 · 实验性内置工作台
+
+**当前浏览的是 `alpha` 开发分支。** Alpha 保留内置模型工作台、支持范围内的 STL/几何 3MF 导入、在线切片及团队模型工程，工作台会在此分支持续、缓慢推进。
+
+**日常团队打印推荐：LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio)。** 主要的团队与打印管理功能在 Beta 的 [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) 分支完善。Beta 只接收已切片 3MF，不包含编辑器，也不需要 NAS 切片引擎。
+
+| 路线 | 版本标签 | 下载 | 开发分支 |
+|---|---|---|---|
+| **Beta · 推荐使用** | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [Beta 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) |
+| **Alpha · 实验性工作台** | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) |
+
+[完整版本区别与维护政策](CHANNELS.md#简体中文) · [Beta 迁移说明](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/BETA_MIGRATION.md)
+
+两条路线分别维护版本号与固定发布标签；开发分支可能含未发布改动。并行测试时使用不同数据目录和端口，不共用运行中的 SQLite 工作区。
 
 LayerHub 是一个可自行部署的 **3D 打印协作网页应用**。它把模型准备、在线切片、逐台打印机排队、逐卷耗材管理、设备状态和邮件通知放在同一个空间里。成员保留自己的工程，也能把选定的版本分享给团队，共同了解任务需要哪台机器、哪卷耗材。
 

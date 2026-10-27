@@ -6,7 +6,7 @@
 
 Prepare models. Coordinate the queue. Know what is printing.
 
-[![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
+[![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=alpha)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
 [![Version](https://img.shields.io/badge/version-0.4.0--alpha-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
@@ -15,6 +15,21 @@ Prepare models. Coordinate the queue. Know what is printing.
 [Download](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Deployment](DEPLOYMENT.md) · [Validation](validation/README.md) · [Feedback](https://github.com/Tuang-Gaashuan/LayerHub/issues)
 
 </div>
+
+## Alpha channel · experimental built-in workbench
+
+**You are browsing the `alpha` development branch.** Alpha retains LayerHub's integrated model workbench, supported STL/geometry 3MF import, online slicing and team model projects. The workbench will continue to improve gradually on this branch.
+
+**Recommended for day-to-day team printing: LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio).** Most ongoing team/printer feature refinement happens on the Beta [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) branch. Beta accepts already-sliced 3MF and does not include the editor or NAS slicing engine.
+
+| Channel | Version tag | Download | Development |
+|---|---|---|---|
+| **Beta · recommended** | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [Beta release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) |
+| **Alpha · experimental workbench** | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) |
+
+[Full comparison and maintenance policy](CHANNELS.md) · [Beta migration guidance](https://github.com/Tuang-Gaashuan/LayerHub/blob/main/BETA_MIGRATION.md)
+
+The two channels have independent version numbers and separate release tags. A development branch can contain unreleased work. Keep separate data directories and ports if testing both; do not share a live SQLite workspace.
 
 LayerHub is a **self-hosted web application for teams sharing 3D printers**. It brings model preparation, slicing, per-printer queues, spool inventory, printer status and notifications into one workspace. Members keep their own projects, share selected snapshots, and see which machine and material a job needs.
 
