@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS jobs_spool_reserve ON jobs(spool_id,state);
 CREATE TABLE IF NOT EXISTS printer_commands(id INTEGER PRIMARY KEY,printer_id INTEGER NOT NULL REFERENCES printers(id),job_id INTEGER NOT NULL,user_id INTEGER NOT NULL REFERENCES users(id),action TEXT NOT NULL,state TEXT NOT NULL,message TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,finished_at INTEGER NOT NULL DEFAULT 0);
 CREATE UNIQUE INDEX IF NOT EXISTS printer_command_pending ON printer_commands(printer_id) WHERE state='pending';
 CREATE TABLE IF NOT EXISTS job_consumption(job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,spool_id TEXT NOT NULL REFERENCES spools(id),grams INTEGER NOT NULL CHECK(grams>=0),PRIMARY KEY(job_id,spool_id));
-`
+` + importBatchSchema
 
 func Open(cfg Config, device Device) (*Service, error) {
 	var err error
@@ -91,6 +91,16 @@ func Open(cfg Config, device Device) (*Service, error) {
 		return nil, err
 	}
 	database.SetMaxOpenConns(8)
+	// Refuse newer workspaces before applying any additive migrations or
+	// recovering pending commands. Plate selection requires a compatible reader.
+	var workspaceVersion int
+	if err = database.QueryRow("PRAGMA user_version").Scan(&workspaceVersion); err != nil || workspaceVersion > 5 {
+		database.Close()
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("database version is newer than this program")
+	}
 	if _, err = database.Exec(schema); err != nil {
 		database.Close()
 		return nil, err
@@ -412,7 +422,36 @@ func readJobs(q queryer) ([]Job, error) {
 		}
 		out = append(out, j)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	selected, err := q.Query("SELECT job_id,plate FROM job_plate_selection")
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table") {
+			return out, nil
+		}
+		return nil, err
+	}
+	defer selected.Close()
+	plates := map[int64]int{}
+	for selected.Next() {
+		var id int64
+		var plate int
+		if err = selected.Scan(&id, &plate); err != nil {
+			return nil, err
+		}
+		plates[id] = plate
+	}
+	if err = selected.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].SelectedPlate = plates[out[i].ID]
+	}
+	return out, nil
 }
 func spoolVisible(s Spool, u User) bool  { return s.OwnerID == 0 || s.OwnerID == u.ID || s.Shared }
 func spoolEditable(s Spool, u User) bool { return s.OwnerID == u.ID || s.OwnerID == 0 && u.Admin }

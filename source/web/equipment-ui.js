@@ -1,24 +1,25 @@
 'use strict';
 const EquipmentUI=(()=>{
- const pendingSettings=new Set();
+ const pendingSettings=new Map();
  let editor=null;
  const names={'nozzle:0':I18n.t('喷嘴 0 温度'),'nozzle:1':I18n.t('喷嘴 1 温度'),'fan:1':I18n.t('模型风扇'),'fan:2':I18n.t('辅助风扇 1'),'fan:3':I18n.t('排风风扇'),'fan:10':I18n.t('辅助风扇 2'),nozzle:I18n.t('喷嘴温度'),bed:I18n.t('热床温度'),speed:I18n.t('速度档位'),chamber_light:I18n.t('机舱灯'),chamber_light2:I18n.t('机舱灯 2'),part_fan:I18n.t('模型风扇'),aux_fan:I18n.t('辅助风扇'),chamber_fan:I18n.t('机舱风扇')};
  const speedNames={1:I18n.t('静音 · 50%'),2:I18n.t('标准 · 100%'),3:I18n.t('运动 · 124%'),4:I18n.t('狂暴 · 166%')};
  const label=a=>a.startsWith('set:')?I18n.t('设置')+(names[a.slice(4)]||a.slice(4)):a;
  const value=s=>s.key==='speed'?(speedNames[s.value]||s.value):s.key.startsWith('chamber_light')?(s.value?I18n.t('开启'):I18n.t('关闭')):s.value+' '+s.unit;
  function canSet(p,j){return (!['printing','pause'].includes(p.state)||['printing','paused'].includes(j?.state))&&Remote.printerFresh(p)&&!Remote.deviceBlocked(p.id)&&p.enabled&&!data.capabilities?.restorePending&&(data.user?.admin||j&&canManageJob(j)&&['printing','paused'].includes(j.state))}
- function render(p,j,records,busy){
-  const root=$('#controlRoot');if(!root)return;const eq=p.equipment||{},slots=Workspace.slots(p),source=id=>slots.find(s=>s.id===id)?.label||id||I18n.t('未上报');
+ function render(p,j,records,busy,root=$('#controlRoot')){
+  if(!root)return;const eq=p.equipment||{},slots=Workspace.slots(p),source=id=>slots.find(s=>s.id===id)?.label||id||I18n.t('未上报');
   const temperatures=$('.control-temperatures',root),readings=eq.extruders||[];
   temperatures.innerHTML=(readings.length?readings:[{name:I18n.t('喷嘴状态待上报'),temperature:null,target:null}]).map(x=>`<div>${icon('temperature')}<span>${esc(I18n.system(x.name))}<strong>${p.connected?(x.temperature??'—'):'—'}<small> / ${p.connected?(x.target??'—'):'—'} °C</small></strong></span></div>`).join('')+I18n.html`<div>${icon('layers')}<span>热床<strong>${p.connected?(eq.bed??'—'):'—'}<small> / ${p.connected?(eq.bedTarget??'—'):'—'} °C</small></strong></span><i>HEATBED</i></div>`;
   $('.control-readonly',root).textContent=readings.length>1?I18n.t('各喷嘴独立读数 · 编号沿用设备上报'):I18n.t('当前温度 / 目标温度 · 缺失数据显示 —');
   if(readings.length){const paths=document.createElement('div');paths.className='equipment-paths';paths.innerHTML=readings.map(x=>`<div><span>${esc(I18n.system(x.name))}</span><strong>${esc(source(x.currentSource))}</strong>${x.targetSource&&x.targetSource!==x.currentSource?I18n.html`<small>目标：${esc(source(x.targetSource))}</small>`:''}</div>`).join('')+(eq.switching?I18n.html('<p>机器正在切换喷嘴或供料</p>'):'');$('.control-visual',root).append(paths)}
   const pending=records.some(r=>r.state==='pending'),uncertain=records.some(r=>r.state==='uncertain'),disabled=!canSet(p,j)||pending||uncertain||busy||pendingSettings.has(p.id);
-  const available=eq.settings||[];
+  const available=eq.settings||[],localPending=pendingSettings.get(p.id),serverPending=records.find(r=>r.state==='pending'&&r.action.startsWith('set:'));
+  const pendingKey=localPending?.key||serverPending?.action.slice(4),pendingText=localPending?.phase==='sending'?(pendingKey?.startsWith('chamber_light')?(localPending.value?I18n.t('正在开灯…'):I18n.t('正在关灯…')):I18n.t('正在提交…')):I18n.t('等待设备确认');
   const button=(s,kind)=>{
    const stamp=Date.parse(s.updated),blocked=s.readonly||disabled||eq.controlIssue==='authorization_required'&&!s.key.startsWith('chamber_light')||!Number.isFinite(stamp)||Date.now()-stamp>90000||s.key==='speed'&&!['printing','pause'].includes(p.state);
    const label=names[s.key]||I18n.system(s.label);
-   if(s.key.startsWith('chamber_light'))return `<button type="button" role="switch" aria-checked="${s.value===1}" aria-label="${esc(label)}" class="equipment-setting setting-common setting-light" data-equipment="${esc(s.key)}" ${blocked?'disabled':''}><span class="setting-light-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 17h6m-5 3h4M8 13a6 6 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg><span>${esc(label)}<small>${pendingSettings.has(p.id)?I18n.t('等待设备确认'):s.value?I18n.t('已开启'):I18n.t('已关闭')}</small></span></span><span class="device-switch" aria-hidden="true"><i></i></span></button>`;
+   if(s.key.startsWith('chamber_light'))return `<button type="button" role="switch" aria-checked="${s.value===1}" aria-label="${esc(label)}" class="equipment-setting setting-common setting-light ${pendingKey===s.key?'setting-pending':''}" aria-busy="${pendingKey===s.key}" data-equipment="${esc(s.key)}" ${blocked?'disabled':''}><span class="setting-light-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 17h6m-5 3h4M8 13a6 6 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg><span>${esc(label)}<small>${pendingKey===s.key?pendingText:s.value?I18n.t('已开启'):I18n.t('已关闭')}</small></span></span><span class="device-switch" aria-hidden="true"><i></i></span></button>`;
    let body;
    if(kind==='thermal'){
     const extruder=s.key.startsWith('nozzle:')?readings.find(x=>x.id===Number(s.key.split(':')[1])):readings[0];
@@ -29,7 +30,8 @@ const EquipmentUI=(()=>{
    }else{
     body=`<span>${esc(label)}</span><strong>${esc(value(s))}</strong><small class="setting-action">${s.key==='speed'&&!['printing','pause'].includes(p.state)?I18n.t('打印中可调整'):blocked?I18n.t('当前读数'):I18n.t('调整 →')}</small>`;
    }
-   return I18n.html`<button type="button" class="equipment-setting setting-${kind}" data-equipment="${esc(s.key)}" aria-label="调整${esc(label)}，当前${esc(value(s))}" ${blocked?'disabled':''}>${body}</button>`;
+   if(pendingKey===s.key)body+=`<small class="setting-pending-label" role="status">${esc(pendingText)}</small>`;
+   return I18n.html`<button type="button" aria-busy="${pendingKey===s.key}" class="equipment-setting setting-${kind} ${pendingKey===s.key?'setting-pending':''}" data-equipment="${esc(s.key)}" aria-label="${esc(I18n.msg`调整${label}，当前${value(s)}`)}" ${blocked?'disabled':''}>${body}</button>`;
   };
   const thermal=available.filter(s=>s.key==='bed'||s.key.startsWith('nozzle'));
   for(const [index,x] of (readings.length?readings:[{name:I18n.t('喷嘴'),target:null}]).entries()){
@@ -43,7 +45,7 @@ const EquipmentUI=(()=>{
   const section=document.createElement('section');section.className='equipment-panel';section.innerHTML=I18n.html`<div class="equipment-panel-heading"><div><span class="control-section-label">设备控制</span><small>点击项目调整 · 以设备反馈为准</small></div><span class="equipment-tag">${data.capabilities?.deviceMode==='simulated'?I18n.t('模拟设备'):I18n.t('实时控制')}</span></div>${eq.controlIssue==='authorization_required'?I18n.html('<div class="equipment-authorization" role="status"><strong>打印机限制了第三方控制</strong><p>请在打印机屏幕核对局域网与开发者模式，并处理授权告警。</p><a class="text-link" href="https://wiki.bambulab.com/en/knowledge-sharing/enable-developer-mode" target="_blank" rel="noopener noreferrer">查看官方说明 ↗</a></div>'):''}${group(I18n.t('温度'),I18n.t('实际 / 目标 · °C'),thermal,'thermal')}${group(I18n.t('风扇'),I18n.t('风速 · %'),fans,'fans')}${group(I18n.t('常用设置'),'',other,'common')}${!available.length?I18n.html('<p class="equipment-empty">等待设备上报可调项目。连接恢复后将自动更新。</p>'):''}${records.some(r=>r.state==='uncertain'&&r.action.startsWith('set:'))?I18n.html('<button class="button small" id="resolveSettings">核对设备设置结果</button>'):''}`;
   $('.control-supply',root).before(section);
   $$('[data-equipment]',section).forEach(b=>b.onclick=()=>{const s=eq.settings.find(s=>s.key===b.dataset.equipment);if(s?.key.startsWith('chamber_light'))toggleLight(p,s);else if(s)edit(p,s)});
-  if($('#resolveSettings'))$('#resolveSettings').onclick=()=>confirmAction(I18n.t('核对设备设置'),I18n.t('请先检查机器的实际目标温度、灯光或风扇状态，确认后解除未确认设置的限制。'),async()=>{try{await Remote.request('/api/printers/settings',{printerId:p.id,key:'resolve_settings',value:0});PrinterControl.open(p.id);toast(I18n.t('设备设置核对已记录'))}catch(e){toast(I18n.system(e.message))}},{printerId:p.id,review:true});
+  if(root.querySelector('#resolveSettings'))root.querySelector('#resolveSettings').onclick=()=>confirmAction(I18n.t('核对设备设置'),I18n.t('请先检查机器的实际目标温度、灯光或风扇状态，确认后解除未确认设置的限制。'),async()=>{try{await Remote.request('/api/printers/settings',{printerId:p.id,key:'resolve_settings',value:0});PrinterControl.open(p.id);toast(I18n.t('设备设置核对已记录'))}catch(e){toast(I18n.system(e.message))}},{printerId:p.id,review:true});
   $$('.control-spool',root).forEach(card=>{const index=[...card.parentElement.children].indexOf(card),slot=slots[index];if(!slot)return;const feed=(eq.feeds||[]).find(f=>f.slot===slot.id);if(feed){const el=document.createElement('p');el.className='equipment-feed';el.textContent=I18n.t('机器上报：')+(feed.material||I18n.t('材质未知'))+(feed.remaining!==null&&feed.remaining!==undefined?' · '+feed.remaining+feed.remainingUnit:I18n.t(' · 余量未知'));if(/^#?[0-9a-f]{6}([0-9a-f]{2})?$/i.test(feed.color||'')){const dot=document.createElement('i');dot.className='equipment-feed-color';dot.style.backgroundColor='#'+feed.color.replace('#','').slice(0,6);dot.title=I18n.t('机器上报颜色');el.prepend(dot)}card.append(el)}});
   const live=document.createElement('section');live.className='equipment-live-supply';
   const units=(eq.amsUnits||[]),feeds=(eq.feeds||[]),currentSources=readings.map(x=>x.currentSource).filter(Boolean);
@@ -57,8 +59,8 @@ const EquipmentUI=(()=>{
  }
  async function toggleLight(p,s){
   if(pendingSettings.has(p.id))return;
-  pendingSettings.add(p.id);PrinterControl.redraw();
-  try{await Remote.request('/api/printers/settings',{printerId:p.id,key:s.key,value:s.value===1?0:1});await PrinterControl.refresh();toast(I18n.t('灯光指令已提交，等待设备确认'))}
+  pendingSettings.set(p.id,{key:s.key,value:s.value===1?0:1,phase:'sending'});PrinterControl.redraw();
+  try{await Remote.request('/api/printers/settings',{printerId:p.id,key:s.key,value:s.value===1?0:1});pendingSettings.get(p.id).phase='waiting';PrinterControl.redraw();toast(I18n.t('灯光指令已提交，等待设备确认'));await PrinterControl.refresh({urgent:true})}
   catch(error){toast(I18n.system(error.message))}
   finally{pendingSettings.delete(p.id);PrinterControl.redraw();Remote.paintConnection()}
  }
@@ -108,8 +110,8 @@ const EquipmentUI=(()=>{
   form.onsubmit=async event=>{
    event.preventDefault();if(sending||contextBlocked||!ready()||!form.reportValidity())return;
    const n=chosen();if(!Number.isInteger(n)||n<min||n>max)return;
-   sending=true;form.dataset.submitting='true';pendingSettings.add(p.id);update();PrinterControl.redraw();
-   try{await Remote.request('/api/printers/settings',{printerId:p.id,key:s.key,value:n});if(current())close();await PrinterControl.refresh();toast(I18n.t('已提交设置，等待设备确认'))}
+   sending=true;form.dataset.submitting='true';pendingSettings.set(p.id,{key:s.key,value:n,phase:'sending'});update();PrinterControl.redraw();
+   try{await Remote.request('/api/printers/settings',{printerId:p.id,key:s.key,value:n});pendingSettings.get(p.id).phase='waiting';if(current())close();toast(I18n.t('已提交设置，等待设备确认'));await PrinterControl.refresh({urgent:true})}
    catch(error){if(error.unconfirmed){if(current())close();PrinterControl.redraw();toast(I18n.system(error.message))}else if(current())d.querySelector('#equipmentError').textContent=I18n.system(error.message)}
    finally{sending=false;delete form.dataset.submitting;pendingSettings.delete(p.id);if(current())update();PrinterControl.redraw();Remote.paintConnection()}
   };
@@ -131,6 +133,6 @@ const EquipmentUI=(()=>{
  function bindFilamentChoices(plate){
   for(const f of plate.filaments){const radios=$$(`input[name="spool-${f.index}"]`),summary=$(`[data-color-summary="${f.index}"]`);const update=()=>{const selected=radios.find(r=>r.checked&&!r.disabled),sp=selected&&spoolById(selected.value);if(!sp){summary.textContent=I18n.t('请选择一卷耗材的颜色');summary.classList.remove('changed');return}const different=colorHex(f.color)&&colorHex(sp.color)!==colorHex(f.color);summary.textContent=I18n.msg`将使用：${sp.colorName} · ${sp.material}${different?I18n.t('（与文件原色不同）'):''}`;summary.classList.toggle('changed',!!different)};radios.forEach(r=>r.onchange=update);update()}
  }
- return {render,label,platePreview,temperatureSummary,filamentChoices,bindFilamentChoices};
+ return {render,label,pending:id=>pendingSettings.has(id),platePreview,temperatureSummary,filamentChoices,bindFilamentChoices};
 })();
 

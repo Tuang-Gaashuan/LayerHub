@@ -2,6 +2,41 @@
 // Presentation only: all commands continue through the existing guarded handlers.
 const ControlLayout=(()=>{
  let printerId=0,active='overview',inventoryOpen=false;
+ // Update the existing console in place. Tabs, disclosure, focused controls and
+ // the camera keep their DOM identity; only changed readings are patched.
+ function patch(old,next){
+  if(old.nodeType!==next.nodeType||old.nodeName!==next.nodeName||old.nodeType===1&&(old.id!==next.id||old.dataset.equipment!==next.dataset.equipment)){old.replaceWith(next);return}
+  if(old.nodeType!==1){if(old.nodeValue!==next.nodeValue)old.nodeValue=next.nodeValue;return}
+  for(const a of [...old.attributes])if(!next.hasAttribute(a.name))old.removeAttribute(a.name);
+  for(const a of [...next.attributes])if(old.getAttribute(a.name)!==a.value)old.setAttribute(a.name,a.value);
+  for(const event of ['onclick','onchange','onkeydown','oninput'])old[event]=next[event];
+  const previous=[...old.childNodes],incoming=[...next.childNodes];
+  incoming.forEach((node,i)=>previous[i]?patch(previous[i],node):old.append(node));
+  previous.slice(incoming.length).forEach(node=>node.remove());
+ }
+ function update(root,next,p,j,records){
+  // These notices belong outside the tab panels. Detach them before patching
+  // the task, whose unarranged template originally contains both nodes.
+  const alerts=document.createElement('div');alerts.className='control-alerts';
+  const errors=next.querySelector('.equipment-errors'),notice=next.querySelector('#controlNotice');
+  if(errors)alerts.append(errors);
+  notice.classList.toggle('control-quiet-notice',!notice.classList.contains('warning')&&!records.some(r=>r.state==='pending'));
+  alerts.append(notice,next.querySelector('#connectionReviewNotice'));
+  const refresh=selector=>{const old=root.querySelector(selector),fresh=next.querySelector(selector);if(old&&fresh)patch(old,fresh)};
+  refresh('.control-machine-head');refresh('.control-connection');
+  refresh('.control-work');refresh('.equipment-panel');refresh('.equipment-live-supply');refresh('.control-supply');
+  const work=root.querySelector('.control-work');work.classList.toggle('control-task-empty',!j&&!['printing','pause'].includes(p.state));
+  if(!j&&!['printing','pause'].includes(p.state)){
+   work.querySelector('.control-filename').textContent=p.state==='idle'?I18n.t('打印机已就绪'):I18n.t('等待设备连接');
+   work.querySelector('.control-task-meta').textContent=p.state==='idle'?I18n.t('选择队列中的任务，在确认准备后开始。'):I18n.t('连接恢复后显示任务与实时状态。');
+  }
+  const history=root.querySelector('.control-history'),freshHistory=next.querySelector('.control-history');
+  freshHistory.id=history.id;freshHistory.setAttribute('role','tabpanel');freshHistory.setAttribute('aria-labelledby','controlTab-history');freshHistory.tabIndex=0;freshHistory.hidden=history.hidden;patch(history,freshHistory);
+  root.querySelector('[data-control-tab="history"] span').textContent=String(records.length);
+  patch(root.querySelector('.control-alerts'),alerts);
+  const paths=root.querySelector('.equipment-paths'),freshPaths=next.querySelector('.equipment-paths');
+  if(paths&&freshPaths)patch(paths,freshPaths);else if(paths)paths.remove();else if(freshPaths)root.querySelector('.control-materials-pane').append(freshPaths);
+ }
  function selectPrinter(id){if(printerId!==id){printerId=id;active='overview';inventoryOpen=false}}
  function arrange(root,p,j,records,focusTab){
   const take=selector=>root.querySelector(selector),shell=document.createElement('div');
@@ -51,5 +86,5 @@ const ControlLayout=(()=>{
   shell.append(head,alerts,nav,overview,materials,history);root.replaceChildren(shell);activate(active);
   if(focusTab)nav.querySelector(`[data-control-tab="${focusTab}"]`)?.focus({preventScroll:true});
  }
- return {selectPrinter,arrange};
+ return {selectPrinter,arrange,update};
 })();

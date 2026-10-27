@@ -1,6 +1,6 @@
 # Sliced 3MF intake / 切片文件上传
 
-0.1.0-beta · [English](README.md) · [简体中文](README.zh-CN.md)
+0.1.1-beta · [English](README.md) · [简体中文](README.zh-CN.md)
 
 ## English
 
@@ -12,7 +12,7 @@
 
 Only `.3mf`, including `.gcode.3mf`, is accepted, up to 500 MB or the smaller configured limit. Raw `.gcode`, STL and unsliced model projects are rejected by both UI and backend. Filename changes do not bypass content checks. A sliced export may also contain geometry, which Beta ignores rather than loading or editing.
 
-Inspection is authenticated and CSRF protected, temporary uploads are cleaned, and no jobs, reservations, commands or emails are created. Known single-plate time and total grams are rounded up into editable queue estimates. Unknown or multi-plate estimates remain blank, so LayerHub does not guess which plate you intend to print. Stock is reserved only when you explicitly create the job and actual consumption is settled separately.
+Inspection is authenticated and CSRF protected, temporary uploads are cleaned, and no jobs, reservations, commands or emails are created. Known single-plate time and total grams are rounded up into editable queue estimates. Multi-plate files require an explicit plate selection. Selecting one plate prefills that plate’s estimates; selecting several opens the batch review. Missing values remain blank. See [multi-plate intake](MULTIPLATE.md). Stock is reserved only when you explicitly create the job and actual consumption is settled separately.
 
 LayerHub retains the file's original sliced paths/process. Parameter references are display-only; LayerHub does not modify or regenerate them. Successful inspection is not device compatibility approval: existing machine, nozzle, plate, material, AMS and firmware authorization checks remain. No new multicolor/dual-nozzle support is implied.
 
@@ -28,7 +28,7 @@ The verified-file details can export a local JSON report. It contains the filena
 
 只接受 `.3mf`，包括 `.gcode.3mf`，最大 500 MB，配置更小限制时以服务器为准。界面和后端都拒绝原始 `.gcode`、STL、未切片模型工程，重命名不能绕过。有效切片包中同时含有的几何内容会被忽略，不加载或编辑。
 
-检查需要登录与会话校验，临时上传会清理，不创建任务、库存预留、设备指令或邮件。单盘已知时长与总用量向上取整后预填，可修改；缺失项和多盘预计值留空，不猜选第一盘。用户明确创建任务后才预留库存，实际消耗另外结算。
+检查需要登录与会话校验，临时上传会清理，不创建任务、库存预留、设备指令或邮件。单盘已知时长与总用量向上取整后预填，可修改；多盘文件必须明确勾选：选一盘就预填该盘数据，选多盘进入逐盘审核；缺失项仍留空。参见[多盘导入说明](MULTIPLATE.md)。用户明确创建任务后才预留库存，实际消耗另外结算。
 
 原切片路径和工艺保持，参数仅供显示核对，不被 LayerHub 修改或重新生成。文件通过校验不等于设备兼容批准，机型、喷嘴、板型、材质、AMS 和固件授权等校验仍保留，不新增多色或双喷嘴打印支持。
 

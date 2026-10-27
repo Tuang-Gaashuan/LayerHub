@@ -97,6 +97,10 @@ func (s *Service) JobSettlement(u User, id int64) (Settlement, error) {
 		if err != nil {
 			return err
 		}
+		j, err = s.observeDeviceStopped(tx, j, s.Device.Status(j.Printer), time.Now().Unix())
+		if err != nil {
+			return err
+		}
 		out.Job, out.Rolls = j, []SettlementRoll{}
 		spools, err := readSpools(tx)
 		if err != nil {
@@ -136,6 +140,12 @@ func (s *Service) SettleJob(u User, in SettlementWrite) error {
 		j, _, err := settlementJob(tx, u, in.JobID)
 		if err != nil {
 			return err
+		}
+		if j.State != "stopped" && j.FinishedAt == 0 && !printFinishedMatches(j, s.Device.Status(j.Printer)) {
+			j, err = s.observeDeviceStopped(tx, j, s.Device.Status(j.Printer), time.Now().Unix())
+			if err != nil {
+				return err
+			}
 		}
 		if j.State != "stopped" && j.FinishedAt == 0 && !printFinishedMatches(j, s.Device.Status(j.Printer)) {
 			return conflict("尚无此任务的设备完成记录，请先核对设备")

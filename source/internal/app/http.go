@@ -96,6 +96,11 @@ func (s *Service) Handler() http.Handler {
 		case "POST /api/files/inspect":
 			s.inspectFile(w, r)
 			return
+		case "POST /api/upload/batch":
+			s.upload(w, r, u)
+			return
+		case "GET /api/jobs/import-receipt":
+			result, err = s.ImportReceipt(u, r.URL.Query().Get("requestId"))
 		case "GET /api/notifications":
 			before, _ := strconv.ParseInt(r.URL.Query().Get("before"), 10, 64)
 			result, err = s.notificationPage(u, max(int64(0), before), r.URL.Query().Get("unread") == "1")
@@ -516,16 +521,44 @@ func (s *Service) upload(w http.ResponseWriter, r *http.Request, u User) {
 	}
 	// The chooser is advisory. Enforce the same sliced-file boundary for API
 	// clients before creating a job or reserving any inventory.
+	var sliced SliceInfo
 	if strings.EqualFold(filepath.Ext(filename), ".3mf") {
-		if _, err = inspectSlice(path); err != nil {
+		if sliced, err = inspectSlice(path); err != nil {
 			fail(w, err)
 			return
 		}
+	}
+	if r.URL.Path == "/api/upload/batch" {
+		var batch ImportBatch
+		if err = json.Unmarshal([]byte(fields["batch"]), &batch); err != nil {
+			fail(w, invalid("请确认每个打印盘的设备与耗材安排"))
+			return
+		}
+		receipt, e := s.CreateImportBatch(u, batch, filename, path, hex.EncodeToString(hash.Sum(nil)), fields["note"], bytes)
+		if e != nil {
+			fail(w, e)
+			return
+		}
+		keep = !receipt.Replayed
+		status := 201
+		if receipt.Replayed {
+			status = 200
+		}
+		reply(w, status, map[string]any{"ok": true, "receipt": receipt})
+		return
 	}
 	var in Schedule
 	if err = json.Unmarshal([]byte(fields["schedule"]), &in); err != nil {
 		fail(w, invalid("请确认设备与耗材安排"))
 		return
+	}
+	if len(sliced.Plates) > 0 {
+		plate, e := selectedImportPlate(sliced, in.Plate)
+		if e != nil {
+			fail(w, e)
+			return
+		}
+		in.Plate = plate.ID
 	}
 	id, err := s.CreateJob(u, in, filename, path, hex.EncodeToString(hash.Sum(nil)), fields["note"], bytes)
 	if err != nil {

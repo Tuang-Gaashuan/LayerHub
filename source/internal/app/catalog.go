@@ -381,6 +381,9 @@ func (s *Service) Snapshot(u User) (map[string]any, error) {
 		p.PrintError = t.PrintError
 		if t.State == "failed" {
 			p.Warning = "设备任务失败或已停止，请核对设备与实际用量"
+			if p.Enabled && p.Connected && settledStopReady(jobs, p.ID, t) {
+				p.State, p.Warning = "idle", ""
+			}
 		}
 		p.AMS = t.AMS
 		p.Equipment = t.Equipment

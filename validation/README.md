@@ -1,4 +1,16 @@
-# Beta validation / Beta 验证
+# v0.1.1-beta validation / 验证范围
+
+2026-10-27 · [Release notes](../RELEASE_NOTES.md)
+
+Go tests/vet, generated translation checks and **94 frontend/language tests** pass. Windows/Linux amd64 application and updater builds carry corresponding vendored sources. Temporary offline Windows workspaces exercise fresh startup/restart, diagnostics, sliced-only intake and multi-plate replay/reservations/file lifetime. No real printer or test email is used.
+
+Regression covers printer-side stops and settled readiness, atomic batch rollback, user-scoped receipts, sparse plate IDs, safe PNG previews, A1 external-spool preparation, schema migration/refusal, and backup/restore. Browser checks cover desktop Chinese/English and mobile Chinese batch/spool dialogs. The [earlier A1/multi-plate record](a1-multiplate-preview-20261027.md) records pre-publication validation.
+
+A1 hardware and real Studio multi-plate printing still require attended acceptance. Docker, ARM and fresh two-host OS installation remain unverified. Publishing does not deploy production; previous attended X2D evidence does not prove broader hardware, multicolor or dual-nozzle compatibility.
+
+中文：94 项前端/语言及 Go 检查通过，实际程序在临时离线目录验收，不操作生产打印机或发送邮件。A1、真实多盘逐盘打印及新平台部署仍须独立验收，上传 GitHub 不代表生产已升级。以下保留上一版的历史验证记录。
+
+## Historical Beta 0.1.0 validation / 上版记录
 
 0.1.0-beta · 2026-10-27
 

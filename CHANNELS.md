@@ -8,8 +8,8 @@
 
 | | Beta · recommended | Alpha · experimental workbench |
 |---|---|---|
-| Published version | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
-| Download | [Beta release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) | [Alpha release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
+| Published version | [`v0.1.1-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.1-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
+| Download | [Beta release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.1-beta) | [Alpha release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 | Development branch | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main), the repository default | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha), based on the last workbench-enabled release |
 | Team, queues, spools, controls, email | Included; primary refinement path | Included in the Alpha baseline; relevant fixes may be adapted |
 | Model workbench and geometry import | Removed | Retained, including supported STL / geometry 3MF import |
@@ -22,7 +22,7 @@
 ### Maintenance and version tags
 
 - Beta and Alpha are parallel scopes in the same repository. Beta receives most feature refinement; Alpha is retained for ongoing experimental workbench development.
-- Version tags such as `v0.1.0-beta` and `v0.4.0-alpha` identify fixed release snapshots. Branches move as work progresses; existing release tags and binaries are not repointed or replaced.
+- Version tags such as `v0.1.1-beta` and `v0.4.0-alpha` identify fixed release snapshots. Branches move as work progresses; existing release tags and binaries are not repointed or replaced.
 - Version numbers advance separately. The smaller Beta number does not mean it predates Alpha. Choose the channel by its feature scope, then read that release's notes and checksum file.
 - Keep development and testing on the matching branch. Shared team/security/printer fixes can be adapted with branch-specific tests; editor and engine changes remain on Alpha. Do not merge Beta's workbench removal into Alpha wholesale.
 - CI validates both development branches using the tests present on each branch. Release packages are published in batches; documentation-only updates do not require rebuilding an existing version's downloads.
@@ -39,8 +39,8 @@ Published download links above point to the named versions. A branch can contain
 
 | 对比项 | Beta · 推荐使用 | Alpha · 实验性内置工作台 |
 |---|---|---|
-| 已发布版本 | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
-| 下载入口 | [Beta 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) | [Alpha 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
+| 已发布版本 | [`v0.1.1-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.1-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
+| 下载入口 | [Beta 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.1-beta) | [Alpha 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 | 开发分支 | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main)，仓库默认分支 | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha)，基于最后一个含工作台的版本 |
 | 团队、队列、耗材、控制和邮件 | 保留，作为主要完善方向 | 保留 Alpha 原有能力，按需适配相关修复 |
 | 模型工作台与几何导入 | 已移除 | 保留，支持范围内可导入 STL / 几何 3MF |
@@ -53,7 +53,7 @@ Published download links above point to the named versions. A branch can contain
 ### 维护与标签规则
 
 - 两条路线保留在同一仓库中，主要精力用于 Beta 功能完善，Alpha 工作台继续实验性开发。
-- `v0.1.0-beta`、`v0.4.0-alpha` 等版本标签对应固定发布快照；开发分支随工作推进，已发布标签和二进制包不重新指向或覆盖。
+- `v0.1.1-beta`、`v0.4.0-alpha` 等版本标签对应固定发布快照；开发分支随工作推进，已发布标签和二进制包不重新指向或覆盖。
 - 两条路线分别递增版本号，不能仅凭数字大小判断先后或功能多少。先按用途选择路线，再阅读该版本说明并校验下载包。
 - 在对应分支开发和测试。共同的团队、安全、设备问题可分别适配与验证；编辑器、引擎功能留在 Alpha，不把 Beta 移除工作台的改动整批合入 Alpha。
 - CI 分别运行各分支自己的测试。功能更新整批发布，仅修改说明文档时无需重新打包既有版本。

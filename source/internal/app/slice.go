@@ -495,6 +495,20 @@ func (s *Service) SavePrintOptions(u User, id int64, o PrintOptions) error {
 					total += v.Grams
 				}
 				_, err = tx.Exec("UPDATE jobs SET print_options=?,spool_id=?,grams=?,error='' WHERE id=?", string(raw), o.Mapping[0].SpoolID, total, id)
+				if err == nil {
+					err = recordSelectedPlate(tx, id, o.Plate)
+				}
+				if err == nil && j.SelectedPlate != o.Plate {
+					info, e := inspectSlice(j.Path)
+					if e != nil {
+						return e
+					}
+					for _, plate := range info.Plates {
+						if plate.ID == o.Plate && plate.Seconds > 0 {
+							_, err = tx.Exec("UPDATE jobs SET estimate=? WHERE id=?", (plate.Seconds+59)/60, id)
+						}
+					}
+				}
 				return err
 			}
 			return invalid("请先确认目标设备")

@@ -293,7 +293,7 @@ func validateBackup(dir string, m backupManifest) (backupManifest, error) {
 	if db.QueryRow("PRAGMA quick_check").Scan(&integrity) != nil || integrity != "ok" {
 		return m, invalid("备份数据库损坏")
 	}
-	if db.QueryRow("PRAGMA user_version").Scan(&version) != nil || (version != 2 && version != 3 && version != 4) {
+	if db.QueryRow("PRAGMA user_version").Scan(&version) != nil || (version != 2 && version != 3 && version != 4 && version != 5) {
 		return m, invalid("备份数据库版本不受支持")
 	}
 	if db.QueryRow("SELECT COUNT(*) FROM users WHERE admin=1 AND disabled=0").Scan(&admins) != nil || admins < 1 {

@@ -78,7 +78,7 @@ function localScheduleJob(j){
 function localUploadForm(){
   if(uploading)return;if(!data.user)return showLogin();if(!picked)return toast(I18n.t('请先选择需要打印的切片文件'));
   const file=picked,note=$('#note').value.trim(),selected=Number($('#pickPrinter').value);
-  modal(I18n.t('确认设备与耗材'),`<p class="scheduling-filename">${esc(file.name)}</p>${FileIntake.forFile(file)?`<div class="intake-context">${FileIntake.forFile(file).sliced.info.plates.length===1?I18n.t('已读取切片预计值并向上取整；缺失项请补填，仍可手动修正。'):I18n.t('此文件包含多盘；当前预计值需手动填写，打印准备时再选择具体盘并核对用量。')}</div>`:''}<form id="uploadScheduleForm">${schedulingFields({...FileIntake.estimates(file),...(selected?{printer:selected}:{})})}</form>`,I18n.html`<button class="button" data-cancel>返回</button><button class="button primary" type="submit" form="uploadScheduleForm">确认加入队列</button>`);
+  modal(I18n.t('确认设备与耗材'),`<p class="scheduling-filename">${esc(file.name)}</p>${FileIntake.forFile(file)?`<div class="intake-context">${FileIntake.selection(file).length===1?I18n.t('已读取所选盘的预计值并向上取整；缺失项请补填。'):I18n.t('此文件包含多盘；当前预计值需手动填写，打印准备时再选择具体盘并核对用量。')}</div>`:''}<form id="uploadScheduleForm">${schedulingFields({...FileIntake.estimates(file),...(selected?{printer:selected}:{})})}</form>`,I18n.html`<button class="button" data-cancel>返回</button><button class="button primary" type="submit" form="uploadScheduleForm">确认加入队列</button>`);
   SpoolPicker.bind($('#uploadScheduleForm'));
 }
 function completionForm(j){

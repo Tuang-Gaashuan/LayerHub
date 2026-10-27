@@ -1,3 +1,15 @@
+# 0.1.1-beta — Reliable controls, updates and multi-plate intake / 控制、升级与多盘导入
+
+- Improve control response feedback and preserve console focus, tabs and camera during telemetry updates. Reconcile printer-side stops without treating them as successful completions; release readiness only after manual collection/settlement.
+- Ship a standalone Windows/Linux download/update kit with channel selection, verification, offline transfer, idle checks, backups and coordinated NAS/cloud updates.
+- Preserve the explicitly selected sliced plate through queueing and print preparation; never silently choose the first plate of a multi-plate file.
+- Offer bounded PNG thumbnails and plate-specific time, material/color and reservation estimates.
+- Enqueue 1–16 single-filament plates atomically, each as a separate job. Owner-scoped import receipts and stable request IDs prevent duplicate batches after an uncertain response. No automatic print starts.
+- Preserve shared source files until the final referencing job is deleted; validate combined stock reservations, material and printer compatibility.
+- Disable AMS preparation for bare printers; add A1 external-spool regression tests and bilingual on-site setup guidance. Physical A1 validation is pending.
+- Workspace schema advances from 4 to 5. Back up before upgrading. Reverting to a pre-feature binary requires restoring the matching pre-upgrade workspace; do not point it at the migrated database.
+- 本版合并：明确选盘、逐盘颜色与预览、整批原子入队、断网重试防重复、共用文件保护、中英文界面及 A1 无 AMS 准备。与下载/更新工具一并发布；真实 A1 接入待现场验证。
+
 # 0.1.0-beta — Team printer management / 团队打印机管理
 
 Start the Beta mainline. Remove the model/slicing workbench, its geometry/editor APIs, shared model snapshots, Three.js and NAS engine runtime. Accept only actual sliced 3MF. Inspection now finishes inline on the dashboard without a purpose chooser. Keep accounts, device control, queues, physical inventory, notifications, diagnostics and backups; retain legacy project rows without exposing editor APIs. Add bilingual migration/deployment guidance and beta packages. Alpha tags/releases remain available.

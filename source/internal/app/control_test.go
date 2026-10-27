@@ -276,7 +276,7 @@ func TestVersion2BackupRestoresWithControlMigration(t *testing.T) {
 	}
 	var version int
 	restored.DB.QueryRow("PRAGMA user_version").Scan(&version)
-	if version != 4 {
+	if version != 5 {
 		t.Fatal("legacy backup was not migrated")
 	}
 }

@@ -5,21 +5,27 @@
 **English** · [简体中文](README.zh-CN.md)
 
 [![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![Beta recommended](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta)
+[![Beta recommended](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.1-beta)
 [![Alpha experimental workbench](https://img.shields.io/badge/Alpha-experimental_workbench-d48a21)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
-[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) · [Download Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Compare channels](CHANNELS.md) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Validation](validation/README.md)
+[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.1-beta) · [Download Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Compare channels](CHANNELS.md) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Validation](validation/README.md)
 
 LayerHub is a self-hosted workspace for teams sharing 3D printers. Prepare and slice in **Bambu Studio**, then use LayerHub to assign a printer, confirm real spools, coordinate its queue, monitor progress and receive notifications.
 
 **Recommended setup: LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio).** Prepare and slice on your computer, then upload the sliced 3MF for team scheduling, printer control and notifications.
 
+## New in v0.1.1-beta
+
+Batch plate selection, printer-side stop handling, faster controls, A1 external-spool preparation and a standalone download/update kit ship together. See [release notes](RELEASE_NOTES.md), [Update Kit](deploy/update-kit/README.md), [A1 setup](A1_SETUP.md) and [multi-plate imports](MULTIPLATE.md).
+
+**Back up before upgrading:** schema 5 requires coordinated NAS/backend and cloud/UI updates while idle. Older readers need the matching pre-upgrade workspace for rollback. A1 hardware and real multi-plate printing still need attended acceptance.
+
 ## Beta and Alpha
 
 | Channel | Focus | Maintenance | Version tag | Download |
 |---|---|---|---|---|
-| **Beta · recommended** | Team printer management; upload already-sliced 3MF | Primary development on [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) | [`v0.1.0-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.0-beta) | [Beta release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta) |
+| **Beta · recommended** | Team printer management; upload already-sliced 3MF | Primary development on [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) | [`v0.1.1-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.1-beta) | [Beta release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.1-beta) |
 | **Alpha · experimental workbench** | Team printing with an integrated model workbench and online slicing | Gradual workbench development on [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 
 Beta is the mainline for ongoing feature refinement. Its model workbench, geometry import, online slicing, 3D editing and shared model projects have been removed from the UI, APIs and runtime. Alpha retains those experimental features and will progress more slowly on its own branch. Both channels currently have prerelease status; their version numbers advance independently. Read the [full comparison and maintenance policy](CHANNELS.md) or the [Alpha → Beta migration guide](BETA_MIGRATION.md).
@@ -71,23 +77,23 @@ The NAS owns the live application and database and connects to the printer local
 
 ## Try it locally
 
-Download a platform archive and `SHA256SUMS` from [v0.1.0-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.0-beta), verify the checksum and extract to a new directory.
+Download a platform archive and `SHA256SUMS` from [v0.1.1-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.1-beta), verify the checksum and extract to a new directory.
 
 Windows PowerShell:
 
 ```powershell
-Get-FileHash .\LayerHub-0.1.0-beta-windows-amd64.zip -Algorithm SHA256
-Expand-Archive .\LayerHub-0.1.0-beta-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.1.0-beta
+Get-FileHash .\LayerHub-0.1.1-beta-windows-amd64.zip -Algorithm SHA256
+Expand-Archive .\LayerHub-0.1.1-beta-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.1.1-beta
 .\start.cmd
 ```
 
 Linux:
 
 ```sh
-grep 'LayerHub-0.1.0-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.1.0-beta-linux-amd64.tar.gz
-cd LayerHub-0.1.0-beta
+grep 'LayerHub-0.1.1-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.1-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.1-beta
 sh start.sh
 ```
 
@@ -114,3 +120,6 @@ Hardware print evidence remains concentrated on the previously attended **X2D / 
 Go 1.27, Node.js 24 and Python 3 are the build/test tools. Go dependencies are vendored. Run `sh tools/build.sh` or `tools/build.ps1`; see [source guidance](source/README.md). Runtime does not depend on Node, Python, Three.js or a slicing engine.
 
 Original project code and schematic artwork are **AGPL-3.0-only**. Third-party dependencies retain their licenses; see [notices](THIRD_PARTY_NOTICES.md). Hosted deployments provide matching source through the footer. Public source/packages exclude accounts, databases, credentials, private uploads and backups. Report issues with redacted reproduction steps rather than a whole data directory.
+
+
+[A1 without AMS setup](A1_SETUP.md) · [Multi-plate import guide](MULTIPLATE.md)

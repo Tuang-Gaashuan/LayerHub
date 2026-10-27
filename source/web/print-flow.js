@@ -2,7 +2,7 @@
 const PrintFlow=(()=>{
  function summary(j){
   const p=data.printers.find(p=>p.id===j.printer),ids=j.printOptions?.mapping?.map(x=>x.spoolId)||[j.spoolId];
-  return I18n.html`<div class="print-summary"><strong>${esc(j.filename)}</strong><span>${esc(p?.name||I18n.t('未指定设备'))} · 预计 ${Number(j.estimate)||0} 分钟</span>${[...new Set(ids)].map(id=>{const s=data.spools.find(s=>s.id===id);return s?`<span class="print-roll"><i style="background:${esc(s.color)}"></i>${esc(s.label)} · ${esc(s.colorName)} · ${esc(s.mount?.slot==='external'?I18n.t('外挂'):`AMS ${s.mount?.slot||I18n.t('未装载')}`)}</span>`:''}).join('')}</div>`;
+  return I18n.html`<div class="print-summary"><strong>${esc(j.filename)+FileIntake.plateBadge(j)}</strong><span>${esc(p?.name||I18n.t('未指定设备'))} · 预计 ${Number(j.estimate)||0} 分钟</span>${[...new Set(ids)].map(id=>{const s=data.spools.find(s=>s.id===id);return s?`<span class="print-roll"><i style="background:${esc(s.color)}"></i>${esc(s.label)} · ${esc(s.colorName)} · ${esc(s.mount?.slot==='external'?I18n.t('外挂'):`AMS ${s.mount?.slot||I18n.t('未装载')}`)}</span>`:''}).join('')}</div>`;
  }
  function open(j){
   if(!['queued','assigned'].includes(j.state))return toast(I18n.t('任务状态已变化，请查看我的任务'));

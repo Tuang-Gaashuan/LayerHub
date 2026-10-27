@@ -1,8 +1,8 @@
 {
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "status": "passed",
-  "files_scanned": 15097,
-  "archives_scanned": 5,
+  "files_scanned": 15707,
+  "archives_scanned": 6,
   "checks": [
     "production_endpoint",
     "production_mail",

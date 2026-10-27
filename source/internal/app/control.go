@@ -98,7 +98,7 @@ func (s *Service) ControlPrinter(u User, in ControlInput) error {
 			if unrelated > 0 {
 				return forbidden("请使用对应入口核对原任务或设备设置")
 			}
-			if uncertain == 0 && job.Error == "" {
+			if uncertain == 0 && job.Error == "" && !deviceEndNeedsReview(job, t) {
 				return conflict("没有需要核对的结果")
 			}
 			state := ""

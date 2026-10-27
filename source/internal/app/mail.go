@@ -502,11 +502,15 @@ func (s *Service) collectMail(at time.Time) error {
 			return err
 		}
 		for _, j := range jobs {
+			t := s.Device.Status(j.Printer)
+			j, err = s.observeDeviceStopped(tx, j, t, now)
+			if err != nil {
+				return err
+			}
 			state := j.State
 			if j.Error != "" && (state == "queued" || state == "assigned") {
 				state = "needs_review"
 			}
-			t := s.Device.Status(j.Printer)
 			active := state == "printing" || state == "paused"
 			matched := active && mailTaskMatches(j, t)
 			if matched && state == "printing" && t.RawState == "RUNNING" && t.State == "printing" {

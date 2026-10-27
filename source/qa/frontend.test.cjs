@@ -231,7 +231,7 @@ async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewe
  };
  const scripts=[...w.document.querySelectorAll('script[src]')].map(s=>read(s.getAttribute('src').replace('./','')));
  const source=scripts.join('\n');
- w.eval(source+'\nwindow.testing={FileIntake,Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,get data(){return data}};');
+ w.eval(source+'\nwindow.testing={PrintFlow,BatchQueue,FileIntake,Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,get data(){return data}};');
  await settle();assert.equal(w.testing.Remote.ready(),true);
  return {w,...w.testing,state,intervals,$:selector=>w.document.querySelector(selector)};
 }
@@ -339,6 +339,34 @@ test('light switch submits once, waits for device state and never opens a settin
  assert.equal(a.$('[data-equipment="chamber_light"]').getAttribute('aria-checked'),'true');assert.equal(calls,1);
 });
 
+test('control reads start concurrently and an unchanged refresh preserves controls, tabs and focus',async t=>{
+ const a=await app(t);a.PrinterControl.open(1);await settle();
+ const root=a.$('.control-shell'),tabs=a.$('.control-tabs'),light=a.$('[data-equipment="chamber_light"]'),history=a.$('.control-history');
+ light.focus();const base=a.w.fetch;let release,commandsStarted=false;
+ a.w.fetch=(url,o)=>url==='/api/workspace'?new Promise(resolve=>release=()=>resolve(reply(200,structuredClone(a.state.snapshot)))):url.startsWith('/api/printers/commands')?(commandsStarted=true,base(url,o)):base(url,o);
+ const refreshing=a.PrinterControl.refresh();await settle();
+ assert.equal(commandsStarted,true,'command read must not wait for the workspace response');
+ assert.equal(a.$('.control-shell'),root);release();await refreshing;
+ assert.equal(a.$('.control-tabs'),tabs);assert.equal(a.$('.control-history'),history);assert.equal(a.$('[data-equipment="chamber_light"]'),light);assert.equal(a.w.document.activeElement,light);
+ assert.equal(writes(a).length,0);
+});
+
+test('light feedback is immediate, fast polling reads only, and device confirmation restores the same switch',async t=>{
+ const a=await app(t,{language:'en'});a.PrinterControl.open(1);await settle();
+ const base=a.w.fetch,timers=[];const timeout=a.w.setTimeout.bind(a.w);
+ a.w.setTimeout=(fn,ms,...args)=>ms===350?(timers.push(fn),900000+timers.length):timeout(fn,ms,...args);
+ let release,writesSent=0;
+ a.w.fetch=(url,o)=>url==='/api/printers/settings'?(writesSent++,new Promise(resolve=>release=()=>resolve(reply(200,{ok:true})))):base(url,o);
+ const light=a.$('[data-equipment="chamber_light"]'),camera=a.$('.printer-camera');
+ light.click();light.click();
+ assert.equal(a.$('[data-equipment="chamber_light"]'),light);assert.match(light.textContent,/Turning light on/);assert.equal(light.getAttribute('aria-busy'),'true');assert.equal(light.getAttribute('aria-checked'),'false');
+ assert.equal(a.$('[data-equipment="fan:1"]').disabled,true,'same-printer physical commands remain serialized');
+ a.state.commands=[{id:101,action:'set:chamber_light',state:'pending',created:Date.now(),user:'Admin',message:'target 1'}];release();await settle();
+ assert.equal(writesSent,1);assert.ok(timers.length);assert.match(light.textContent,/Waiting for printer confirmation/);
+ const next=timers.shift();a.state.commands[0].state='succeeded';a.state.snapshot.printers[0].equipment.settings.find(s=>s.key==='chamber_light').value=1;
+ await next();await settle();assert.equal(light.getAttribute('aria-checked'),'true');assert.equal(light.disabled,false);assert.equal(light.getAttribute('aria-busy'),'false');assert.equal(writesSent,1);assert.equal(timers.length,0);assert.equal(a.$('.printer-camera'),camera);
+});
+
 test('fan slider and presets stay local until confirmation, and survive parent telemetry refresh',async t=>{
  const a=await app(t);a.PrinterControl.open(1);await settle();a.$('[data-equipment="fan:1"]').click();
  const dialog=a.$('#equipmentDialog'),input=a.$('#settingValue');input.value='42';input.dispatchEvent(new a.w.Event('input'));
@@ -401,6 +429,15 @@ test('unconfirmed device warnings stay visible outside the selected content tab'
  assert.match(a.$('#controlNotice').textContent,/未确认/);
  assert.equal(a.$('#controlNotice').closest('[role=tabpanel]'),null);
  assert.equal(a.$('[data-equipment="chamber_light"]').disabled,true);assert.equal(writes(a).length,0);
+});
+
+test('physical printer termination exposes a review path without requiring a failed cloud command',async t=>{
+ const a=await app(t,{language:'en'});Object.assign(a.state.snapshot.printers[0],{state:'failed',rawState:'FAILED',file:''});
+ await a.Remote.refresh({renderPage:false});a.PrinterControl.open(1);await settle();
+ assert.ok(a.$('#controlResolve'));assert.match(a.$('#controlNotice').textContent,/printer reports that the job ended/);assert.equal(a.$('#controlStop').disabled,true);assert.equal(writes(a).length,0);
+ a.$('#controlResolve').click();await settle();assert.ok(a.$('#confirmAction'));assert.equal(writes(a).length,0,'opening review must not stop or settle the printer');
+ a.state.snapshot.printers[0].rawState='FINISH';a.state.snapshot.printers[0].state='confirming';a.state.snapshot.jobs[0].finishedAt=123;
+ await a.Remote.refresh({renderPage:false});a.PrinterControl.open(1);await settle();assert.equal(a.$('#controlResolve'),null,'successful completion must not be presented as an aborted print');
 });
 
 test('service loss while browser remains online shows stale snapshot, disables physical controls, recovers without writes',async t=>{
@@ -750,7 +787,7 @@ test('beta verifies a sliced file inline, preserves colors and prefills only con
  $('#uploadBtn').click();const form=$('#uploadScheduleForm');assert.equal(form.elements.estimate.value,'62');assert.equal(form.elements.grams.value,'13');assert.equal(form.querySelector('[name=spoolId]:checked'),null);assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/files/inspect');
 });
 test('beta leaves multi-plate estimates blank rather than choosing the first plate',async t=>{
- const a=await betaIntakeApp(t,{multi:true}),{$}=a;await a.FileIntake.open(a.file);assert.equal(a.w.document.querySelectorAll('.intake-plate').length,2);$('#uploadBtn').click();assert.equal($('#uploadScheduleForm').elements.estimate.value,'');assert.equal($('#uploadScheduleForm').elements.grams.value,'');
+ const a=await betaIntakeApp(t,{multi:true}),{$}=a;await a.FileIntake.open(a.file);assert.equal(a.w.document.querySelectorAll('.intake-plate').length,2);assert.equal(a.FileIntake.estimates(a.file).estimate,null);$('#uploadBtn').click();assert.equal($('#uploadScheduleForm'),null);assert.match($('#toast').textContent,/请先选择/);
 });
 test('beta English intake and errors explain the external slicing workflow without an editor choice',async t=>{
  const a=await betaIntakeApp(t,{language:'en'}),{$,w}=a;await a.FileIntake.open(a.file);assert.match($('#fileReview').textContent,/Sliced 3MF verified/);assert.doesNotMatch($('#fileReview').textContent,/已校验|导入|工作台/);assert.equal($('#intakeGeometry'),null);
@@ -763,4 +800,74 @@ test('beta cancellation and stale account responses cannot select files or creat
 });
 test('beta inspection report is local and no geometry or execution action is offered',async t=>{
  const a=await betaIntakeApp(t),{$,w}=a;let downloads=0;w.URL.createObjectURL=()=>{downloads++;return 'blob:test'};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=function(){assert.equal(this.download,'layerhub-sliced-3mf-review.json')};await a.FileIntake.open(a.file);$('#fileReviewExport').click();assert.equal(downloads,1);assert.equal(writes(a).length,1);assert.equal($('#intakeSlice'),null);assert.equal($('#intakeGeometry'),null);
+});
+
+async function multiImportApp(t,options={}){
+ const a=await betaIntakeApp(t,{multi:true,...options});
+ a.review.sliced.info.model='P1S';a.review.sliced.info.plates=[{...plate(1,'#FFFFFF',10),seconds:61},{...plate(7,'#4778BC',12),seconds:181}];
+ await a.FileIntake.open(a.file);return a;
+}
+async function chooseBatchSpool(a,plateId,spool){
+ a.$(`[data-batch-spool="${plateId}"]`).click();const form=a.$('#batchSpoolForm');
+ choose(a.w,form.querySelector(`[name=spoolId][value="${spool}"]`));submitForm(a.w,form);await settle();
+}
+async function openFilledBatch(a){
+ a.$('[data-select-batch]').click();a.$('#uploadBtn').click();
+ await chooseBatchSpool(a,1,'white');await chooseBatchSpool(a,7,'blue');
+}
+test('multi-plate selection preserves a noncontiguous plate ID and its own estimates in single upload',async t=>{
+ const a=await multiImportApp(t),{$,w}=a;choose(w,$('[data-import-plate="7"]'));$('#uploadBtn').click();
+ const form=$('#uploadScheduleForm');assert.equal(form.elements.estimate.value,'4');assert.equal(form.elements.grams.value,'12');
+ let sent;w.XMLHttpRequest=class{constructor(){this.upload={}}open(){}setRequestHeader(){}send(body){sent=body}};
+ choose(w,form.querySelector('[name=spoolId][value=blue]'));submitForm(w,form);
+ assert.equal(JSON.parse(sent.get('schedule')).plate,7);assert.equal(JSON.parse(sent.get('schedule')).grams,12);
+});
+test('batch queue reviews colors per plate, reserves in one request and never sends a printer command',async t=>{
+ const a=await multiImportApp(t),{$,w,state}=a;await openFilledBatch(a);assert.equal($('.batch-spool-dialog'),null);
+ assert.match($('[data-batch-spool="1"]').textContent,/白色/);assert.match($('[data-batch-spool="7"]').textContent,/蓝色/);
+ const base=w.fetch;let payload;
+ w.fetch=async(url,o)=>{if(url==='/api/upload/batch'){state.calls.push({url,options:o});payload=JSON.parse(o.body.get('batch'));return reply(201,{ok:true,receipt:{requestId:payload.requestId,jobIds:[21,22]}})}return base(url,o)};
+ submitForm(w,$('#batchQueueForm'));submitForm(w,$('#batchQueueForm'));await settle();
+ assert.deepEqual(payload.items.map(x=>x.plate),[1,7]);assert.equal(payload.items[1].grams,12);
+ assert.equal(state.calls.filter(c=>c.url==='/api/upload/batch').length,1);assert.equal(state.calls.some(c=>/dispatch|\/start|settings\/apply/.test(c.url)),false);
+ assert.equal($('#modal').open,false);assert.equal(w.sessionStorage.getItem('layerhub.pendingImport.1'),null);
+});
+test('batch picker filters material and subtracts other plate drafts before offering a spool',async t=>{
+ const a=await multiImportApp(t),{$,w,state}=a;state.snapshot.spools.find(s=>s.id==='white').remaining=60;await a.Remote.refresh();
+ await openFilledBatch(a);$('[data-batch-spool="7"]').click();const form=$('#batchSpoolForm');
+ assert.equal(form.querySelector('[name=spoolId][value=petg]'),null);assert.equal(form.querySelector('[name=spoolId][value=white]').disabled,true);
+ form.querySelector('[data-back]').click();numberInput(w,$('[name=grams-1]'),900);submitForm(w,$('#batchQueueForm'));await settle();
+ assert.match($('#batchError').textContent,/合计预留/);assert.equal(state.calls.some(c=>c.url==='/api/upload/batch'),false);
+});
+test('unknown batch response preserves the same ID and performs no automatic upload retry',async t=>{
+ const a=await multiImportApp(t),{$,w,state}=a;await openFilledBatch(a);const base=w.fetch;let seen;
+ w.fetch=async(url,o)=>{if(url==='/api/upload/batch'){state.calls.push({url,options:o});seen=JSON.parse(o.body.get('batch'));throw Error('lost acknowledgement')}if(url.startsWith('/api/jobs/import-receipt'))return reply(200,{ok:true,found:true,receipt:{requestId:seen.requestId,jobIds:[31,32]}});return base(url,o)};
+ submitForm(w,$('#batchQueueForm'));await settle();assert.match($('#batchError').textContent,/未确认/);assert.equal($('#batchSubmit').disabled,false);assert.equal($('[name=grams-1]').disabled,true);
+ const pending=JSON.parse(w.sessionStorage.getItem('layerhub.pendingImport.1'));assert.equal(pending.requestId,seen.requestId);
+ assert.equal(state.calls.filter(c=>c.url==='/api/upload/batch').length,1);$('#modal').close();$('#uploadBtn').click();assert.equal($('[name=grams-1]').disabled,true);assert.match($('[data-batch-spool="7"]').textContent,/蓝色/);$('#batchRead').click();await settle();assert.equal($('#modal').open,false);assert.equal(w.sessionStorage.getItem('layerhub.pendingImport.1'),null);
+});
+test('correcting a rejected batch keeps its original request ID and a replay cannot create duplicates',async t=>{
+ const a=await multiImportApp(t),{$,w,state}=a;await openFilledBatch(a);const base=w.fetch,requests=[];
+ w.fetch=async(url,o)=>{if(url==='/api/upload/batch'){requests.push(JSON.parse(o.body.get('batch')));return requests.length===1?reply(409,{ok:false,error:'库存变化，请重新选择'}):reply(200,{ok:true,receipt:{jobIds:[41,42]}})}if(url.startsWith('/api/jobs/import-receipt'))return reply(200,{ok:true,found:false});return base(url,o)};
+ submitForm(w,$('#batchQueueForm'));await settle();assert.equal($('[name=grams-1]').disabled,false);
+ numberInput(w,$('[name=grams-1]'),11);submitForm(w,$('#batchQueueForm'));await settle();assert.equal(requests.length,2);assert.equal(requests[0].requestId,requests[1].requestId);assert.equal(requests[1].items[0].grams,11);
+});
+test('English batch import has translated controls and A1 bare preparation locks AMS off',async t=>{
+ const a=await multiImportApp(t,{language:'en'}),{$,w,state}=a;await openFilledBatch(a);
+ // User-created spool names intentionally retain their original language.
+ assert.match($('#batchQueueRoot').textContent,/Each plate becomes a separate job/);assert.equal($('#batchSubmit').textContent,'Add batch to queue');assert.match($('#batchTotals').textContent,/22 g reserved/);
+ $('#modal').close();const p=state.snapshot.printers[0];p.modelId='a1';p.model='A1';p.configuration='bare';state.slice={model:'A1',plates:[plate(1,'#FFFFFF',10),plate(7,'#222222',12)]};state.snapshot.jobs[1].selectedPlate=7;await a.Remote.refresh();a.PrinterControl.options(a.w.testing.data.jobs.find(j=>j.id===4));await settle();
+ assert.equal($('#projectPlate').value,'7');assert.equal($('#projectAMS').disabled,true);assert.equal($('#projectAMS').checked,false);assert.match($('#projectAMS').closest('label').textContent,/external spool holder/);assert.equal(writes(a).filter(c=>c.url!=='/api/files/inspect').length,0);
+});
+
+test('batch upload requires a saved recovery ID before any upload can be sent',async t=>{
+ const a=await multiImportApp(t),{$,w,state}=a;await openFilledBatch(a);const original=w.Storage.prototype.setItem;
+ w.Storage.prototype.setItem=function(k,v){if(k.startsWith('layerhub.pendingImport.'))throw new w.DOMException('storage blocked');return original.call(this,k,v)};
+ submitForm(w,$('#batchQueueForm'));await settle();assert.match($('#batchError').textContent,/无法保存导入恢复编号/);assert.equal($('[name=grams-1]').disabled,false);assert.equal(state.calls.some(c=>c.url==='/api/upload/batch'),false);
+});
+
+test('plate IDs stay visible in task rows, the control console and the final print confirmation',async t=>{
+ const a=await app(t),{$,state}=a;state.snapshot.jobs.forEach(j=>{j.selectedPlate=7;j.size=.1});await a.Remote.refresh();$('[data-page=mine]').click();
+ assert.match($('.job-plate-label').textContent,/打印盘 7/);a.PrinterControl.open(1);await settle();assert.match($('.control-filename').textContent,/打印盘 7/);
+ a.PrintFlow.open(a.w.testing.data.jobs.find(j=>j.id===4));assert.match($('.print-summary').textContent,/打印盘 7/);assert.equal(writes(a).length,0);
 });

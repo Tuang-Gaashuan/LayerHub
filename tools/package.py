@@ -1,10 +1,11 @@
 """Create portable archives from built, clean files. Never includes data/."""
-import hashlib,pathlib,re,shutil,tarfile,zipfile
+import argparse,hashlib,pathlib,re,shutil,tarfile,zipfile
 root=pathlib.Path(__file__).resolve().parent.parent
 version=(root/'VERSION').read_text().strip();assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.]+)?',version)
-out=root/'packages';out.mkdir(exist_ok=True)
+parser=argparse.ArgumentParser();parser.add_argument('--local-preview',action='store_true');args=parser.parse_args()
+out=root/('local-packages/a1-multiplate-preview-20261027' if args.local_preview else 'packages');out.mkdir(parents=True,exist_ok=True)
 source=root/'source/web/source/layerhub-source.tar.gz';assert source.is_file(),'Generate corresponding source first'
-docs=['README.md','README.zh-CN.md','LICENSE','THIRD_PARTY_NOTICES.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','DIAGNOSTICS.md','IMPORTING.md','BETA_MIGRATION.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION']
+docs=['README.md','README.zh-CN.md','LICENSE','THIRD_PARTY_NOTICES.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','DIAGNOSTICS.md','IMPORTING.md','A1_SETUP.md','MULTIPLATE.md','BETA_MIGRATION.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION']
 start_cmd=r'''@echo off
 setlocal
 pushd "%~dp0" || exit /b 1
@@ -46,7 +47,7 @@ def entries(platform):
   for name in ['layerhub','layerhub-mail-worker']:yield root/'binaries/linux-amd64'/name,'bin/'+name
 def clean(info):
  info.uid=info.gid=0;info.uname=info.gname='';info.mode=0o755 if info.name.endswith('.sh') or '/bin/' in info.name else 0o644;return info
-prefix='LayerHub-'+version
+prefix='LayerHub-'+version+('-a1-multiplate-preview-20261027' if args.local_preview else '')
 with zipfile.ZipFile(out/(prefix+'-windows-amd64.zip'),'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
  for p,name in entries('windows'):z.write(p,prefix+'/'+name)
  z.writestr(prefix+'/start.cmd',start_cmd.replace('\n','\r\n'))

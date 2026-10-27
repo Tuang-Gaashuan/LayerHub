@@ -14,6 +14,7 @@ import (
 
 type Schedule struct {
 	JobID    int64                `json:"jobId"`
+	Plate    int                  `json:"plate,omitempty"`
 	Printer  int64                `json:"printer"`
 	Estimate int                  `json:"estimate"`
 	Grams    int                  `json:"grams"`
@@ -85,6 +86,9 @@ func (s *Service) CreateJob(u User, in Schedule, filename, path, hash, note stri
 			return err
 		}
 		id, err = r.LastInsertId()
+		if err == nil && in.Plate > 0 {
+			err = recordSelectedPlate(tx, id, in.Plate)
+		}
 		return err
 	})
 	return id, err
@@ -144,8 +148,14 @@ func (s *Service) DeleteJob(u User, id int64) error {
 			if j.State != "queued" && j.State != "assigned" && j.State != "failed" {
 				return conflict("该任务正在执行，不能删除")
 			}
-			path = j.Path
 			_, err = tx.Exec("DELETE FROM jobs WHERE id=?", id)
+			if err == nil {
+				var references int
+				err = tx.QueryRow("SELECT COUNT(*) FROM jobs WHERE path=?", j.Path).Scan(&references)
+				if references == 0 {
+					path = j.Path
+				}
+			}
 			return err
 		}
 		return missing("任务不存在")
@@ -183,6 +193,11 @@ func (s *Service) completeJobUsesTx(tx *sql.Tx, u User, id int64, used int, actu
 	if job.State != "printing" && job.State != "paused" && job.State != "stopped" {
 		return conflict("任务尚未打印，或已确认完成")
 	}
+	synced, err := s.observeDeviceStopped(tx, *job, s.Device.Status(job.Printer), time.Now().Unix())
+	if err != nil {
+		return err
+	}
+	*job = synced
 	var pending int
 	if err = tx.QueryRow("SELECT COUNT(*) FROM printer_commands WHERE printer_id=? AND state IN ('pending','uncertain')", job.Printer).Scan(&pending); err != nil {
 		return err
@@ -290,7 +305,7 @@ func (s *Service) executable(tx *sql.Tx, u User, id int64, expected string) (Job
 	if !t.Connected || !timeFresh(t.Updated) {
 		return j, conflict("设备未连接或状态已过期")
 	}
-	if t.State != "idle" {
+	if t.State != "idle" && !settledStopReady(jobs, j.Printer, t) {
 		return j, conflict("设备尚未空闲")
 	}
 	var uncertain int
@@ -301,6 +316,9 @@ func (s *Service) executable(tx *sql.Tx, u User, id int64, expected string) (Job
 		return j, conflict("有未确认的设备指令，请先核对设备")
 	}
 	if j.PrintOptions != nil {
+		if j.SelectedPlate > 0 && j.PrintOptions.Plate != j.SelectedPlate {
+			return j, conflict("打印盘选择已变化，请重新保存打印准备")
+		}
 		ps, e := readPrinters(tx)
 		if e != nil {
 			return j, e
@@ -311,6 +329,9 @@ func (s *Service) executable(tx *sql.Tx, u User, id int64, expected string) (Job
 			}
 		}
 	} else {
+		if j.SelectedPlate > 0 {
+			return j, conflict("请先为选定打印盘保存供料准备，再传输或启动")
+		}
 		err = validateSchedule(tx, u, Schedule{Printer: j.Printer, Estimate: j.Estimate, Grams: j.Grams, SpoolID: j.SpoolID}, j.ID)
 	}
 	if err != nil {

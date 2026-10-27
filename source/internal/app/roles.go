@@ -19,7 +19,7 @@ func initOwnership(db *sql.DB, initialUsername string) error {
 	if e = tx.QueryRow("PRAGMA user_version").Scan(&version); e != nil {
 		return e
 	}
-	if version > 4 {
+	if version > 5 {
 		return fmt.Errorf("database version is newer than this program")
 	}
 	rows, e := tx.Query("PRAGMA table_info(users)")
@@ -80,7 +80,7 @@ func initOwnership(db *sql.DB, initialUsername string) error {
 	if count != 1 || valid != 1 {
 		return fmt.Errorf("workspace requires exactly one enabled owner; automatic reassignment refused")
 	}
-	if _, e = tx.Exec("PRAGMA user_version=4"); e != nil {
+	if _, e = tx.Exec("PRAGMA user_version=5"); e != nil {
 		return e
 	}
 	return tx.Commit()

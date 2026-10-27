@@ -36,6 +36,9 @@ func (s *Service) SetEquipment(u User, in SettingInput) error {
 		if e != nil {
 			return e
 		}
+		if settledStopReady(jobs, in.PrinterID, t) {
+			t.State = "idle"
+		}
 		var current *Job
 		for i := range jobs {
 			j := &jobs[i]

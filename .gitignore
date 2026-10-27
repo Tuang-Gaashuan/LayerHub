@@ -1,5 +1,6 @@
 /binaries/
 /packages/
+/local-packages/
 **/data/
 **/simulation-data/
 **/node_modules/

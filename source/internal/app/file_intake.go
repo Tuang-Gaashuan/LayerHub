@@ -69,8 +69,9 @@ func importReference(raw []byte) *ImportReference {
 }
 
 type fileSliceReview struct {
-	Available bool       `json:"available"`
-	Info      *SliceInfo `json:"info"`
+	Available bool           `json:"available"`
+	Info      *SliceInfo     `json:"info"`
+	Previews  map[int]string `json:"previews,omitempty"`
 }
 type fileReview struct {
 	Schema    int              `json:"schema"`
@@ -109,6 +110,7 @@ func inspectPrintFile(ctx context.Context, filename, digest string, size int64) 
 		return out, err
 	}
 	defer z.Close()
+	out.Sliced.Previews = importPreviews(z, info.Plates)
 	for _, f := range z.File {
 		if err = ctx.Err(); err != nil {
 			return out, err

@@ -168,6 +168,18 @@ func TestX2DSingleNozzleProjectEnvelope(t *testing.T) {
 		t.Fatal("fixed-nozzle file was given an unverified nozzle-rack override")
 	}
 }
+
+func TestA1BareExternalSpoolSelectsExactPlateWithoutAMS(t *testing.T) {
+	payload := printPayload(app.PrintRequest{Remote: "a1-plates.3mf", TaskName: "job-fixture", Options: &app.PrintOptions{Plate: 7, UseAMS: false, Mapping: []app.AMSTarget{{Filament: 0, AMSID: 0, SlotID: 0, SpoolID: "external", Grams: 12}}, BedLeveling: true}})
+	legacy := payload["ams_mapping"].([]int)
+	modern := payload["ams_mapping2"].([]map[string]int)
+	if payload["param"] != "Metadata/plate_7.gcode" || payload["use_ams"] != false || legacy[0] != -1 || modern[0]["ams_id"] != 255 || modern[0]["slot_id"] != 255 {
+		t.Fatal(payload)
+	}
+	if _, present := payload["nozzle_mapping"]; present {
+		t.Fatal("A1 was given a dual-nozzle override")
+	}
+}
 func TestSimulatedPauseResumeAndStop(t *testing.T) {
 	m, _ := New("simulated")
 	defer m.Close()

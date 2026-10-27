@@ -39,3 +39,10 @@ For rollback, preserve all new Beta work first and use the matching data snapsho
 升级步骤：先等设备空闲/完工、新鲜遥测、无传输/启动/待核对指令、无 Alpha 活动切片或待恢复；导出所有者备份，并保存数据目录、master.key、环境/服务配置和旧程序。停止应用，把 Beta 程序与完整 web 安装到新的发布目录，再切换服务指向，避免覆盖旧 web 后遗留编辑器文件。保留原数据目录与相关配置，移除旧切片环境项；已安装的外部引擎可保持不运行，供回退使用。只启动一次并核对版本、账号、库存、任务、通知偏好、遥测和切片文件校验，不需要实机试打。
 
 回退前先保留 Beta 期间新增的业务，再在维护窗口使用对应旧程序和数据快照。成员操作期间不得用旧备份覆盖新数据库。备份恢复仍要求所有者明确操作、离线启动，恢复后设备保持停用，等待核对。
+
+
+## Beta 0.1.0 → 0.1.1
+
+Back up the complete workspace and master key. Upgrade NAS/backend and cloud/UI together while idle. Schema 5 preserves explicit plate selection; pre-feature readers cannot open it. Rollback needs the matching pre-upgrade data backup and loses intervening changes. Never overwrite newly created jobs/settlements with an old snapshot.
+
+升级前备份完整工作空间和主密钥，在空闲时统一更新 NAS 与云端。本版数据库为 schema 5，旧程序不能直接读取；回退须配套恢复升级前数据，不能覆盖升级后的新任务与结算。新程序启动后若出问题，更新工具保留程序、数据和备份供检查，不盲目覆盖回退。

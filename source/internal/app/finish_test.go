@@ -248,7 +248,7 @@ func TestUpgradeFromOriginalUserSchemaKeepsWorkspace(t *testing.T) {
 	}
 	upgraded.DB.QueryRow("PRAGMA user_version").Scan(&version)
 	upgraded.DB.QueryRow("SELECT COUNT(*) FROM jobs WHERE id=? AND spool_id=?", jobID, sp.ID).Scan(&count)
-	if disabled || version != 4 || count != 1 || !verifyPassword("TestPassword123", hash) {
+	if disabled || version != 5 || count != 1 || !verifyPassword("TestPassword123", hash) {
 		t.Fatal("upgrade lost existing data or changed credentials")
 	}
 }

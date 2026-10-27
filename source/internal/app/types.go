@@ -91,6 +91,7 @@ type Job struct {
 	Printer              int64         `json:"printer"`
 	State                string        `json:"state"`
 	DisplayState         string        `json:"displayState,omitempty"`
+	SelectedPlate        int           `json:"selectedPlate,omitempty"`
 	FinishedAt           int64         `json:"finishedAt,omitempty"`
 	CollectedAt          int64         `json:"collectedAt,omitempty"`
 	SettledAt            int64         `json:"settledAt,omitempty"`
