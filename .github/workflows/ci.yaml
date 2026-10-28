@@ -32,4 +32,4 @@ jobs:
           node-version: '24'
       - run: npm ci --prefix source/qa/frontend-deps --ignore-scripts
       - run: node source/qa/build-locales.cjs --check
-      - run: node --test source/qa/frontend.test.cjs source/qa/i18n.test.cjs
+      - run: node --test source/qa/frontend.test.cjs source/qa/i18n.test.cjs source/qa/studio-shortcut.test.cjs

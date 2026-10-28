@@ -146,8 +146,15 @@ func (m *Manager) command(ctx context.Context, p app.Printer, payload map[string
 	return m.commandSection(ctx, p, "print", payload, done)
 }
 func (m *Manager) commandSection(ctx context.Context, p app.Printer, section string, payload map[string]any, done func(app.Telemetry, time.Time) bool) error {
+	return m.commandSectionFeedback(ctx, p, section, payload, done, false)
+}
+
+func (m *Manager) commandSectionFeedback(ctx context.Context, p app.Printer, section string, payload map[string]any, done func(app.Telemetry, time.Time) bool, acceptLampReceipt bool) error {
 	if m.mode != "live" {
 		return errors.New("device connection disabled")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	seq := fmt.Sprint(100000 + m.sequence.Add(1)%1000000000)
 	m.mu.Lock()
@@ -166,10 +173,10 @@ func (m *Manager) commandSection(ctx context.Context, p app.Printer, section str
 	payload["sequence_id"] = seq
 	body, _ := json.Marshal(map[string]any{section: payload})
 	sent := time.Now()
-	token := client.Publish("device/"+p.Serial+"/request", 1, false, body)
-	if !token.WaitTimeout(10*time.Second) || token.Error() != nil {
-		return errors.New("command publish unconfirmed")
-	}
+	client.Publish("device/"+p.Serial+"/request", 0, false, body)
+	// Transport acknowledgement is not hardware confirmation. In particular,
+	// do not discard fresh device evidence just because PUBACK is late/missing.
+	// Publish exactly once; the existing context bounds observation below.
 	// A read-only snapshot also confirms unchanged requested values. Never resend
 	// a physical command just because its acknowledgement was lost.
 	switch text(payload["command"]) {
@@ -186,10 +193,20 @@ func (m *Manager) commandSection(ctx context.Context, p app.Printer, section str
 			m.mu.Lock()
 			ack := l.replies[seq]
 			result := strings.ToLower(text(ack["result"]))
-			bad := result == "fail" || result == "failed" || result == "error" || number(ack["reason_code"]) > 0
+			bad := result == "fail" || result == "failed" || result == "error" || number(ack["reason_code"]) != 0 || number(ack["errno"]) != 0 || number(ack["err_code"]) != 0
 			m.mu.Unlock()
 			if bad {
 				return fmt.Errorf("%w: reason_code=%d", app.ErrDeviceRejected, number(ack["reason_code"]))
+			}
+			if acceptLampReceipt && p.ModelID == "a1" && section == "system" && text(payload["command"]) == "ledctrl" && text(payload["led_node"]) == "chamber_light" && text(ack["command"]) == "ledctrl" && result == "success" {
+				value := 0
+				if text(payload["led_mode"]) == "on" {
+					value = 1
+				}
+				m.mu.Lock()
+				l.lampRequest = &value
+				m.mu.Unlock()
+				return app.ErrDeviceAccepted
 			}
 			t := m.Status(p.ID)
 			if t.Connected && done(t, sent) {

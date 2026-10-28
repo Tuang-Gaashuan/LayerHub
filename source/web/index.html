@@ -7,6 +7,7 @@
   <button class="workspace" id="workspaceBtn"><span class="workspace-icon">M</span><span>Maker 创客实验室<small>团队工作空间</small></span><span data-icon="chevrons" class="muted"></span></button>
   <div class="nav-caption">工作空间</div>
   <nav aria-label="主要导航">
+    <button class="nav-item" id="studioShortcut" hidden><span data-icon="layers"></span>Bambu Studio<span data-icon="arrow-up-right" class="end-icon"></span></button>
     <button data-page="board" class="nav-item active"><span data-icon="dashboard"></span>协作看板</button>
     <button data-page="queues" class="nav-item"><span data-icon="clock"></span>设备队列</button>
     <button data-page="materials" class="nav-item"><span data-icon="box"></span>耗材库</button>
@@ -55,6 +56,9 @@
 <script src="./equipment-ui.js"></script>
 <link rel="stylesheet" href="./control-layout.css">
 <script src="./control-layout.js"></script>
+<link rel="stylesheet" href="./motion.css">
+<script src="./motion-ui.js"></script>
+<script src="./orphan-ui.js"></script>
 <link rel="stylesheet" href="./print-prepare.css">
 <script src="./print-prepare.js"></script>
 <script src="./machine-materials.js"></script>
@@ -64,9 +68,15 @@
 <link rel="stylesheet" href="./file-intake.css">
 <script src="./file-intake.js"></script>
 <script src="./batch-queue.js"></script>
+<link rel="stylesheet" href="./upload-preparation.css">
+<script src="./upload-preparation.js"></script>
+<script src="./queue-order.js"></script>
 <link rel="stylesheet" href="./board-ui.css">
 <script src="./board-ui.js"></script>
 <link rel="stylesheet" href="./appearance.css">
 <script src="./appearance.js"></script>
+<link rel="stylesheet" href="./viewport-fit.css">
+<link rel="stylesheet" href="./studio-shortcut.css">
+<script src="./studio-shortcut.js"></script>
 <script src="./app.js"></script>
 </body></html>

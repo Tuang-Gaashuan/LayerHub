@@ -146,6 +146,9 @@ func (s *Service) SetEquipment(u User, in SettingInput) error {
 			if e != nil {
 				state = "uncertain"
 				message = "设备设置结果未确认，请现场核对"
+				if errors.Is(e, ErrDeviceAccepted) {
+					state, message = "accepted", "打印机已接受灯光指令；实际亮灭请现场或通过相机确认"
+				}
 				if errors.Is(e, ErrDeviceRejected) {
 					state, message = "rejected", "打印机已明确拒绝设置，请检查设备授权或告警；没有自动重试"
 				}

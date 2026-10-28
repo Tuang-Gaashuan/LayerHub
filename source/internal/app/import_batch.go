@@ -149,7 +149,11 @@ func (s *Service) CreateImportBatch(u User, in ImportBatch, filename, path, dige
 			if item.Printer != 0 {
 				pid = item.Printer
 			}
-			r, e := tx.Exec("INSERT INTO jobs(user_id,filename,path,size,sha256,printer_id,state,note,created_at,queue_order,estimate,grams,spool_id) VALUES(?,?,?,?,?,?,'queued',?,?,?,?,?,?)", u.ID, filename, path, size, digest, pid, trim(note, 200), time.Now().UnixMilli(), order, item.Estimate, item.Grams, item.SpoolID)
+			newID, e := nextJobID(tx)
+			if e != nil {
+				return e
+			}
+			r, e := tx.Exec("INSERT INTO jobs(id,user_id,filename,path,size,sha256,printer_id,state,note,created_at,queue_order,estimate,grams,spool_id) VALUES(?,?,?,?,?,?,?,'queued',?,?,?,?,?,?)", newID, u.ID, filename, path, size, digest, pid, trim(note, 200), time.Now().UnixMilli(), order, item.Estimate, item.Grams, item.SpoolID)
 			if e != nil {
 				return e
 			}

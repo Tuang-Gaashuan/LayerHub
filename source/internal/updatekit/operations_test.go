@@ -22,6 +22,32 @@ func sampleWorkspace() Workspace {
 	w.Printers = []Printer{{ID: 1, Enabled: true, Connected: true, Updated: 1000, RawState: "FINISH", Percent: 100, File: "job-6"}}
 	return w
 }
+func TestAllowRunningIsExplicitAndRequiresKnownStableTask(t *testing.T) {
+	w := sampleWorkspace()
+	w.Printers[0].RawState = "RUNNING"
+	w.Printers[0].Percent = 40
+	json.Unmarshal([]byte(`[{"id":6,"printer":1,"state":"printing"}]`), &w.Jobs)
+	if guardWorkspace(w, 1001) == nil {
+		t.Fatal("running allowed by default")
+	}
+	if e := guardWorkspaceMode(w, 1001, true); e != nil {
+		t.Fatal(e)
+	}
+	w.Printers[0].File = "job-7"
+	if guardWorkspaceMode(w, 1001, true) == nil {
+		t.Fatal("unknown task allowed")
+	}
+	w.Printers[0].File = "job-6"
+	w.Jobs[0].State = "starting"
+	if guardWorkspaceMode(w, 1001, true) == nil {
+		t.Fatal("inflight start allowed")
+	}
+	w.Jobs[0].State = "printing"
+	w.Printers[0].PrintError = 1
+	if guardWorkspaceMode(w, 1001, true) == nil {
+		t.Fatal("alert ignored")
+	}
+}
 func TestWorkspaceGuards(t *testing.T) {
 	for _, state := range []string{"FINISH", "IDLE", "READY"} {
 		w := sampleWorkspace()

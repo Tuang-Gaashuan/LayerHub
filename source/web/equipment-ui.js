@@ -10,7 +10,7 @@ const EquipmentUI=(()=>{
  function render(p,j,records,busy,root=$('#controlRoot')){
   if(!root)return;const eq=p.equipment||{},slots=Workspace.slots(p),source=id=>slots.find(s=>s.id===id)?.label||id||I18n.t('未上报');
   const temperatures=$('.control-temperatures',root),readings=eq.extruders||[];
-  temperatures.innerHTML=(readings.length?readings:[{name:I18n.t('喷嘴状态待上报'),temperature:null,target:null}]).map(x=>`<div>${icon('temperature')}<span>${esc(I18n.system(x.name))}<strong>${p.connected?(x.temperature??'—'):'—'}<small> / ${p.connected?(x.target??'—'):'—'} °C</small></strong></span></div>`).join('')+I18n.html`<div>${icon('layers')}<span>热床<strong>${p.connected?(eq.bed??'—'):'—'}<small> / ${p.connected?(eq.bedTarget??'—'):'—'} °C</small></strong></span><i>HEATBED</i></div>`;
+  temperatures.innerHTML=(readings.length?readings:[{name:I18n.t('喷嘴状态待上报'),temperature:null,target:null}]).map(x=>`<div>${icon('temperature')}<span>${esc(I18n.system(x.name))}<strong>${p.connected?(x.temperatureExact??x.temperature??'—'):'—'}<small> / ${p.connected?(x.target??'—'):'—'} °C</small></strong></span></div>`).join('')+I18n.html`<div>${icon('layers')}<span>热床<strong>${p.connected?(eq.bedExact??eq.bed??'—'):'—'}<small> / ${p.connected?(eq.bedTarget??'—'):'—'} °C</small></strong></span><i>HEATBED</i></div>`;
   $('.control-readonly',root).textContent=readings.length>1?I18n.t('各喷嘴独立读数 · 编号沿用设备上报'):I18n.t('当前温度 / 目标温度 · 缺失数据显示 —');
   if(readings.length){const paths=document.createElement('div');paths.className='equipment-paths';paths.innerHTML=readings.map(x=>`<div><span>${esc(I18n.system(x.name))}</span><strong>${esc(source(x.currentSource))}</strong>${x.targetSource&&x.targetSource!==x.currentSource?I18n.html`<small>目标：${esc(source(x.targetSource))}</small>`:''}</div>`).join('')+(eq.switching?I18n.html('<p>机器正在切换喷嘴或供料</p>'):'');$('.control-visual',root).append(paths)}
   const pending=records.some(r=>r.state==='pending'),uncertain=records.some(r=>r.state==='uncertain'),disabled=!canSet(p,j)||pending||uncertain||busy||pendingSettings.has(p.id);
@@ -18,12 +18,12 @@ const EquipmentUI=(()=>{
   const pendingKey=localPending?.key||serverPending?.action.slice(4),pendingText=localPending?.phase==='sending'?(pendingKey?.startsWith('chamber_light')?(localPending.value?I18n.t('正在开灯…'):I18n.t('正在关灯…')):I18n.t('正在提交…')):I18n.t('等待设备确认');
   const button=(s,kind)=>{
    const stamp=Date.parse(s.updated),blocked=s.readonly||disabled||eq.controlIssue==='authorization_required'&&!s.key.startsWith('chamber_light')||!Number.isFinite(stamp)||Date.now()-stamp>90000||s.key==='speed'&&!['printing','pause'].includes(p.state);
-   const label=names[s.key]||I18n.system(s.label);
-   if(s.key.startsWith('chamber_light'))return `<button type="button" role="switch" aria-checked="${s.value===1}" aria-label="${esc(label)}" class="equipment-setting setting-common setting-light ${pendingKey===s.key?'setting-pending':''}" aria-busy="${pendingKey===s.key}" data-equipment="${esc(s.key)}" ${blocked?'disabled':''}><span class="setting-light-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 17h6m-5 3h4M8 13a6 6 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg><span>${esc(label)}<small>${pendingKey===s.key?pendingText:s.value?I18n.t('已开启'):I18n.t('已关闭')}</small></span></span><span class="device-switch" aria-hidden="true"><i></i></span></button>`;
+   const label=s.feedback==='command_receipt'?I18n.t('照明灯'):names[s.key]||I18n.system(s.label);
+   if(s.key.startsWith('chamber_light'))return `<button type="button" role="switch" aria-checked="${s.value<0?'mixed':s.value===1}" aria-label="${esc(label)}" class="equipment-setting setting-common setting-light ${pendingKey===s.key?'setting-pending':''}" aria-busy="${pendingKey===s.key}" data-equipment="${esc(s.key)}" ${blocked?'disabled':''}><span class="setting-light-label"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 17h6m-5 3h4M8 13a6 6 0 1 1 8 0c-1 1-1 2-1 4H9c0-2 0-3-1-4Z"/></svg><span>${esc(label)}<small>${pendingKey===s.key?pendingText:s.feedback==='command_receipt'?(s.value<0?I18n.t('状态未上报，点击开灯'):s.value?I18n.t('上次请求：开灯'):I18n.t('上次请求：关灯')):s.value?I18n.t('已开启'):I18n.t('已关闭')}</small></span></span><span class="device-switch" aria-hidden="true"><i></i></span></button>`;
    let body;
    if(kind==='thermal'){
     const extruder=s.key.startsWith('nozzle:')?readings.find(x=>x.id===Number(s.key.split(':')[1])):readings[0];
-    const actual=Remote.printerFresh(p)?(s.key==='bed'?eq.bed:s.readonly?s.observed:extruder?.temperature):null;
+    const actual=Remote.printerFresh(p)?(s.key==='bed'?(eq.bedExact??eq.bed):s.readonly?s.observed:(extruder?.temperatureExact??extruder?.temperature)):null;
     body=I18n.html`<span>${esc(label.replace(I18n.t('温度'),''))}</span><strong class="setting-temperature">${actual??'—'}<small>°C</small></strong><span class="setting-target">目标 <b>${s.value??'—'}</b> °C <i aria-hidden="true">↗</i></span>`;
    }else if(kind==='fans'){
     body=`<span>${esc(label)}</span><strong>${s.value}<small>%</small></strong><span class="setting-meter" aria-hidden="true"><i style="width:${Math.max(0,Math.min(100,s.value))}%"></i></span><small class="setting-action">${blocked?I18n.t('当前读数'):I18n.t('调整 →')}</small>`;
@@ -36,7 +36,7 @@ const EquipmentUI=(()=>{
   const thermal=available.filter(s=>s.key==='bed'||s.key.startsWith('nozzle'));
   for(const [index,x] of (readings.length?readings:[{name:I18n.t('喷嘴'),target:null}]).entries()){
    const key=x.id===undefined?(readings.length===1?'nozzle':'reading:'+index):'nozzle:'+x.id;
-   if(!thermal.some(s=>s.key===key))thermal.push({key,label:I18n.system(x.name)||I18n.t('喷嘴'),observed:x.temperature,value:x.target,unit:'°C',readonly:true});
+   if(!thermal.some(s=>s.key===key))thermal.push({key,label:I18n.system(x.name)||I18n.t('喷嘴'),observed:x.temperatureExact??x.temperature,value:x.target,unit:'°C',readonly:true});
   }
   if(!thermal.some(s=>s.key==='bed'))thermal.push({key:'bed',label:I18n.t('热床温度'),value:eq.bedTarget,unit:'°C',readonly:true});
   const fans=available.filter(s=>s.key.startsWith('fan:')||s.key.endsWith('_fan'));
@@ -94,7 +94,7 @@ const EquipmentUI=(()=>{
    if($('#controlRoot')?.dataset.printerId===String(p.id))$('#modal').scrollTop=returnScroll;
   }
   function sync(printer,blocked){
-   const eq=printer.equipment||{},reading=s.key==='bed'?eq.bed:s.key.startsWith('nozzle:')?(eq.extruders||[]).find(x=>x.id===Number(s.key.split(':')[1]))?.temperature:eq.extruders?.[0]?.temperature;
+   const eq=printer.equipment||{},reading=s.key==='bed'?(eq.bedExact??eq.bed):s.key.startsWith('nozzle:')?(eq.extruders||[]).find(x=>x.id===Number(s.key.split(':')[1]))?.temperature:(eq.extruders?.[0]?.temperatureExact??eq.extruders?.[0]?.temperature);
    const live=(eq.settings||[]).find(x=>x.key===s.key);
    const stamp=Date.parse(live?.updated);
    contextBlocked=blocked||!live||!Number.isFinite(stamp)||Date.now()-stamp>90000||eq.controlIssue==='authorization_required'||isSpeed&&!['printing','pause'].includes(printer.state);
@@ -120,7 +120,7 @@ const EquipmentUI=(()=>{
   d.showModal();sync(p,false);Remote.paintConnection();
  }
  function platePreview(j,plate){const grams=plate.filaments.reduce((n,f)=>n+f.grams,0);return I18n.html`<div class="project-preview">${plate.thumbnail?I18n.html`<img src="/api/jobs/thumbnail?jobId=${j.id}&plate=${plate.id}" alt="第 ${plate.id} 盘切片预览" onerror="this.hidden=true">`:I18n.html('<span class="project-no-preview">此文件没有缩略图</span>')}<div><small>第 ${plate.id} 盘 · 切片估算</small><strong>${plate.seconds?Math.ceil(plate.seconds/60)+I18n.t(' 分钟'):I18n.t('时间未提供')}</strong><span>耗材约 ${grams} g${plate.multiNozzle?I18n.t(' · 多喷嘴待适配'):''}</span></div></div>`}
- function temperatureSummary(p){if(!p.connected)return '—';const eq=p.equipment,values=(eq?.extruders||[]).map(x=>x.temperature===null?'—':x.temperature+'°');return (values.length?values.join(' · '):'—')+' / '+(eq?.bed??'—')+'°C'}
+ function temperatureSummary(p){if(!p.connected)return '—';const eq=p.equipment,values=(eq?.extruders||[]).map(x=>x.temperature===null?'—':(x.temperatureExact??x.temperature)+'°');return (values.length?values.join(' · '):'—')+' / '+(eq?.bed??'—')+'°C'}
  const colorHex=v=>/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v||'')?'#'+v.replace('#','').slice(0,6).toLowerCase():null;
  function filamentChoices(j,p,f,ams,selected,grams){
   const original=colorHex(f.color),candidates=data.spools.filter(s=>Workspace.visible(s,data)&&s.mount?.printerId===p?.id&&s.state==='available'&&(ams?['1','2','3','4'].includes(s.mount.slot):s.mount.slot==='external')&&s.material.toLowerCase()===f.material.toLowerCase());

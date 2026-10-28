@@ -1,12 +1,12 @@
 # A1 without AMS / A1 无 AMS 接入准备
 
-Prepared on 2026-10-27 for the on-site session on 2026-10-28. This is a preparation guide; an A1 has not been registered or physically tested yet.
+Updated 2026-10-28: one A1 was connected for live telemetry/camera observation. Light on/off was confirmed onsite, and the cloud control path returned an acceptance receipt. The firmware kept reporting the light as on after physical switch-off, so the UI reports the last request. **This is partial validation:** A1 XYZ movement and the full print → collection → actual-material settlement cycle are not signed off. Test your own printer/firmware using the checklist below.
 
-编写日期：2026-10-27；计划现场接入：2026-10-28。这里只准备流程，不代表已连接或验证过这台 A1。
+2026-10-28 更新：已有一台 A1 接入遥测和相机观察，灯光亮灭由现场确认，云端控制链路收到接受回执。固件关灯后仍上报灯亮，因此界面显示上次请求。**这是部分验证**：A1 XYZ 移动以及打印、取件、实际用量结算的完整闭环仍未验收。独立部署需按下方清单检查自己的机型和固件。
 
 ## 中文
 
-### 明天需要准备
+### 接入需要准备
 
 | 项目 | 填写位置 / 说明 |
 |---|---|
@@ -38,7 +38,7 @@ flowchart LR
 ### LayerHub 的对应配置
 
 - 由 NAS 访问打印机；电脑的系统代理不负责发现局域网打印机。
-- 型号 `a1`，配置 `bare`。现有驱动包含 A1 的 MQTT、FTPS 与 JPEG 相机分支，真实可用性仍需明天验收。
+- 型号 `a1`，配置 `bare`。现有驱动包含 A1 的 MQTT、FTPS 与 JPEG 相机分支，各项能力需按本页清单分别验收。
 - 本项目当前驱动默认使用 MQTT TLS 8883、隐式 FTPS 990、JPEG 相机 6000；这是当前实现的连接参数，不宣称为官方稳定 API。只允许 NAS 在局域网访问，打印机端口不用暴露公网。
 - 料卷登记在 A1 的**外置料架**；打印准备关闭“使用 AMS”。单盘只允许一份切片耗材。更换材质必须回 Bambu Studio 重新切片，不能只改颜色或库存标签。
 - 300°C 喷嘴上限、100°C 热床上限和低帧率相机来自 A1 官方规格；这些是硬件上限，不是材料建议温度。[官方技术参数](https://bambulab.com/pl/a1/tech-specs)

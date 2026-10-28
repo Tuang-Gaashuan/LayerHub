@@ -1,3 +1,19 @@
+# Unreleased · main / 未发布更新
+
+- A combined upload-to-print preparation view, per-plate queue order, explicit next-job selection, and cancellation of never-started tasks. Later plates never start automatically.
+- X2D manual homing and individual XYZ small steps with onsite clearance, freshness checks and command review. [Motion scope and physical evidence](MOTION.md).
+- A1 decimal readings, source-limited camera hints and an onsite-verified light switch. A light receipt means accepted; the UI shows the last request rather than trusting static light telemetry. A1 motion and a complete print/collection/material acceptance cycle remain unverified.
+- Missing completed-task records remain awaiting explicit collection/usage reconciliation; they do not silently release the machine or deduct stock. [Runtime stability](STABILITY.md).
+- Working font preferences, scrollable long pages and sidebar, and a redesigned source/license page.
+- A first-position **Bambu Studio** shortcut with a browser-local Windows EXE path and a one-time, user-imported registration file. [Setup and removal](STUDIO_SHORTCUT.md).
+
+- 合并上传到打印前的准备步骤，逐盘排队、调整顺序、指定下一项，以及取消尚未启动的任务；不自动连续开打。
+- X2D 原生归位与 XYZ 小步移动，保留现场清板、状态新鲜度和结果核对要求，见[移动范围与实机证据](MOTION.md)。
+- A1 小数温度、低帧率相机说明，以及现场验证过亮灭的照明灯。灯光回执仅表示接受，界面显示上次请求。A1 移动与完整打印、取件和耗材结算闭环仍未验收通过。
+- 完成后缺失原任务的设备保持待登记状态；必须明确确认取件及实际用量，不自动放行或扣减库存，见[稳定性说明](STABILITY.md)。
+- 修复字体应用和长页面、侧栏滚动，重新整理源码与许可证页面。
+- 左侧导航第一项新增 **Bambu Studio**，本机路径只存浏览器，首次由用户导入 Windows 配置，见[设置与移除方法](STUDIO_SHORTCUT.md)。
+
 # 0.1.1-beta — Reliable controls, updates and multi-plate intake / 控制、升级与多盘导入
 
 - Improve control response feedback and preserve console focus, tabs and camera during telemetry updates. Reconcile printer-side stops without treating them as successful completions; release readiness only after manual collection/settlement.

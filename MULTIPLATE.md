@@ -7,12 +7,20 @@ v0.1.1-beta, prepared 2026-10-27. Use with Bambu Studio. No model editing or onl
 在 Bambu Studio 为实际设备与耗材切片，并导出包含所需打印盘的**已切片 3MF**。LayerHub 不接受 STL、未切片工程或原始 G-code。
 
 1. 在协作看板选择“新建任务”，上传文件。检查通过后展开盘列表，查看盘号、预览、材质、颜色代码、预计时长与用量。
-2. 单盘文件自动选中这一盘；多盘文件初始不选任何盘。勾选一盘时沿用单任务安排，并填入该盘自己的估算，盘号会保存到任务中。
+2. 单盘文件自动选中这一盘；多盘文件初始不选任何盘。未选盘时点击“下一步”会打开选盘界面，勾选本次需要的打印盘后继续。只选一盘时显示该盘的颜色、切片净用量，并填入该盘自己的预计时长与向上取整的预留量，盘号会保存到任务中。
 3. 勾选多盘后进入逐盘审核，最多 16 盘。选择目标设备，也可暂时不分配；每盘分别选择实际料卷、预留克数与预计分钟数。耗材选择使用颜色卡，同时显示名称、材质、余量及登记的装载位置。
 4. 确认后整批加入队列：每盘产生一个独立任务。如果某盘库存不足、材质不同或机型不匹配，整批不保存，不会留下半批任务。共同使用一卷时会合并检查预留总量。
 5. 每个任务继续经过打印准备、供料映射及实际启动确认。盘号贯穿导入、任务和准备；改变准备中的盘号会同时更新盘号与有记录的预计时长。保存准备前不能直接传输或启动。
 
 **入队不启动打印，也不代表可以自动连续打印。** 每次打印前仍需现场确认上一件已取走、打印板已清空。真实消耗按后续结算扣减，入队只预留库存。
+
+### 调整打印顺序
+
+在“打印队列”展开任务的“调整顺序”，可上移、下移或“设为下一项”。设为下一项需要再次确认，只改变等待顺序，不发送文件或启动指令。列表标出下一项；非队首任务需要先调序或等待前项结束，不能绕过队首直接开打。
+
+管理员可调整同一台设备的等待任务。普通成员仅能调整自己连续排列的等待任务，不能越过其他成员的任务。已经传输、正在打印或等待核对的任务保持原位。调序不会改变料卷、预留量或已保存的打印准备。
+
+保存时会核对整条设备队列；其他成员新增、移走、传输或调整任务后，旧页面的操作会被拒绝。遇到连接中断或结果不明确，先“重新读取队列”，核对后再操作，系统不会自动重试调序。
 
 ### 当前范围
 
@@ -38,13 +46,15 @@ A1 无 AMS 的现场检查见 [A1 接入准备](A1_SETUP.md)。软件测试通�
 
 ## English
 
-Export a **sliced 3MF** for the actual printer/nozzle/plate/material from Bambu Studio. After inspection, choose plates by their original IDs, previews and material/color estimates. A single-plate file is selected automatically; a multi-plate file starts with no selection. One selected plate uses the normal job form with its own estimates. Several selected plates open a per-plate batch review, up to 16 plates.
+Export a **sliced 3MF** for the actual printer/nozzle/plate/material from Bambu Studio. After inspection, choose plates by their original IDs, previews and material/color estimates. A single-plate file is selected automatically; a multi-plate file starts with no selection. Clicking Next without a selection opens a plate chooser. One selected plate uses the normal job form, showing its color and exact sliced consumption and filling in its own estimated time and rounded-up reservation. Several selected plates open a per-plate batch review, up to 16 plates.
 
 Choose a compatible printer or assign later. Review each plate’s spool, reserved grams and estimated minutes. Color cards display spool identity, material, available stock and registered mount. Saving creates independent jobs in one transaction: any invalid arrangement rolls back the entire batch. Combined reservations for a shared spool cannot exceed available stock. Actual inventory is deducted only during consumption settlement.
 
 Batch intake currently accepts single-nozzle, single-filament plates. Import multi-filament plates individually and use the supported preparation workflow. Existing restrictions on multi-nozzle starts remain. Plate IDs are preserved, including sparse IDs such as 1 and 7. Each selected plate requires saved feed preparation before transfer/start; changing it in preparation updates the stored plate and known time estimate.
 
 **Queueing does not start printing or authorize unattended consecutive prints.** Clear the plate and explicitly confirm each real start. The original archive/G-code remains unchanged. Shared source files are retained until the final referencing job is deleted. Optional PNG previews are bounded, decoded and re-encoded at up to 160×160; geometry/SVG are not rendered.
+
+In Printer queues, expand **Change order** to move a waiting job up/down or **Make next**. Making a job next requires confirmation and only changes its waiting position; it does not transfer or start it. The next job is labeled, and other jobs cannot bypass the head. Administrators can reorder the printer's waiting jobs. Members can reorder their own consecutive waiting jobs without overtaking another member. Transferred, executing and review-pending jobs stay in place; spool reservations and preparation stay unchanged. A concurrent queue change rejects the stale request. After an uncertain response, explicitly **Reread queue** and review the result; no reorder is retried automatically.
 
 An uncertain upload retains the original request ID and arrangement in account-scoped browser session storage. Check the receipt first; a retry with that same ID returns the original jobs instead of creating duplicates. There are no automatic upload/start retries. Avoid clearing browser data or switching browsers to retry. If the recovery ID is lost, inspect My jobs before creating another import. Corrections after a confirmed rejection retain the same ID; if an earlier request already won, review its original jobs.
 

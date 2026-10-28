@@ -56,10 +56,12 @@ func TestMQTTControlNeedsFreshMatchingStateAndRejectsFailure(t *testing.T) {
 				return
 			}
 			n := int(binary.BigEndian.Uint16(b))
-			packetID := b[2+n : 4+n]
-			conn.Write([]byte{0x40, 2, packetID[0], packetID[1]})
+			if (kind>>1)&3 != 0 {
+				brokerResult <- fmt.Errorf("non-idempotent control must use QoS0")
+				return
+			}
 			var request map[string]map[string]any
-			if e = json.Unmarshal(b[4+n:], &request); e != nil {
+			if e = json.Unmarshal(b[2+n:], &request); e != nil {
 				brokerResult <- e
 				return
 			}

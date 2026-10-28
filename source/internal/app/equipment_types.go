@@ -11,12 +11,13 @@ import (
 
 // Device readings are separate from the manually maintained inventory ledger.
 type ExtruderReading struct {
-	ID            int    `json:"id"`
-	Name          string `json:"name"`
-	Temperature   *int   `json:"temperature"`
-	Target        *int   `json:"target"`
-	CurrentSource string `json:"currentSource"`
-	TargetSource  string `json:"targetSource"`
+	ID               int      `json:"id"`
+	Name             string   `json:"name"`
+	Temperature      *int     `json:"temperature"`
+	TemperatureExact *float64 `json:"temperatureExact,omitempty"`
+	Target           *int     `json:"target"`
+	CurrentSource    string   `json:"currentSource"`
+	TargetSource     string   `json:"targetSource"`
 }
 type FeedReading struct {
 	Kind          string    `json:"kind"`
@@ -62,15 +63,18 @@ type CameraProvider interface {
 	CameraFrame(context.Context, Printer) (CameraFrame, error)
 }
 type SettingReading struct {
-	Key     string    `json:"key"`
-	Label   string    `json:"label"`
-	Unit    string    `json:"unit"`
-	Value   int       `json:"value"`
-	Min     int       `json:"min"`
-	Max     int       `json:"max"`
-	Updated time.Time `json:"updated"`
+	Feedback string    `json:"feedback,omitempty"`
+	Key      string    `json:"key"`
+	Label    string    `json:"label"`
+	Unit     string    `json:"unit"`
+	Value    int       `json:"value"`
+	Min      int       `json:"min"`
+	Max      int       `json:"max"`
+	Updated  time.Time `json:"updated"`
 }
 type Equipment struct {
+	BedExact     *float64          `json:"bedExact,omitempty"`
+	Motion       MotionReading     `json:"motion"`
 	ControlIssue string            `json:"controlIssue,omitempty"`
 	Bed          *int              `json:"bed"`
 	BedTarget    *int              `json:"bedTarget"`
@@ -85,6 +89,9 @@ type Equipment struct {
 }
 
 // An explicit negative device response is different from a missing response.
+// A positive command receipt confirms acceptance, not measured actuator state.
+var ErrDeviceAccepted = errors.New("printer accepted command; physical state not reported")
+
 var ErrDeviceRejected = errors.New("printer rejected command")
 
 type SettingInput struct {

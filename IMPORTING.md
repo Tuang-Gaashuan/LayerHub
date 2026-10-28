@@ -33,3 +33,6 @@ The verified-file details can export a local JSON report. It contains the filena
 原切片路径和工艺保持，参数仅供显示核对，不被 LayerHub 修改或重新生成。文件通过校验不等于设备兼容批准，机型、喷嘴、板型、材质、AMS 和固件授权等校验仍保留，不新增多色或双喷嘴打印支持。
 
 文件详情可下载本地 JSON 报告，包含文件名与参数，分享前请自行查看。取消、失败或迟到的检查不会替换之前选定的文件或创建任务。已经移除的模型接口返回 HTTP 410。
+
+
+Unified preparation / 统一打印准备：详见 [PRINT_PREPARATION.md](PRINT_PREPARATION.md)，包括单盘一次确认、逐盘入队、取消与结果恢复规则。

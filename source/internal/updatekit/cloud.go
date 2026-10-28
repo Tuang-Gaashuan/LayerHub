@@ -372,6 +372,7 @@ func UpdateCloud(o Options, input *bufio.Reader, w io.Writer) error {
 	if e != nil {
 		return e
 	}
+	a.allowRunning = o.AllowRunning
 	if e = authenticate(a, "", input, w); e != nil {
 		return e
 	}

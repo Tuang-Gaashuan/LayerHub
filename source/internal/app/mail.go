@@ -497,6 +497,24 @@ func (s *Service) notifyUser(tx *sql.Tx, uid int64, event, subject, text string,
 func (s *Service) collectMail(at time.Time) error {
 	return s.transaction(func(tx *sql.Tx) error {
 		now := at.Unix()
+		orphanPrinters, e := readPrinters(tx)
+		if e != nil {
+			return e
+		}
+		for _, p := range orphanPrinters {
+			if !p.Enabled {
+				continue
+			}
+			v, e := freshOrphanCompletion(tx, p.ID, s.Device.Status(p.ID))
+			if e != nil {
+				return e
+			}
+			if v != nil {
+				if _, e = tx.Exec("INSERT OR IGNORE INTO orphan_completion_holds(printer_id,job_id,command_id,observed_at) VALUES(?,?,?,?)", p.ID, v.JobID, v.CommandID, now); e != nil {
+					return e
+				}
+			}
+		}
 		jobs, err := readJobs(tx)
 		if err != nil {
 			return err

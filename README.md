@@ -15,6 +15,17 @@ LayerHub is a self-hosted workspace for teams sharing 3D printers. Prepare and s
 
 **Recommended setup: LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio).** Prepare and slice on your computer, then upload the sliced 3MF for team scheduling, printer control and notifications.
 
+## Latest main updates (not yet tagged)
+
+The `main` branch now includes the updates below. Existing **v0.1.1-beta release downloads remain unchanged**; build from this branch to use these additions.
+
+- A combined upload-to-print preparation view, per-plate queue order, explicit next-job selection, and cancellation of never-started tasks. Later plates never start automatically.
+- X2D manual homing and individual XYZ small steps with onsite clearance, freshness checks and command review. [Motion scope and physical evidence](MOTION.md).
+- A1 decimal readings, source-limited camera hints and an onsite-verified light switch. A light receipt means accepted; the UI shows the last request rather than trusting static light telemetry. A1 motion and a complete print/collection/material acceptance cycle remain unverified.
+- Missing completed-task records remain awaiting explicit collection/usage reconciliation; they do not silently release the machine or deduct stock. [Runtime stability](STABILITY.md).
+- Working font preferences, scrollable long pages and sidebar, and a redesigned source/license page.
+- A first-position **Bambu Studio** shortcut with a browser-local Windows EXE path and a one-time, user-imported registration file. [Setup and removal](STUDIO_SHORTCUT.md).
+
 ## New in v0.1.1-beta
 
 Batch plate selection, printer-side stop handling, faster controls, A1 external-spool preparation and a standalone download/update kit ship together. See [release notes](RELEASE_NOTES.md), [Update Kit](deploy/update-kit/README.md), [A1 setup](A1_SETUP.md) and [multi-plate imports](MULTIPLATE.md).

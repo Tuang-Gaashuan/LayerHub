@@ -45,6 +45,7 @@ func Run(args []string, in io.Reader, out io.Writer) error {
 	platform := fs.String("platform", runtime.GOOS, "windows or linux (amd64)")
 	extract := fs.Bool("extract", false, "extract to a new version folder; preserve existing folders")
 	apply := fs.Bool("apply", false, "apply update after interactive confirmation; default is preflight only")
+	allowRunning := fs.Bool("allow-running", false, "permit a stable, identified print; still refuse transfers, pending commands and unknown tasks")
 	root := fs.String("root", "/opt/layerhub", "existing NAS install root")
 	env := fs.String("env-file", "/etc/layerhub/layerhub.env", "existing NAS environment file (never rewritten)")
 	origin := fs.String("api-origin", "", "loopback API origin; NAS defaults to environment address, cloud to 15181")
@@ -77,6 +78,7 @@ func Run(args []string, in io.Reader, out io.Writer) error {
 		}
 	}
 	o := Options{Channel: *channel, Tag: *tag, Output: *output, Root: *root, Env: *env, Origin: *origin, Nginx: *nginx, StaticRoot: *static, Apply: *apply, Package: *pack, PackageDir: *packageDir, BackupRoot: *backupRoot}
+	o.AllowRunning = *allowRunning
 	switch args[0] {
 	case "download":
 		b, e := Download(*channel, *platform, *tag, *output, *extract, out)

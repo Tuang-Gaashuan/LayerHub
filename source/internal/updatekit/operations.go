@@ -21,6 +21,10 @@ import (
 var stateHelper string
 
 type Printer struct {
+	PrintError int `json:"printError"`
+	Equipment  struct {
+		HMS []string `json:"hms"`
+	} `json:"equipment"`
 	ID        int64  `json:"id"`
 	Enabled   bool   `json:"enabled"`
 	Connected bool   `json:"connected"`
@@ -41,10 +45,11 @@ type Workspace struct {
 	} `json:"jobs"`
 }
 type API struct {
-	base    string
-	client  *http.Client
-	cookies []*http.Cookie
-	csrf    string
+	allowRunning bool
+	base         string
+	client       *http.Client
+	cookies      []*http.Cookie
+	csrf         string
 }
 
 func newAPI(base string) (*API, error) {
@@ -125,18 +130,24 @@ func (a *API) guard(now int64) (Workspace, error) {
 	if restore.Pending || restore.Preview {
 		return w, errors.New("有备份恢复或预览未结束，暂不更新")
 	}
-	return w, guardWorkspace(w, now)
+	return w, guardWorkspaceMode(w, now, a.allowRunning)
 }
 func guardWorkspace(w Workspace, now int64) error {
+	return guardWorkspaceMode(w, now, false)
+}
+func guardWorkspaceMode(w Workspace, now int64, allowRunning bool) error {
 	printers := map[int64]Printer{}
 	for _, p := range w.Printers {
 		printers[p.ID] = p
 		if p.Enabled {
+			if p.PrintError != 0 || len(p.Equipment.HMS) > 0 {
+				return errors.New("Printer has an unresolved alert")
+			}
 			age := now - p.Updated
 			if !p.Connected || age < 0 || age >= 60 {
 				return errors.New("启用的打印机必须在线并有新鲜遥测")
 			}
-			if p.RawState != "FINISH" && p.RawState != "IDLE" && p.RawState != "READY" {
+			if p.RawState != "FINISH" && p.RawState != "IDLE" && p.RawState != "READY" && !(allowRunning && p.RawState == "RUNNING") {
 				return errors.New("打印机尚未空闲，更新已取消")
 			}
 		}
@@ -147,8 +158,27 @@ func guardWorkspace(w Workspace, now int64) error {
 			return errors.New("有传输、启动、暂停或待核对任务，更新已取消")
 		case "printing":
 			p := printers[job.Printer]
+			if allowRunning && p.Connected && now-p.Updated >= 0 && now-p.Updated < 60 && p.RawState == "RUNNING" && p.File == fmt.Sprintf("job-%d", job.ID) {
+				continue
+			}
 			if !p.Connected || now-p.Updated < 0 || now-p.Updated >= 60 || p.RawState != "FINISH" || p.Percent != 100 || p.File != fmt.Sprintf("job-%d", job.ID) {
 				return errors.New("有进行中的打印任务，更新已取消")
+			}
+		}
+	}
+	if allowRunning {
+		for _, p := range printers {
+			if !p.Enabled || p.RawState != "RUNNING" {
+				continue
+			}
+			matched := false
+			for _, j := range w.Jobs {
+				if j.Printer == p.ID && j.State == "printing" && p.File == fmt.Sprintf("job-%d", j.ID) {
+					matched = true
+				}
+			}
+			if !matched {
+				return errors.New("Running printer task is unclaimed; explicit recovery is required")
 			}
 		}
 	}
@@ -314,6 +344,7 @@ func switchLink(link, target string) error {
 }
 
 type Options struct {
+	AllowRunning                                               bool
 	Channel, Tag, Output, Root, Env, Origin, Nginx, StaticRoot string
 	Apply                                                      bool
 	Package                                                    string
@@ -493,6 +524,7 @@ func UpdateNAS(o Options, input *bufio.Reader, w io.Writer) error {
 	if e != nil {
 		return e
 	}
+	a.allowRunning = o.AllowRunning
 	if e = authenticate(a, data, input, w); e != nil {
 		return e
 	}

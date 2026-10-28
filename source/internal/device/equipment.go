@@ -63,6 +63,7 @@ func observeFields(l *listener, report map[string]any, now time.Time) {
 func readEquipment(l *listener) app.Equipment {
 	r := l.raw
 	out := app.Equipment{Extruders: []app.ExtruderReading{}, Feeds: []app.FeedReading{}, Settings: []app.SettingReading{}, HMS: []string{}}
+	out.Motion = readMotion(l)
 	for _, v := range list(object(object(r["device"])["nozzle"])["info"]) {
 		x := object(v)
 		id, ok := integer(x["id"])
@@ -71,9 +72,11 @@ func readEquipment(l *listener) app.Equipment {
 			out.Nozzles = append(out.Nozzles, app.NozzleReading{ID: id, Diameter: strconv.FormatFloat(diameter, 'f', -1, 64), Type: text(x["type"]), Updated: l.fields[fmt.Sprintf("nozzle.spec.%d", id)]})
 		}
 	}
-	out.Bed = intPtr(r["bed_temper"], 0, 150)
+	out.Bed = temperatureRounded(r["bed_temper"], 150)
+	out.BedExact = temperatureExact(r["bed_temper"], 150)
 	out.BedTarget = intPtr(r["bed_target_temper"], 0, 150)
 	if n, ok := integer(object(r["device"])["bed_temp"]); ok {
+		out.BedExact = nil
 		out.Bed = intPtr(n&65535, 0, 150)
 		out.BedTarget = intPtr((n>>16)&65535, 0, 150)
 	}
@@ -99,7 +102,7 @@ func readEquipment(l *listener) app.Equipment {
 			out.Extruders = append(out.Extruders, e)
 		}
 	} else if legacyModel(l.config.ModelID) {
-		out.Extruders = append(out.Extruders, app.ExtruderReading{ID: 0, Name: "喷嘴", Temperature: intPtr(r["nozzle_temper"], 0, 500), Target: intPtr(r["nozzle_target_temper"], 0, 500), CurrentSource: legacySource(object(r["ams"])["tray_now"]), TargetSource: legacySource(object(r["ams"])["tray_tar"])})
+		out.Extruders = append(out.Extruders, app.ExtruderReading{ID: 0, Name: "喷嘴", Temperature: temperatureRounded(r["nozzle_temper"], 500), TemperatureExact: temperatureExact(r["nozzle_temper"], 500), Target: intPtr(r["nozzle_target_temper"], 0, 500), CurrentSource: legacySource(object(r["ams"])["tray_now"]), TargetSource: legacySource(object(r["ams"])["tray_tar"])})
 	}
 	for _, v := range list(object(r["ams"])["ams"]) {
 		u := object(v)
@@ -201,6 +204,11 @@ func readEquipment(l *listener) app.Equipment {
 	add("bed", "热床目标温度", "°C", intPtr(r["bed_target_temper"], 0, bedMax), 0, bedMax, "bed_target_temper")
 	add("speed", "打印速度档位", "", intPtr(r["spd_lvl"], 1, 4), 1, 4, "spd_lvl")
 	for _, v := range list(r["lights_report"]) {
+		// A1 chamber_light is physically validated, but lights_report is static.
+		// Keep A1 mini unvalidated and never expose extra placeholder lamps.
+		if l.config.ModelID == "a1-mini" || l.config.ModelID == "a1" {
+			continue
+		}
 		t := object(v)
 		node := text(t["node"])
 		mode := text(t["mode"])
@@ -211,6 +219,13 @@ func readEquipment(l *listener) app.Equipment {
 			}
 			add(node, "机舱灯", "", &n, 0, 1, "light."+node)
 		}
+	}
+	if l.config.ModelID == "a1" {
+		value := -1 // Unknown until this connection receives a positive command receipt.
+		if l.lampRequest != nil {
+			value = *l.lampRequest
+		}
+		out.Settings = append(out.Settings, app.SettingReading{Key: "chamber_light", Label: "照明灯", Value: value, Min: 0, Max: 1, Updated: l.stateUpdated, Feedback: "command_receipt"})
 	}
 	for i, f := range []struct{ key, field, label string }{{"part_fan", "cooling_fan_speed", "模型风扇"}, {"aux_fan", "big_fan1_speed", "辅助风扇"}, {"chamber_fan", "big_fan2_speed", "机舱风扇"}} {
 		if f.key != "part_fan" {
@@ -244,6 +259,30 @@ func readEquipment(l *listener) app.Equipment {
 		add(f.key, f.label, "%", n, 0, 100, field)
 	}
 	return out
+}
+func temperatureExact(v any, max float64) *float64 {
+	var n float64
+	switch x := v.(type) {
+	case float64:
+		n = x
+	case int:
+		n = float64(x)
+	default:
+		return nil
+	}
+	if math.IsNaN(n) || math.IsInf(n, 0) || n < 0 || n > max {
+		return nil
+	}
+	n = math.Round(n*100) / 100
+	return &n
+}
+func temperatureRounded(v any, max float64) *int {
+	n := temperatureExact(v, max)
+	if n == nil {
+		return nil
+	}
+	r := int(math.Round(*n))
+	return &r
 }
 func packedSource(v any) string {
 	n, ok := integer(v)
@@ -398,6 +437,10 @@ func (m *Manager) SetEquipment(ctx context.Context, p app.Printer, in app.Settin
 		if field != "" {
 			applyReport(l, map[string]any{field: in.Value})
 		} else if strings.HasPrefix(in.Key, "chamber_light") {
+			if p.ModelID == "a1" {
+				n := in.Value
+				l.lampRequest = &n
+			}
 			a := []any{}
 			for _, v := range list(l.raw["lights_report"]) {
 				x := object(v)
@@ -431,6 +474,9 @@ func (m *Manager) SetEquipment(ctx context.Context, p app.Printer, in app.Settin
 		if modern {
 			section, payload = "print", map[string]any{"command": "set_bed_temp", "temp": in.Value}
 		}
+	}
+	if p.ModelID == "a1" && in.Key == "chamber_light" {
+		return m.commandSectionFeedback(ctx, p, section, payload, func(app.Telemetry, time.Time) bool { return false }, true)
 	}
 	return m.commandSection(ctx, p, section, payload, func(t app.Telemetry, sent time.Time) bool { return settingMatches(t, in, sent) })
 }

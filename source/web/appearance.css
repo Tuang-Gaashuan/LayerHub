@@ -12,7 +12,7 @@ html[data-ui-font="serif"],.appearance-preview[data-ui-font="serif"]{--ui-font:'
 html[data-ui-font="heiti"],.appearance-preview[data-ui-font="heiti"]{--ui-font:'SimHei','STHeiti','Microsoft YaHei',sans-serif}
 html[data-ui-font="kaiti"],.appearance-preview[data-ui-font="kaiti"]{--ui-font:'KaiTi','STKaiti',serif}
 html[data-ui-font="fangsong"],.appearance-preview[data-ui-font="fangsong"]{--ui-font:'FangSong','STFangsong',serif}
-html{font-family:var(--ui-font)}
+:root{font-family:var(--ui-font)}
 body{font-weight:var(--ui-weight-normal)}
 .appearance-fields{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
 .appearance-preview{margin-top:22px;border:1px solid var(--line);border-radius:12px;background:#f7f9fc;padding:20px;font-family:var(--ui-font);font-weight:var(--ui-weight-normal);color:var(--ink)}

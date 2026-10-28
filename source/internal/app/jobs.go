@@ -81,7 +81,11 @@ func (s *Service) CreateJob(u User, in Schedule, filename, path, hash, note stri
 		if in.Printer != 0 {
 			pid = in.Printer
 		}
-		r, err := tx.Exec(`INSERT INTO jobs(user_id,filename,path,size,sha256,printer_id,state,note,created_at,queue_order,estimate,grams,spool_id) VALUES(?,?,?,?,?,?,'queued',?,?,?,?,?,?)`, u.ID, filename, path, size, hash, pid, trim(note, 200), time.Now().UnixMilli(), order, in.Estimate, in.Grams, in.SpoolID)
+		newID, err := nextJobID(tx)
+		if err != nil {
+			return err
+		}
+		r, err := tx.Exec(`INSERT INTO jobs(id,user_id,filename,path,size,sha256,printer_id,state,note,created_at,queue_order,estimate,grams,spool_id) VALUES(?,?,?,?,?,?,?,'queued',?,?,?,?,?,?)`, newID, u.ID, filename, path, size, hash, pid, trim(note, 200), time.Now().UnixMilli(), order, in.Estimate, in.Grams, in.SpoolID)
 		if err != nil {
 			return err
 		}
@@ -147,6 +151,13 @@ func (s *Service) DeleteJob(u User, id int64) error {
 			}
 			if j.State != "queued" && j.State != "assigned" && j.State != "failed" {
 				return conflict("该任务正在执行，不能删除")
+			}
+			var unresolved int
+			if err = tx.QueryRow("SELECT count(*) FROM printer_commands WHERE job_id=? AND state IN ('pending','uncertain')", id).Scan(&unresolved); err != nil {
+				return err
+			}
+			if unresolved > 0 || j.Error != "" {
+				return conflict("任务仍有待核对的执行结果，不能删除")
 			}
 			_, err = tx.Exec("DELETE FROM jobs WHERE id=?", id)
 			if err == nil {
@@ -304,6 +315,13 @@ func (s *Service) executable(tx *sql.Tx, u User, id int64, expected string) (Job
 	t := s.Device.Status(j.Printer)
 	if !t.Connected || !timeFresh(t.Updated) {
 		return j, conflict("设备未连接或状态已过期")
+	}
+	missingCompletion, e := pendingOrphanCompletion(tx, j.Printer, t)
+	if e != nil {
+		return j, e
+	}
+	if missingCompletion != nil {
+		return j, conflict("上一任务记录缺失，请先补登记取件与实际用量")
 	}
 	if t.State != "idle" && !settledStopReady(jobs, j.Printer, t) {
 		return j, conflict("设备尚未空闲")

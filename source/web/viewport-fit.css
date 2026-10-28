@@ -1,0 +1,30 @@
+/* Keep the application frame inside the viewport, including browser zoom. */
+html,body{height:100%;min-width:0;max-width:100%;overflow:hidden}
+.app-shell{height:100dvh;min-height:0;min-width:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.topbar{min-width:0}.breadcrumb{min-width:0}.breadcrumb strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.topbar-right{flex-shrink:0}
+#main{width:100%;height:100%;margin:0 auto;min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-bottom:20px}
+#pageContent,#pageContent>*,.app-shell>footer{min-width:0;max-width:100%}
+.app-shell>footer{flex-wrap:wrap;gap:8px 20px;padding-block:16px}
+/* Native modal dialogs already make the background inert. Nonmodal dialogs must not lock page scrolling. */
+.sidebar{min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+dialog{max-width:calc(100% - 32px)!important;max-height:calc(100dvh - 32px)!important;box-sizing:border-box}
+#modal{overflow:hidden}
+#modal #modalContent{display:flex;flex-direction:column;min-height:0;max-height:calc(100dvh - 34px)!important;overflow:hidden}
+#modal .modal-header,#modal .modal-actions{flex-shrink:0}
+#modal .modal-header h2{min-width:0;overflow-wrap:anywhere}
+#modal .modal-header .icon-button{flex-shrink:0}
+#modal .modal-body{min-height:0;overflow:auto;overscroll-behavior:contain}
+#modal .modal-actions{flex-wrap:wrap;gap:8px}
+.prepare-footer-actions,.up-submit{min-width:0;max-width:100%;flex-wrap:wrap}
+.up-layout>*,.prepare-layout>*{min-width:0}
+.device-queue-job .queue-job-actions{flex-shrink:0}
+@media(max-height:820px) and (min-width:761px){
+ .topbar{height:62px}#main{padding-top:22px;padding-inline:26px}.sidebar{padding-top:22px}.workspace{margin-block:22px}.sidebar-bottom{padding-top:18px}.sidebar-user{padding-block:14px}
+ .board-home .page-heading{margin-bottom:22px}.board-home .page-heading h1{font-size:calc(24px * var(--ui-text-scale,1.12))}.board-metrics{padding-bottom:18px;margin-bottom:22px;gap:12px}.board-section-heading{margin-bottom:12px}.board-device,.board-devices.single .board-device{min-height:0;padding:18px 22px;gap:20px}.board-device-art,.board-devices.single .board-device-art{height:135px;width:120px;flex-basis:120px}.board-device-heading{margin-bottom:14px}.board-device-foot{margin-top:12px}.board-queue-section{margin-top:22px}.board-queue-row{padding-block:13px}.board-upload{margin-top:20px}
+}
+@media(max-width:1000px){.materials-toolbar,.toolbar{flex-wrap:wrap}.mount-filter{min-width:0;max-width:100%}}
+@media(max-width:760px){
+ #main{padding:20px 16px 16px}.topbar{padding-inline:16px;gap:8px}.breadcrumb{gap:7px;flex:1}.topbar-right{gap:7px}.app-shell>footer{padding:12px 16px}.device-queue-job{flex-wrap:wrap}.device-queue-job .device-queue-copy{flex-basis:calc(100% - 48px)}.device-queue-job .queue-job-actions{width:100%;flex-direction:row;flex-wrap:wrap;justify-content:flex-end}
+ #modal .modal-header{padding:16px}#modal .modal-body{padding:16px}#modal .modal-actions{padding:14px 16px}.up-submit{width:100%}.up-submit>.button{white-space:normal}.form-grid{min-width:0}
+}
+@media(max-width:390px){.live-indicator{max-width:85px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.breadcrumb>.slash,.breadcrumb>span:not(.icon):not(.slash){display:none}}

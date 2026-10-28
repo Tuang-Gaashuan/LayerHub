@@ -1,3 +1,11 @@
+## Current main branch / 当前主线
+
+The changes in the Unreleased changelog are source updates on `main`, not a replacement of v0.1.1-beta assets. See [changelog](CHANGELOG.md), [print preparation](PRINT_PREPARATION.md), [motion](MOTION.md), [stability](STABILITY.md) and [local Studio shortcut](STUDIO_SHORTCUT.md).
+
+当前未发布更新已提交 `main`，不替换 v0.1.1-beta 的既有附件。下方仍保留该版本原发布说明。
+
+---
+
 # LayerHub v0.1.1-beta · Controls, updates and multi-plate intake
 
 **Recommended: LayerHub Beta + Bambu Studio.** This release bundles the previously local work into one update:

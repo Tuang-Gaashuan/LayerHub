@@ -385,6 +385,17 @@ func (s *Service) Snapshot(u User) (map[string]any, error) {
 				p.State, p.Warning = "idle", ""
 			}
 		}
+		missingCompletion, e := pendingOrphanCompletion(s.DB, p.ID, t)
+		if e != nil {
+			return nil, e
+		}
+		if missingCompletion != nil && p.Enabled && p.Connected {
+			if t.State == "idle" {
+				p.State = "confirming"
+			}
+			p.Warning = "打印已完成，但原任务记录缺失；请补登记取件与实际用量，库存尚未扣减"
+			p.CompletionReview = missingCompletion
+		}
 		p.AMS = t.AMS
 		p.Equipment = t.Equipment
 		redactEquipment(p, occupiedSlots)
@@ -439,5 +450,5 @@ func (s *Service) Snapshot(u User) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"printers": printers, "spools": visible, "occupiedSlots": occupiedSlots, "jobs": jobs, "members": members, "user": u, "completed": completed, "notifications": []any{}, "notificationSummary": summary, "serverTime": time.Now().UnixMilli(), "capabilities": map[string]any{"deviceMode": s.Config.DeviceMode, "printStart": s.Config.EnablePrintStart, "restorePending": s.pendingRestore.Load(), "accountManagement": true, "backups": u.Owner, "ownerRoles": true, "accountSecurity": true, "printerControl": true, "settlement": true, "projectPrint": true, "x2dSingleNozzlePrint": true, "notificationCenter": true, "stockAlerts": true, "teamProjects": false, "modelWorkbench": false, "slicing": false, "sliced3MFOnly": true, "releaseChannel": "beta"}}, nil
+	return map[string]any{"printers": printers, "spools": visible, "occupiedSlots": occupiedSlots, "jobs": jobs, "members": members, "user": u, "completed": completed, "notifications": []any{}, "notificationSummary": summary, "serverTime": time.Now().UnixMilli(), "capabilities": map[string]any{"deviceMode": s.Config.DeviceMode, "printStart": s.Config.EnablePrintStart, "restorePending": s.pendingRestore.Load(), "accountManagement": true, "backups": u.Owner, "ownerRoles": true, "accountSecurity": true, "printerControl": true, "settlement": true, "projectPrint": true, "x2dSingleNozzlePrint": true, "notificationCenter": true, "stockAlerts": true, "queueOrder": true, "teamProjects": false, "modelWorkbench": false, "slicing": false, "sliced3MFOnly": true, "releaseChannel": "beta"}}, nil
 }

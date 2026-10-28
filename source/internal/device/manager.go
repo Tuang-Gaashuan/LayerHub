@@ -22,6 +22,7 @@ import (
 )
 
 type listener struct {
+	lampRequest               *int
 	config                    app.Printer
 	cancel                    context.CancelFunc
 	client                    mqtt.Client
@@ -132,6 +133,7 @@ func (m *Manager) run(ctx context.Context, id int64, l *listener) {
 		defer m.mu.Unlock()
 		if m.items[id] == l {
 			l.connected = false
+			l.lampRequest = nil
 			l.stateUpdated = time.Time{}
 			l.taskUpdated = time.Time{}
 			l.raw = map[string]any{}

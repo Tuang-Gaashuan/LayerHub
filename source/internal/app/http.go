@@ -211,6 +211,21 @@ func (s *Service) Handler() http.Handler {
 			if err == nil {
 				err = s.ControlPrinter(u, in)
 			}
+		case "POST /api/printers/motion":
+			var in MotionInput
+			if err = decode(r, &in); err == nil {
+				err = s.MovePrinter(u, in)
+			}
+		case "POST /api/printers/orphans/settle":
+			var in OrphanCompletionInput
+			if err = decode(r, &in); err == nil {
+				err = s.SettleOrphanCompletion(u, in)
+			}
+		case "POST /api/printers/orphans/review":
+			var in OrphanReview
+			if err = decode(r, &in); err == nil {
+				err = s.ReviewOrphan(u, in)
+			}
 		case "POST /api/printers/settings":
 			var in SettingInput
 			err = decode(r, &in)
@@ -323,6 +338,11 @@ func (s *Service) Handler() http.Handler {
 			if err == nil {
 				err = s.SaveSpool(u, in)
 			}
+		case "POST /api/jobs/reorder":
+			var in QueueMove
+			if err = decode(r, &in); err == nil {
+				err = s.MoveQueueJob(u, in)
+			}
 		case "POST /api/jobs/schedule":
 			var in Schedule
 			err = decode(r, &in)
@@ -339,7 +359,7 @@ func (s *Service) Handler() http.Handler {
 			if err = decode(r, &in); err == nil {
 				err = s.SettleJob(u, in)
 			}
-		case "POST /api/jobs/dispatch", "POST /api/jobs/send", "POST /api/jobs/start", "POST /api/jobs/delete", "POST /api/jobs/complete":
+		case "POST /api/jobs/dispatch", "POST /api/jobs/send", "POST /api/jobs/start", "POST /api/jobs/delete", "POST /api/jobs/cancel", "POST /api/jobs/complete":
 			var in struct {
 				JobID  int64          `json:"jobId"`
 				Used   int            `json:"used"`
@@ -354,6 +374,8 @@ func (s *Service) Handler() http.Handler {
 					err = s.SendJob(u, in.JobID)
 				case "/api/jobs/start":
 					err = s.StartJob(u, in.JobID)
+				case "/api/jobs/cancel":
+					err = s.CancelJob(u, in.JobID)
 				case "/api/jobs/delete":
 					err = s.DeleteJob(u, in.JobID)
 				case "/api/jobs/complete":
