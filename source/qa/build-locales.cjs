@@ -4,6 +4,8 @@ const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('n
 const parser=require('./frontend-deps/node_modules/@babel/parser');
 const root=path.resolve(__dirname,'..'),web=path.join(root,'web'),check=process.argv.includes('--check');
 const dictionary=JSON.parse(fs.readFileSync(path.join(web,'locales/en.json'),'utf8'));
+// Git checkouts may use LF or CRLF. Template hashes must be platform independent.
+const readSource=file=>fs.readFileSync(file,'utf8').replace(/\r\n?/g,'\n');
 const cjk=/[\u3400-\u9fff]/u,missing=new Set(),html={},seen=new Map();
 const exemptions=new Set(['林','林一','简体中文','中']);
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return (h>>>0).toString(16)}
@@ -28,8 +30,8 @@ const escapeAttr=s=>escapeText(s).replaceAll('"','&quot;');
   if(n.type==='TemplateLiteral'&&n.quasis.some(q=>cjk.test(q.value.cooked||''))){const source=n.quasis.map((q,i)=>(q.value.cooked||'')+(i<n.expressions.length?'__lh_expr_'+i+'__':'')).join('');if(/<\/?[a-z][\w:-]*(?:[\s/>])/i.test(source))compile(source);else lookup(source)}
   for(const [k,v]of Object.entries(n)){if(['loc','leadingComments','trailingComments','innerComments','extra','tokens'].includes(k))continue;if(Array.isArray(v))for(const x of v)visit(x,n);else if(v&&typeof v==='object')visit(v,n)}
  }
- for(const file of fs.readdirSync(web).filter(f=>f.endsWith('.js')&&!f.endsWith('.generated.js')))visit(parser.parse(fs.readFileSync(path.join(web,file),'utf8'),{sourceType:'unambiguous'}));
- compile(fs.readFileSync(path.join(web,'index.html'),'utf8'));
+ for(const file of fs.readdirSync(web).filter(f=>f.endsWith('.js')&&!f.endsWith('.generated.js')))visit(parser.parse(readSource(path.join(web,file)),{sourceType:'unambiguous'}));
+ compile(readSource(path.join(web,'index.html')));
  for(const folder of ['app','device'])for(const file of fs.readdirSync(path.join(root,'internal',folder)).filter(f=>f.endsWith('.go')&&!f.endsWith('_test.go'))){const src=fs.readFileSync(path.join(root,'internal',folder,file),'utf8');for(const m of src.matchAll(/"(?:\\.|[^"\\])*"/g)){try{const s=JSON.parse(m[0]);if(cjk.test(s)&&!/^(?:UPDATE|INSERT|DELETE|CREATE)\s/.test(s))lookup(s)}catch{}}}
  // Validate substitutions before shipping: translators may reorder, but must not drop placeholders.
  const slots=s=>[...s.matchAll(/__lh_expr_\d+__|%(?:\[\d+\])?[+#0 -]*\d*(?:\.\d+)?[sdqvf]/g)].map(m=>m[0]).sort().join('|');

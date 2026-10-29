@@ -1,6 +1,6 @@
 # Sliced 3MF intake / 切片文件上传
 
-0.1.1-beta · [English](README.md) · [简体中文](README.zh-CN.md)
+0.1.2-beta · [English](README.md) · [简体中文](README.zh-CN.md)
 
 ## English
 

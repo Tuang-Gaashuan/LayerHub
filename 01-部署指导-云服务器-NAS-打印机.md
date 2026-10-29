@@ -1,6 +1,6 @@
 # 部署指导：云服务器 → NAS → 打印机
 
-[English deployment guide](DEPLOYMENT.md) · 版本 0.1.1-beta · 2026-10-27
+[English deployment guide](DEPLOYMENT.md) · 版本 0.1.2-beta · 2026-10-27
 
 本文面向**全新独立部署**。示例域名、IP 和公钥都是占位值。不要复制开发者的运行配置，也不要在已有 LayerHub 安装上直接执行首次安装脚本。
 
@@ -53,9 +53,9 @@ sudo systemctl enable --now ssh
 从 GitHub Releases 下载 Linux amd64 包和 SHA256SUMS 到 NAS，在解压前校验。只下载 Linux 包时，先从清单筛选这一项：
 
 ```sh
-grep 'LayerHub-0.1.1-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.1.1-beta-linux-amd64.tar.gz
-cd LayerHub-0.1.1-beta
+grep 'LayerHub-0.1.2-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.2-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.2-beta
 sudo sh deploy/nas/install.sh
 curl --noproxy '*' http://127.0.0.1:5181/healthz
 sudo systemctl status layerhub --no-pager

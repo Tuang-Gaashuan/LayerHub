@@ -14,12 +14,12 @@ import (
 
 func Run(args []string, in io.Reader, out io.Writer) error {
 	if len(args) > 0 && (args[0] == "--help" || args[0] == "-h") {
-		fmt.Fprintln(out, "LayerHub UpdateKit 0.1.1-beta\nCommands: download / nas / cloud / menu\nUse <command> --help for options. Default channel: beta. Updates are preflight-only unless --apply is supplied. No first-time cloud setup or automatic cross-channel migration.")
+		fmt.Fprintln(out, "LayerHub UpdateKit 0.1.2-beta\nCommands: download / nas / cloud / menu\nUse <command> --help for options. Default channel: beta. Updates are preflight-only unless --apply is supplied. No first-time cloud setup or automatic cross-channel migration.")
 		return nil
 	}
 	input := bufio.NewReader(in)
 	if len(args) == 0 || args[0] == "menu" {
-		fmt.Fprintln(out, "LayerHub 下载/更新工具 · 0.1.1-beta\n1. 下载 Beta Windows 包\n2. 下载 Beta NAS/Linux 包\n3. 更新此 NAS（Linux，需 sudo）\n4. 更新此云端界面（Linux，需 sudo）\n0. 退出\n默认 Beta；不会自动把 Alpha 切成 Beta。")
+		fmt.Fprintln(out, "LayerHub 下载/更新工具 · 0.1.2-beta\n1. 下载 Beta Windows 包\n2. 下载 Beta NAS/Linux 包\n3. 更新此 NAS（Linux，需 sudo）\n4. 更新此云端界面（Linux，需 sudo）\n0. 退出\n默认 Beta；不会自动把 Alpha 切成 Beta。")
 		fmt.Fprint(out, "选择 / Choice: ")
 		choice, _ := input.ReadString('\n')
 		switch strings.TrimSpace(choice) {
@@ -40,7 +40,7 @@ func Run(args []string, in io.Reader, out io.Writer) error {
 	fs := flag.NewFlagSet("layerhub-update "+args[0], flag.ContinueOnError)
 	fs.SetOutput(out)
 	channel := fs.String("channel", "beta", "beta or alpha; never automatically switch channels")
-	tag := fs.String("version", "", "fixed release tag, e.g. v0.1.1-beta; default: newest channel version")
+	tag := fs.String("version", "", "fixed release tag, e.g. v0.1.2-beta; default: newest channel version")
 	output := fs.String("output", "", "download cache directory")
 	platform := fs.String("platform", runtime.GOOS, "windows or linux (amd64)")
 	extract := fs.Bool("extract", false, "extract to a new version folder; preserve existing folders")

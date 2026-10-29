@@ -1,4 +1,4 @@
-# Unreleased · main / 未发布更新
+# 0.1.2-beta — Print preparation, maintenance and Studio / 打印准备、维护与 Studio
 
 - A combined upload-to-print preparation view, per-plate queue order, explicit next-job selection, and cancellation of never-started tasks. Later plates never start automatically.
 - X2D manual homing and individual XYZ small steps with onsite clearance, freshness checks and command review. [Motion scope and physical evidence](MOTION.md).
@@ -13,6 +13,9 @@
 - 完成后缺失原任务的设备保持待登记状态；必须明确确认取件及实际用量，不自动放行或扣减库存，见[稳定性说明](STABILITY.md)。
 - 修复字体应用和长页面、侧栏滚动，重新整理源码与许可证页面。
 - 左侧导航第一项新增 **Bambu Studio**，本机路径只存浏览器，首次由用户导入 Windows 配置，见[设置与移除方法](STUDIO_SHORTCUT.md)。
+
+- Make generated locale files stable across LF/CRLF checkouts; add a clean temporary-project regression.
+- 修复 Windows/Linux 换行差异导致语言文件校验失败的问题。
 
 # 0.1.1-beta — Reliable controls, updates and multi-plate intake / 控制、升级与多盘导入
 

@@ -1,6 +1,6 @@
 # Multi-plate sliced 3MF / 多盘切片文件
 
-v0.1.1-beta, prepared 2026-10-27. Use with Bambu Studio. No model editing or online slicing is introduced.
+v0.1.2-beta, prepared 2026-10-27. Use with Bambu Studio. No model editing or online slicing is introduced.
 
 ## 中文
 

@@ -134,7 +134,7 @@ func request(c *http.Client, raw, accept string) (*http.Response, error) {
 	if e != nil {
 		return nil, e
 	}
-	r.Header.Set("User-Agent", "LayerHub-UpdateKit/0.1.1-beta")
+	r.Header.Set("User-Agent", "LayerHub-UpdateKit/0.1.2-beta")
 	r.Header.Set("Accept", accept)
 	r.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	response, e := c.Do(r)
@@ -285,7 +285,7 @@ func downloadAsset(c *http.Client, a Asset, path, expected string) error {
 		}
 		if offset < a.Size {
 			r, _ := http.NewRequest("GET", a.URL, nil)
-			r.Header.Set("User-Agent", "LayerHub-UpdateKit/0.1.1-beta")
+			r.Header.Set("User-Agent", "LayerHub-UpdateKit/0.1.2-beta")
 			r.Header.Set("Accept", "application/octet-stream")
 			r.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 			if offset > 0 {

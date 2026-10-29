@@ -1,6 +1,6 @@
-# LayerHub 一键下载 / 更新工具包 · v0.1.1-beta
+# LayerHub 一键下载 / 更新工具包 · v0.1.2-beta
 
-本工具包与 LayerHub v0.1.1-beta 一并发布。默认下载与更新 **Beta**，推荐配合 Bambu Studio。Windows 工具为独立程序，不需要额外安装 Python；NAS/云端限 Debian/Ubuntu 原生 systemd、Linux amd64，数据备份需要 Python 3。暂不支持 Docker、ARM、云端首次证书/隧道部署，或自动把 Alpha 数据迁移到 Beta。
+本工具包与 LayerHub v0.1.2-beta 一并发布。默认下载与更新 **Beta**，推荐配合 Bambu Studio。Windows 工具为独立程序，不需要额外安装 Python；NAS/云端限 Debian/Ubuntu 原生 systemd、Linux amd64，数据备份需要 Python 3。暂不支持 Docker、ARM、云端首次证书/隧道部署，或自动把 Alpha 数据迁移到 Beta。
 
 ## Windows：双击下载
 

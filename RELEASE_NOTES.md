@@ -1,53 +1,44 @@
-## Current main branch / 当前主线
+# LayerHub v0.1.2-beta · Print preparation, maintenance and Studio
 
-The changes in the Unreleased changelog are source updates on `main`, not a replacement of v0.1.1-beta assets. See [changelog](CHANGELOG.md), [print preparation](PRINT_PREPARATION.md), [motion](MOTION.md), [stability](STABILITY.md) and [local Studio shortcut](STUDIO_SHORTCUT.md).
+**Recommended: LayerHub Beta + Bambu Studio.** This release packages the updates developed since v0.1.1-beta; earlier releases and Alpha remain intact.
 
-当前未发布更新已提交 `main`，不替换 v0.1.1-beta 的既有附件。下方仍保留该版本原发布说明。
+- Combine sliced-3MF inspection, plate selection, device/spool confirmation and print options in one preparation view. For one plate on a ready printer, explicit clearance allows one transfer/start request; multiple plates only queue. Cancel never-started tasks without deleting history or deducting material.
+- Explain the number of separate print runs and retain each plate's estimates, colors and identity. Reorder a printer's queue and explicitly choose the next job; never start later plates automatically.
+- Add X2D manual homing and individual XYZ small steps with fresh-state checks, onsite clearance and audited, non-repeating commands. [Motion scope](MOTION.md).
+- Improve A1 decimal readings, source-limited camera hints and light switching. Onsite on/off observations validate the light; static telemetry is not physical-state proof. A1 XYZ movement and the complete print/collection/material acceptance cycle remain unverified.
+- Keep missing completed-task records awaiting explicit collection and usage reconciliation. Public spools are correctly distinguished from personally shared stock. No automatic material deduction or guessed completion mail.
+- Repair font application, long-page/sidebar scrolling, and source/license presentation. Keep English and Chinese support, with deterministic locale generation across Windows/Linux line endings.
+- Put a local Bambu Studio shortcut first in the sidebar. Users enter a Windows EXE path and import a generated per-user `.reg` file once. No resident helper or remote launch service is installed; paths stay in the browser. [Setup/removal](STUDIO_SHORTCUT.md).
+- Include the updated Windows/Linux Download / Update Kit. Default upgrades require idle printers; explicit `--allow-running` still requires a fresh, alert-free known job and never sends pause/stop commands. Monitoring briefly disconnects during a backend restart.
 
----
+## Downloads and upgrade
 
-# LayerHub v0.1.1-beta · Controls, updates and multi-plate intake
+Download a platform application, optionally the standalone Update Kit, and **SHA256SUMS**:
 
-**Recommended: LayerHub Beta + Bambu Studio.** This release bundles the previously local work into one update:
+- `LayerHub-0.1.2-beta-windows-amd64.zip`
+- `LayerHub-0.1.2-beta-linux-amd64.tar.gz`
+- `LayerHub-0.1.2-beta-source.tar.gz`
+- `LayerHub-Download-UpdateKit-0.1.2-beta.zip`
 
-- Faster control feedback and stable telemetry refreshes that preserve console tabs, focus and camera.
-- Printer-side stop reconciliation and manual collection/usage settlement. Interrupted jobs are not successful prints; a settled stopped job no longer incorrectly blocks the next job.
-- Explicit sliced-3MF plate selection, safe PNG previews, per-plate material/color and estimates, and atomic queueing of up to 16 single-filament plates. Stable receipt IDs prevent duplicate batches after uncertain responses; shared source files remain until their last job is deleted.
-- Plate IDs throughout task lists, control, preparation and final confirmation. Queueing never automatically starts or chains prints.
-- A1 without AMS preparation and bilingual LAN/Developer Mode guidance. A1 physical validation is pending.
-- A standalone Windows/Linux Download / Update Kit, including verified downloads, channel selection, offline transfer, idle checks, backups and coordinated updates to an existing NAS/cloud deployment.
+Verify checksums and extract into a new directory. Back up the full workspace and master key. Coordinate NAS backend and cloud UI upgrades. Schema remains **5** with additive reconciliation records; do not assume an older program preserves these new holds. Rollback requires review and the matching pre-upgrade backup, accounting for any newer jobs and inventory changes.
 
-Download the Windows ZIP or Linux amd64 TAR.GZ application and **SHA256SUMS**. The separate **LayerHub-Download-UpdateKit-0.1.1-beta.zip** supplies the download/update entrypoints. Linux updates require Python 3 and native Debian/Ubuntu systemd; initial network/certificate/tunnel setup, Docker and ARM are outside this updater's scope.
+Linux updates target existing native Debian/Ubuntu amd64 systemd installations with Python 3. ARM, Docker, first-time two-host network/certificate setup, universal printer/firmware compatibility and unattended physical acceptance are not claimed. Publishing this release does not restart or upgrade production services.
 
-**Back up the full workspace and master key before upgrading.** Update NAS backend and cloud UI together while idle. Database schema advances to **5**; reverting to an older reader requires the matching pre-upgrade workspace backup and must account for newer jobs/settlements. The kit never blindly replaces data after a new reader starts.
-
-Go tests/vet, generated translations, 94 frontend/language tests, Windows/Linux builds and offline Windows binary checks passed. Desktop Chinese/English and mobile Chinese dialogs were checked. These tests issue no real print or email. A1 and real Studio multi-plate printing remain attended acceptance work; no new multicolor or dual-nozzle start compatibility is claimed. Publishing does not deploy the existing production service.
-
-[Deployment](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/DEPLOYMENT.md) · [Multi-plate guide](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/MULTIPLATE.md) · [A1 setup](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/A1_SETUP.md) · [Update Kit](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/deploy/update-kit/README.md)
+[Deployment](DEPLOYMENT.md) · [Print preparation](PRINT_PREPARATION.md) · [A1](A1_SETUP.md) · [Studio shortcut](STUDIO_SHORTCUT.md) · [Validation](validation/README.md)
 
 ## 中文
 
-本次将控制响应与稳定刷新、机身终止后的收尾与空闲判定、多盘明确选择和原子入队、断网防重复、共用文件保护、A1 无 AMS 准备及一键下载/更新工具统一发布。最多安排 16 个单耗材盘，盘号贯穿任务、准备和确认；不自动连续开打，中断后仍需人工取件并结算实际用量。
+**推荐 LayerHub Beta 配合 Bambu Studio。** v0.1.2-beta 将上一版之后的改动统一打包，保留旧版和 Alpha 标签与附件。
 
-下载对应系统应用和 SHA256SUMS；另有 **LayerHub-Download-UpdateKit-0.1.1-beta.zip**。升级前备份工作空间和主密钥，空闲时统一更新 NAS 与云端。数据库升级到 **schema 5**，回退旧程序须配套恢复升级前备份，不能直接读新库或覆盖新任务和结算。Linux 更新需 Python 3，首次网络/证书/隧道仍按部署指导配置。
+- 整合切片文件检查、选盘、设备/料卷确认和打印选项。单盘且设备就绪时，明确确认清板后只提交一次传输与启动；多盘只入队，不自动连续打印。
+- 显示独立打印次数、逐盘用量与颜色；可调整本机队列顺序、指定下一项。尚未启动的任务可以取消，保留历史并释放预留，不扣库存。
+- X2D 增加原生归位与 XYZ 单次小步移动，保留现场清板、新鲜状态和结果核对；不重发未知结果的动作。
+- A1 增加小数温度、低帧率相机说明和经现场亮灭验证的照明灯。固定遥测不当成真实灯光状态；A1 移动及完整打印收尾闭环仍未验收。
+- 原任务缺失的已完成打印保持待取件、待用量登记；补登记正确识别公共耗材，只有明确确认后才扣减一次，不伪造归属或完成邮件。
+- 修复个性化字体、长页面与侧栏滚动，优化源码与许可证页面；修复 Windows/Linux 换行差异引发的语言文件检查失败。
+- 左侧第一项可快捷打开本机 Bambu Studio。填写 Windows 主程序路径，首次导入生成的当前用户 `.reg` 配置；路径只存浏览器，无需常驻客户端。
+- 同步打包更新工具。默认要求空闲；显式允许打印中升级仍需新鲜、无告警且已认领的任务。升级不向打印机发送暂停或停止，后台重启期间监控会短暂断开。
 
-Go、翻译生成、94 项前端/语言测试、跨平台构建和真实 Windows 程序离线验收通过。A1 和真实多盘逐盘启动仍待现场验收，不宣称新增多色/双喷嘴启动支持。本次上传不部署生产环境。Beta 继续配合 Bambu Studio；Alpha 工作台分支和历史标签保留。
+下载对应应用包、可选的下载/更新工具包以及 **SHA256SUMS**，校验后解压到新目录。升级前备份完整工作空间和主密钥，协调更新 NAS 与云端。数据库仍为 **schema 5**，新增补登记记录；旧程序不能保证识别新核对状态，回退需审核并使用匹配备份，不能覆盖后续任务和库存变化。
 
-[中文部署](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/README.zh-CN.md) · [多盘导入](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/MULTIPLATE.md) · [A1 接入](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/A1_SETUP.md) · [工具操作](https://github.com/Tuang-Gaashuan/LayerHub/blob/v0.1.1-beta/deploy/update-kit/README.zh-CN.md)
-
----
-
-## Previous v0.1.0-beta baseline / 上一版本基线
-
-Beta is the ongoing mainline. Prepare and slice in Bambu Studio; use LayerHub for teams, printers, per-device queues, physical spools, remote control and notifications.
-
-- Remove model workbench, geometry/STL import, online slicing, process presets and shared model projects, including their frontend assets, Three.js and backend/engine runtime.
-- Accept only actual sliced 3MF; reject raw G-code, STL and unsliced projects in both UI and backend.
-- Inspect files directly into a compact dashboard card, with colors, plate estimates and references. No import-purpose dialog remains.
-- Preserve accounts, roles, queues, inventory, controls, camera, email, diagnostics and backups. Existing alpha project rows remain in database backups; fresh Beta does not create editor tables.
-- Retire old model/project APIs with HTTP 410; send old workbench bookmarks to the dashboard. NAS engine configuration is no longer required or read.
-- Ship Windows/Linux amd64, corresponding AGPL source, bilingual guidance and an Alpha → Beta migration guide as one release.
-
-以后以 Beta 持续更新，首版 v0.1.0-beta。模型准备与切片交给 Bambu Studio，LayerHub 专注团队、打印机、队列、耗材、控制与通知。移除完整工作台前后端及引擎代码，只接收已切片 3MF，直接校验后安排任务；账号与历史业务保留，旧工程数据随数据库备份保留。云端—NAS—打印机部署及中英文文档同步精简。
-
-The numbering resets for this new channel; alpha releases remain available for recovery. Read [migration](BETA_MIGRATION.md) before updating an existing installation. No new hardware, multicolor or dual-nozzle compatibility is claimed. Docker runtime and a fresh two-host OS installation still require independent acceptance.
+127 项前端/语言/配置生成测试、Go 测试与 vet、跨平台构建、临时离线工作空间检查及附件校验用于本次交付，不自动打印或发送测试邮件。独立部署仍须按指南验收设备、网络和固件。GitHub 发布不等于生产服务已升级。

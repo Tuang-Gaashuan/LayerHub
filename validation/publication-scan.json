@@ -1,23 +1,15 @@
 {
-  "version": "0.1.1-beta",
+  "version": "0.1.2-beta",
   "status": "passed",
-  "files_scanned": 15707,
-  "archives_scanned": 6,
+  "files_scanned": 3533,
+  "archives_scanned": 0,
   "checks": [
-    "production_endpoint",
-    "production_mail",
-    "personal_filesystem_path",
-    "production_device_credential",
-    "private_key_material",
-    "github_credential",
-    "runtime_or_link_path",
-    "runtime_private_file",
-    "archive_hash_and_members"
+    "tracked_source_and_docs",
+    "production_endpoints_and_mail",
+    "private_key_and_github_credential",
+    "runtime_private_files"
   ],
-  "upstream_fixtures": {
-    "source/vendor/modernc.org/sqlite/embed.db": "74be192f1e1efe9962b29e50a0325413a93b218ba21706d1b846b1fd4bd28948",
-    "source/vendor/modernc.org/sqlite/embed2.db": "f6c2c396abd1881d035bd709f16e0804809a3d08c0d35b9c1f2e4220e7593402"
-  },
   "findings": [],
-  "credentials_printed": false
+  "credentials_printed": false,
+  "archive_verification": "Recorded separately after packaging"
 }

@@ -1,10 +1,10 @@
-# LayerHub Download / Update Kit · v0.1.1-beta
+# LayerHub Download / Update Kit · v0.1.2-beta
 
 [简体中文及完整操作说明](README.zh-CN.md)
 
 GitHub public API requests are rate limited, including requests sharing the same proxy exit. When exhausted, the tool reports a retry time when supplied by GitHub. Retry later or transfer NAS packages from a trusted download computer and use the offline entrypoints. A failed network check is never reported as “already up to date.”
 
-This kit is distributed alongside LayerHub v0.1.1-beta. Beta is the default and is recommended alongside Bambu Studio. The Windows downloader is self-contained. Linux updates target existing native Debian/Ubuntu amd64 systemd installations and need Python 3 for SQLite guards/backups. Fresh cloud setup, Docker, ARM and automatic cross-channel migration are outside this kit.
+This kit is distributed alongside LayerHub v0.1.2-beta. Beta is the default and is recommended alongside Bambu Studio. The Windows downloader is self-contained. Linux updates target existing native Debian/Ubuntu amd64 systemd installations and need Python 3 for SQLite guards/backups. Fresh cloud setup, Docker, ARM and automatic cross-channel migration are outside this kit.
 
 ## Entrypoints
 

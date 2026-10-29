@@ -1,3 +1,15 @@
+# v0.1.2-beta validation / 验证范围
+
+2026-10-28 · [Release notes](../RELEASE_NOTES.md)
+
+Release checks include 127 frontend/language/Studio configuration and LF/CRLF generator regressions, Go tests/vet, Windows/Linux builds and actual Windows binaries in disposable offline workspaces. Packaging checks compare binaries, every web asset, documentation, nested source offers and SHA256SUMS. The Update Kit builds its exact shipped sources for both targets. These automated release checks do not contact printers, send mail, import a Windows registry handler or claim a real desktop Studio launch.
+
+Separate attended evidence: X2D homing and positive-direction small steps were individually confirmed onsite, without claiming measured millimetres or every motion condition. A1 light on/off was confirmed onsite and cloud control acceptance observed; A1 movement and a complete print/collection/usage settlement acceptance cycle remain unverified. Historical private evidence and credentials are excluded. Independent deployments must validate their own firmware and network.
+
+中文：本版检查包括 127 项界面/语言/配置生成及换行回归、Go 测试与 vet、Windows/Linux 构建、临时离线目录的实际程序检查和附件内容/校验和核对。更新工具使用交付源码验证两平台构建。这些自动检查不操作打印机、发邮件、代导入注册表或声称 Studio 桌面启动已经验证。X2D 运动和 A1 灯光的现场证据范围分别见对应文档；A1 完整收尾闭环仍待验收。
+
+## Historical v0.1.1-beta record / 历史记录
+
 # v0.1.1-beta validation / 验证范围
 
 2026-10-27 · [Release notes](../RELEASE_NOTES.md)
