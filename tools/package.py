@@ -5,7 +5,7 @@ version=(root/'VERSION').read_text().strip();assert re.fullmatch(r'[0-9]+\.[0-9]
 parser=argparse.ArgumentParser();parser.add_argument('--local-preview',action='store_true');args=parser.parse_args()
 out=root/('local-packages/a1-multiplate-preview-20261027' if args.local_preview else 'packages');out.mkdir(parents=True,exist_ok=True)
 source=root/'source/web/source/layerhub-source.tar.gz';assert source.is_file(),'Generate corresponding source first'
-docs=['README.md','README.zh-CN.md','LICENSE','THIRD_PARTY_NOTICES.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','DIAGNOSTICS.md','IMPORTING.md','A1_SETUP.md','MULTIPLATE.md','MOTION.md','STABILITY.md','PRINT_PREPARATION.md','STUDIO_SHORTCUT.md','BETA_MIGRATION.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION']
+docs=['README.md','README.zh-CN.md','USAGE.md','USAGE.zh-CN.md','UPLOAD_FLOW.md','BACKGROUND_FILES.md','APPEARANCE.md','A1_CONTROLS.md','A1_CONTROLS.zh-CN.md','CONTROL_VALIDATION.md','FILAMENT_CONTROL.md','X2D与A1控制指令手册.md','LICENSE','THIRD_PARTY_NOTICES.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','DIAGNOSTICS.md','IMPORTING.md','A1_SETUP.md','MULTIPLATE.md','MOTION.md','STABILITY.md','PRINT_PREPARATION.md','STUDIO_SHORTCUT.md','BETA_MIGRATION.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION']
 start_cmd=r'''@echo off
 setlocal
 pushd "%~dp0" || exit /b 1
@@ -39,7 +39,7 @@ def entries(platform):
  for name in docs:yield root/name,name
  for p in sorted((root/'source/web').rglob('*')):
   if p.is_file():yield p,'web/'+p.relative_to(root/'source/web').as_posix()
- for folder in ['deploy','licenses','validation']:
+ for folder in ['deploy','licenses','validation','docs']:
   for p in sorted((root/folder).rglob('*')):
    if p.is_file() and p.name!='.env' and (folder!='validation' or p.suffix in ['.json','.md','.png']):yield p,p.relative_to(root).as_posix()
  if platform=='windows':yield root/'binaries/windows-amd64/layerhub.exe','bin/layerhub.exe'

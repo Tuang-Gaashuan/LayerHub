@@ -1,4 +1,4 @@
-# Unreleased / 未发布
+# 0.1.3-beta — Background uploads, materials and personalization / 后台上传、耗材与个性化
 
 ## 2026-11-04 source update / 源码更新
 
@@ -12,7 +12,7 @@
 - 修复TPU-AMS等未列出材质误选PLA，增加按机器更新材质颜色并保留克数与归属；换卷后的原卷卸载与新卷挂载仍待实现。
 - Add X2D external-spool routing with exact physical nozzle/source and fresh profile checks. Offline and fixture-browser tests passed; live print acceptance and production deployment of this route remain pending.
 - 新增X2D外置单料卷路径和物理喷嘴/料位、新鲜预设检查；离线与模拟浏览器验证通过，实机打印验收和这部分生产切换仍待完成。
-- These are main-branch source changes, not replacements for existing version tags or download archives. 本次仅更新main源码，不重写旧版本标签或安装包。
+- Packaged as v0.1.3-beta on 2026-11-04. Older version tags/assets remain unchanged. 2026-11-04统一打包为v0.1.3-beta，旧标签和附件保持不变。
 
 ## Earlier development notes / 先前开发记录
 

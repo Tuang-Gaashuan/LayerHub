@@ -4,8 +4,8 @@ project=pathlib.Path(__file__).resolve().parent.parent
 root=project.parent if project.name=='source' and (project.parent/'deploy').is_dir() else project
 out=project/'web/source';out.mkdir(exist_ok=True)
 archive=out/'layerhub-source.tar.gz'
-allowed=['source','deploy','tools','licenses','validation','.github'] if root!=project else ['cmd','internal','web','vendor','qa','tools','assets-source','licenses']
-allowed += ['go.mod','go.sum','LICENSE','THIRD_PARTY_NOTICES.md','README.md','README.zh-CN.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','DIAGNOSTICS.md','IMPORTING.md','A1_SETUP.md','MULTIPLATE.md','MOTION.md','STABILITY.md','STUDIO_SHORTCUT.md','PRINT_PREPARATION.md','BETA_MIGRATION.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION','.gitignore','.gitattributes']
+allowed=['source','deploy','tools','licenses','validation','.github','docs'] if root!=project else ['cmd','internal','web','vendor','qa','tools','assets-source','licenses']
+allowed += ['go.mod','go.sum','LICENSE','THIRD_PARTY_NOTICES.md','README.md','README.zh-CN.md','USAGE.md','USAGE.zh-CN.md','UPLOAD_FLOW.md','BACKGROUND_FILES.md','APPEARANCE.md','A1_CONTROLS.md','A1_CONTROLS.zh-CN.md','CONTROL_VALIDATION.md','FILAMENT_CONTROL.md','X2D与A1控制指令手册.md','DEPLOYMENT.md','01-部署指导-云服务器-NAS-打印机.md','TESTING.md','02-外部验收与反馈.md','OPERATIONS.md','03-升级备份与排障.md','LANGUAGES.md','DIAGNOSTICS.md','IMPORTING.md','A1_SETUP.md','MULTIPLATE.md','MOTION.md','STABILITY.md','STUDIO_SHORTCUT.md','PRINT_PREPARATION.md','BETA_MIGRATION.md','RELEASE_NOTES.md','SECURITY.md','CHANGELOG.md','VERSION','.gitignore','.gitattributes']
 with tarfile.open(archive,'w:gz') as tar:
  for name in allowed:
   path=root/name

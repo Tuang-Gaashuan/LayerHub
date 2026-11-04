@@ -1,44 +1,48 @@
-# LayerHub v0.1.2-beta · Print preparation, maintenance and Studio
+# LayerHub v0.1.3-beta · Background uploads, materials and personalization
 
-**Recommended: LayerHub Beta + Bambu Studio.** This release packages the updates developed since v0.1.1-beta; earlier releases and Alpha remain intact.
+**Use Bambu Studio for slicing, then LayerHub Beta for shared printers.** This release bundles the source updates after v0.1.2-beta into Windows/Linux applications, matching source and the Download / Update Kit. Older releases and the Alpha channel remain available.
 
-- Combine sliced-3MF inspection, plate selection, device/spool confirmation and print options in one preparation view. For one plate on a ready printer, explicit clearance allows one transfer/start request; multiple plates only queue. Cancel never-started tasks without deleting history or deducting material.
-- Explain the number of separate print runs and retain each plate's estimates, colors and identity. Reorder a printer's queue and explicitly choose the next job; never start later plates automatically.
-- Add X2D manual homing and individual XYZ small steps with fresh-state checks, onsite clearance and audited, non-repeating commands. [Motion scope](MOTION.md).
-- Improve A1 decimal readings, source-limited camera hints and light switching. Onsite on/off observations validate the light; static telemetry is not physical-state proof. A1 XYZ movement and the complete print/collection/material acceptance cycle remain unverified.
-- Keep missing completed-task records awaiting explicit collection and usage reconciliation. Public spools are correctly distinguished from personally shared stock. No automatic material deduction or guessed completion mail.
-- Repair font application, long-page/sidebar scrolling, and source/license presentation. Keep English and Chinese support, with deterministic locale generation across Windows/Linux line endings.
-- Put a local Bambu Studio shortcut first in the sidebar. Users enter a Windows EXE path and import a generated per-user `.reg` file once. No resident helper or remote launch service is installed; paths stay in the browser. [Setup/removal](STUDIO_SHORTCUT.md).
-- Include the updated Windows/Linux Download / Update Kit. Default upgrades require idle printers; explicit `--allow-running` still requires a fresh, alert-free known job and never sends pause/stop commands. Monitoring briefly disconnects during a backend restart.
+## What changed
+
+- **Upload → confirmation → start or queue:** durable NAS-side background parsing, recovery from the background file list, automatic confirmation when parsing finishes, clearer cancellation and submission-result review. The upload itself must finish before the page is closed. Multi-plate files keep per-plate time, weight, color and queue identity; only the explicitly selected first plate can start.
+- **Materials:** preserve TPU-AMS and unlisted material values in the editor instead of falling back to PLA; add protected deletion of unused/unmounted records and visible printer/library mismatches. **Update from printer** corrects the existing mounted record's material and color, preserving grams, ownership and reservations. It does **not** treat a changed report as a new physical roll or unmount the old one automatically.
+- **Printer status and controls:** edit a printer IP while retaining its identity/credentials; display AMS drying stages and prevent starting while drying; retain PrintError/HMS observation details for future incidents. A1 temperatures are rounded for display; control values are unchanged. X2D AMS PETG load/change/unload and motion-status refresh are included within their documented validation scope.
+- **Personalization:** system-following/light/dark modes, accent presets/custom colors, density, more local font choices and account-scoped browser preferences. Actual filament colors and semantic status colors retain their meanings.
+- **Bambu Studio shortcut:** a fixed single-instance launch option helps reuse an existing Studio process. Paths remain in the member's browser and require that member's Windows protocol registration.
+- **Illustrated guides:** English and Chinese Studio → sliced 3MF → upload → start/queue instructions, with all six supplied screenshots, are included in the repository and applications.
+
+## Validation and limitations
+
+Local frontend/language/shortcut checks, Go tests/vet, Windows/Linux builds, disposable-workspace smoke checks and package-content/checksum verification are recorded for this release. GitHub CI is checked before publication. These checks do not replace attended hardware acceptance.
+
+**Experimental X2D external spool / soft TPU:** the file's physical nozzle selects the exact external source; fresh loaded-source, profile and nozzle checks are required. It is implemented and tested offline/with fixture APIs, but no real external-spool print was started for acceptance. Do not describe this as fully hardware-validated. Printer presets must match the actual roll and slice; TPU for AMS and TPU 90A are distinct presets.
+
+Physical roll replacement remains a manual inventory/mount operation. This release does not add automatic old-roll unmount/new-roll assignment. Camera frame rate remains limited by each printer. Background parsing persists completed uploads, not interrupted upload bytes. Existing firmware/authorization checks and uncertain-command holds remain in effect.
 
 ## Downloads and upgrade
 
-Download a platform application, optionally the standalone Update Kit, and **SHA256SUMS**:
+- `LayerHub-0.1.3-beta-windows-amd64.zip`
+- `LayerHub-0.1.3-beta-linux-amd64.tar.gz`
+- `LayerHub-0.1.3-beta-source.tar.gz`
+- `LayerHub-Download-UpdateKit-0.1.3-beta.zip`
+- `SHA256SUMS`
 
-- `LayerHub-0.1.2-beta-windows-amd64.zip`
-- `LayerHub-0.1.2-beta-linux-amd64.tar.gz`
-- `LayerHub-0.1.2-beta-source.tar.gz`
-- `LayerHub-Download-UpdateKit-0.1.2-beta.zip`
+Verify checksums, extract to a new directory and back up the entire existing workspace including its master key. Coordinate NAS backend and cloud UI updates; prefer idle printers. Schema remains **5** with additive records. Keep the matching backup and old release for reviewed recovery rather than overwriting newer jobs or stock. The application defaults to offline device mode and remote print start disabled. Publishing this release does not restart, upgrade or control production devices.
 
-Verify checksums and extract into a new directory. Back up the full workspace and master key. Coordinate NAS backend and cloud UI upgrades. Schema remains **5** with additive reconciliation records; do not assume an older program preserves these new holds. Rollback requires review and the matching pre-upgrade backup, accounting for any newer jobs and inventory changes.
+[Illustrated guide](USAGE.md) · [Deployment](DEPLOYMENT.md) · [Update Kit](deploy/update-kit/README.md) · [Changes](CHANGELOG.md)
 
-Linux updates target existing native Debian/Ubuntu amd64 systemd installations with Python 3. ARM, Docker, first-time two-host network/certificate setup, universal printer/firmware compatibility and unattended physical acceptance are not claimed. Publishing this release does not restart or upgrade production services.
+## 中文说明
 
-[Deployment](DEPLOYMENT.md) · [Print preparation](PRINT_PREPARATION.md) · [A1](A1_SETUP.md) · [Studio shortcut](STUDIO_SHORTCUT.md) · [Validation](validation/README.md)
+**v0.1.3-beta 将 v0.1.2-beta 之后的更新统一打包。推荐 Bambu Studio 切片，LayerHub Beta 管理共享打印机。**
 
-## 中文
+1. **上传与排队更顺畅：** 文件上传完毕后由NAS后台持久化解析，解析完成进入确认页；可返回后台文件列表继续。确认设备、打印盘与实际料卷后，按条件立即启动首盘或仅入队；其余盘仍需清板后逐次确认。上传未完成就关闭页面仍可能中断。
+2. **耗材管理：** 修复TPU-AMS/未列出材质误显示PLA；加入耗材删除保护、挂载信息差异提示及“按打印机更新”。更新只校正当前记录的材质和颜色，保留克数、归属与预留；尚未实现换卷后自动卸载旧卷、挂载新卷。
+3. **设备功能：** 可修改打印机IP；识别AMS烘干状态并限制此时启动；保留后续PrintError/HMS告警信息；A1温度改为整数显示。纳入已记录范围内的X2D AMS PETG进换退料、移动状态刷新与相关控制修复。
+4. **个性化：** 跟随系统/浅色/深色、预设及自定义主题色、界面密度和更多本机字体。偏好按账户存于浏览器，实际耗材颜色保留原义。
+5. **Studio和文档：** 单实例打开Studio；新应用包附带六张截图的中英文使用流程，说明切片导出、上传、选料、立即打印与队列，以及完工后的取件和用量登记。
 
-**推荐 LayerHub Beta 配合 Bambu Studio。** v0.1.2-beta 将上一版之后的改动统一打包，保留旧版和 Alpha 标签与附件。
+**验证边界：** X2D外置料架/软TPU启动路径目前为实验性功能，只完成离线与模拟接口验证，尚未完成真实打印验收；机器预设仍需与实物、切片一致。此次发布不会操作打印机或自动升级生产环境。摄像头帧率受机型限制，后台解析不包含断点续传上传。
 
-- 整合切片文件检查、选盘、设备/料卷确认和打印选项。单盘且设备就绪时，明确确认清板后只提交一次传输与启动；多盘只入队，不自动连续打印。
-- 显示独立打印次数、逐盘用量与颜色；可调整本机队列顺序、指定下一项。尚未启动的任务可以取消，保留历史并释放预留，不扣库存。
-- X2D 增加原生归位与 XYZ 单次小步移动，保留现场清板、新鲜状态和结果核对；不重发未知结果的动作。
-- A1 增加小数温度、低帧率相机说明和经现场亮灭验证的照明灯。固定遥测不当成真实灯光状态；A1 移动及完整打印收尾闭环仍未验收。
-- 原任务缺失的已完成打印保持待取件、待用量登记；补登记正确识别公共耗材，只有明确确认后才扣减一次，不伪造归属或完成邮件。
-- 修复个性化字体、长页面与侧栏滚动，优化源码与许可证页面；修复 Windows/Linux 换行差异引发的语言文件检查失败。
-- 左侧第一项可快捷打开本机 Bambu Studio。填写 Windows 主程序路径，首次导入生成的当前用户 `.reg` 配置；路径只存浏览器，无需常驻客户端。
-- 同步打包更新工具。默认要求空闲；显式允许打印中升级仍需新鲜、无告警且已认领的任务。升级不向打印机发送暂停或停止，后台重启期间监控会短暂断开。
+下载并校验SHA256后解压到新目录；升级前备份完整工作空间及主密钥，协调更新NAS与云端，优先选择设备空闲时。数据库仍为schema 5，并包含新增记录；回退前保留匹配备份，避免覆盖新任务与库存。新装默认离线，远程启动默认关闭。
 
-下载对应应用包、可选的下载/更新工具包以及 **SHA256SUMS**，校验后解压到新目录。升级前备份完整工作空间和主密钥，协调更新 NAS 与云端。数据库仍为 **schema 5**，新增补登记记录；旧程序不能保证识别新核对状态，回退需审核并使用匹配备份，不能覆盖后续任务和库存变化。
-
-127 项前端/语言/配置生成测试、Go 测试与 vet、跨平台构建、临时离线工作空间检查及附件校验用于本次交付，不自动打印或发送测试邮件。独立部署仍须按指南验收设备、网络和固件。GitHub 发布不等于生产服务已升级。
+[中文图文流程](USAGE.zh-CN.md) · [部署指导](01-部署指导-云服务器-NAS-打印机.md) · [更新工具](deploy/update-kit/README.zh-CN.md)

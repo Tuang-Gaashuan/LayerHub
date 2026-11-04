@@ -1,7 +1,7 @@
 {
-  "version": "0.1.2-beta",
+  "version": "0.1.3-beta",
   "status": "passed",
-  "files_scanned": 3533,
+  "files_scanned": 3572,
   "archives_scanned": 0,
   "checks": [
     "tracked_source_and_docs",

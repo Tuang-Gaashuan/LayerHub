@@ -5,21 +5,21 @@
 **English** · [简体中文](README.zh-CN.md)
 
 [![Validate source](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/Tuang-Gaashuan/LayerHub/actions/workflows/ci.yaml)
-[![Beta recommended](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta)
+[![Beta recommended](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta)
 [![Alpha experimental workbench](https://img.shields.io/badge/Alpha-experimental_workbench-d48a21)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 
-[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta) · [Download Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Compare channels](CHANNELS.md) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Validation](validation/README.md)
+[Download Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) · [Download Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [Compare channels](CHANNELS.md) · [Deployment](DEPLOYMENT.md) · [Importing](IMPORTING.md) · [Validation](validation/README.md)
 
 LayerHub is a self-hosted workspace for teams sharing 3D printers. Prepare and slice in **Bambu Studio**, then use LayerHub to assign a printer, confirm real spools, coordinate its queue, monitor progress and receive notifications.
 
 **Recommended setup: LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio).** Prepare and slice on your computer, then upload the sliced 3MF for team scheduling, printer control and notifications.
 
-## Latest development updates (`main`)
+## New in v0.1.3-beta
 
-The illustrated [usage guide](USAGE.md) explains the complete Studio → sliced 3MF → LayerHub → start/queue workflow. Recent source updates add persistent background parsing, printer IP editing, appearance themes, spool deletion safeguards, AMS drying status and more detailed device alerts, and an **Update from printer** action for material/color corrections. A1 temperatures now display whole degrees. See [current source changes](CHANGELOG.md).
+This release packages background file inspection, a shorter upload-to-print flow, expanded appearance preferences, printer IP editing, AMS drying visibility/alerts, protected spool deletion and printer-report material/color corrections. A1 temperatures display whole degrees. The apps and Update Kit include the new [illustrated usage guide](USAGE.md) and six screenshots. See [release notes](RELEASE_NOTES.md).
 
-**Source versus downloads:** the changes below this development heading are newer than the existing `v0.1.2-beta` download assets. GitHub source publication does not automatically update an installed NAS or replace a release package. X2D external-spool/soft-TPU startup is implemented in source and tested offline, but still awaits a real print acceptance test. The material update action edits the existing spool; physical spool replacement and automatic unmount/reassignment are not implemented.
+X2D external-spool/soft-TPU startup is included as an experimental path with offline validation; real print acceptance remains pending. **Update from printer** corrects the existing roll, and does not unmount or identify a replacement roll automatically. Publishing or downloading a package does not upgrade an existing NAS by itself.
 
 ## New in v0.1.2-beta
 
@@ -42,7 +42,7 @@ Batch plate selection, printer-side stop handling, faster controls, A1 external-
 
 | Channel | Focus | Maintenance | Version tag | Download |
 |---|---|---|---|---|
-| **Beta · recommended** | Team printer management; upload already-sliced 3MF | Primary development on [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) | [`v0.1.2-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.2-beta) | [Beta release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta) |
+| **Beta · recommended** | Team printer management; upload already-sliced 3MF | Primary development on [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) | [`v0.1.3-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.3-beta) | [Beta release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) |
 | **Alpha · experimental workbench** | Team printing with an integrated model workbench and online slicing | Gradual workbench development on [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha release](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 
 Beta is the mainline for ongoing feature refinement. Its model workbench, geometry import, online slicing, 3D editing and shared model projects have been removed from the UI, APIs and runtime. Alpha retains those experimental features and will progress more slowly on its own branch. Both channels currently have prerelease status; their version numbers advance independently. Read the [full comparison and maintenance policy](CHANNELS.md) or the [Alpha → Beta migration guide](BETA_MIGRATION.md).
@@ -95,23 +95,23 @@ The NAS owns the live application and database and connects to the printer local
 
 ## Try it locally
 
-Download a platform archive and `SHA256SUMS` from [v0.1.2-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta), verify the checksum and extract to a new directory.
+Download a platform archive and `SHA256SUMS` from [v0.1.3-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta), verify the checksum and extract to a new directory.
 
 Windows PowerShell:
 
 ```powershell
-Get-FileHash .\LayerHub-0.1.2-beta-windows-amd64.zip -Algorithm SHA256
-Expand-Archive .\LayerHub-0.1.2-beta-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.1.2-beta
+Get-FileHash .\LayerHub-0.1.3-beta-windows-amd64.zip -Algorithm SHA256
+Expand-Archive .\LayerHub-0.1.3-beta-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.1.3-beta
 .\start.cmd
 ```
 
 Linux:
 
 ```sh
-grep 'LayerHub-0.1.2-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.1.2-beta-linux-amd64.tar.gz
-cd LayerHub-0.1.2-beta
+grep 'LayerHub-0.1.3-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.3-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.3-beta
 sh start.sh
 ```
 

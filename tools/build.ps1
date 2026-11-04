@@ -9,12 +9,12 @@ try {
     $env:CGO_ENABLED='0'
     $env:GOARCH='amd64'
     $env:GOOS='linux'
-    & $goExecutable build -mod=vendor -trimpath -o (Join-Path $releaseRoot 'binaries/linux-amd64/layerhub') ./cmd/server
+    & $goExecutable build -mod=vendor -buildvcs=false -trimpath -o (Join-Path $releaseRoot 'binaries/linux-amd64/layerhub') ./cmd/server
     if ($LASTEXITCODE -ne 0) { throw 'Linux build failed' }
-    & $goExecutable build -mod=vendor -trimpath -o (Join-Path $releaseRoot 'binaries/linux-amd64/layerhub-mail-worker') ./cmd/mail-worker
+    & $goExecutable build -mod=vendor -buildvcs=false -trimpath -o (Join-Path $releaseRoot 'binaries/linux-amd64/layerhub-mail-worker') ./cmd/mail-worker
     if ($LASTEXITCODE -ne 0) { throw 'Mail worker build failed' }
     $env:GOOS='windows'
-    & $goExecutable build -mod=vendor -trimpath -o (Join-Path $releaseRoot 'binaries/windows-amd64/layerhub.exe') ./cmd/server
+    & $goExecutable build -mod=vendor -buildvcs=false -trimpath -o (Join-Path $releaseRoot 'binaries/windows-amd64/layerhub.exe') ./cmd/server
     if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
     python tools/make-source.py
     if ($LASTEXITCODE -ne 0) { throw 'Source offer generation failed' }

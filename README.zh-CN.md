@@ -4,20 +4,20 @@
 
 [English](README.md) · **简体中文**
 
-[![Beta 推荐使用](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta)
+[![Beta 推荐使用](https://img.shields.io/badge/Beta-recommended-5265e8)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta)
 [![Alpha 实验性工作台](https://img.shields.io/badge/Alpha-experimental_workbench-d48a21)](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha)
 
-[下载 Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta) · [下载 Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [版本区别](CHANNELS.md#简体中文) · [部署指南](01-部署指导-云服务器-NAS-打印机.md) · [文件要求](IMPORTING.md) · [验证记录](validation/README.md)
+[下载 Beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) · [下载 Alpha](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) · [版本区别](CHANNELS.md#简体中文) · [部署指南](01-部署指导-云服务器-NAS-打印机.md) · [文件要求](IMPORTING.md) · [验证记录](validation/README.md)
 
 LayerHub 是面向多人共用 3D 打印机的自部署网页应用。成员使用 **Bambu Studio 完成模型准备与切片**，再通过 LayerHub 分配设备、确认实际料卷、协调单机队列、查看进度并接收通知。
 
 **推荐组合：LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio)。** 在电脑上完成模型准备与切片，再将已切片 3MF 上传到 LayerHub，进行团队排队、设备控制和通知。
 
-## 最新源码进展（`main`）
+## v0.1.3-beta 更新
 
-新增中英文[图文使用指南](USAGE.zh-CN.md)，介绍 Studio 切片、导出、LayerHub 上传及立即打印/排队。近期源码同时补充后台持久化解析、设备 IP 修改、主题个性化、耗材删除保护、AMS 烘干状态与更完整的告警记录，以及“按打印机更新”材质和颜色；A1 温度显示调整为整数。详见[源码更新记录](CHANGELOG.md)。
+本版统一打包后台文件解析、更短的上传到打印流程、主题与字体设置、设备IP修改、AMS烘干状态及告警、耗材删除保护，以及按打印机校正材质和颜色。A1温度显示为整数。应用包与更新工具同步更新，并附带六张截图的中英文[图文指南](USAGE.zh-CN.md)，详见[发布说明](RELEASE_NOTES.md)。
 
-**源码与安装包有区别：** 本节内容新于现有 `v0.1.2-beta` 发布附件；上传 GitHub 源码不会自动升级 NAS 或替换旧安装包。X2D 外置料架/软 TPU 启动路径已经实现并完成离线验证，仍待真实打印验收。“按打印机更新”目前校正同一卷的记录，尚未实现实际换卷后的原卷卸载、新卷挂载流程。
+X2D外置料架/软TPU启动作为实验性路径收录，离线验证通过，仍待实机打印验收。“按打印机更新”校正同一卷的记录，不会自动卸载旧卷或识别替换料卷。发布或下载安装包不会自动升级现有NAS。
 
 ## v0.1.2-beta 更新
 
@@ -40,7 +40,7 @@ LayerHub 是面向多人共用 3D 打印机的自部署网页应用。成员使�
 
 | 版本 | 定位 | 后续维护 | 版本标签 | 下载 |
 |---|---|---|---|---|
-| **Beta · 推荐使用** | 团队打印管理，只上传已切片 3MF | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) 为主要功能完善方向 | [`v0.1.2-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.2-beta) | [Beta 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta) |
+| **Beta · 推荐使用** | 团队打印管理，只上传已切片 3MF | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main) 为主要功能完善方向 | [`v0.1.3-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.3-beta) | [Beta 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) |
 | **Alpha · 实验性工作台** | 团队打印管理，含内置模型工作台与在线切片 | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha) 保留工作台，缓慢推进 | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) | [Alpha 发布页](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 
 Beta 持续优先完善团队协作、队列、耗材、控制与通知，已移除模型工作台及相应编辑、几何导入、在线切片和共享模型工程代码。Alpha 保留这些实验功能，在独立分支继续逐步改进。两个版本目前都属于预发布，分别维护版本号。详见[版本区别与维护政策](CHANNELS.md#简体中文)；已有工作区的数据保留及切换步骤见 [Beta 迁移说明](BETA_MIGRATION.md)。
@@ -85,23 +85,23 @@ NAS 运行唯一的业务应用和 SQLite 数据库，在局域网中连接打�
 
 ## 本地试用
 
-从 [v0.1.2-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.2-beta) 下载平台包和 `SHA256SUMS`，校验后解压到新文件夹。
+从 [v0.1.3-beta](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) 下载平台包和 `SHA256SUMS`，校验后解压到新文件夹。
 
 Windows PowerShell：
 
 ```powershell
-Get-FileHash .\LayerHub-0.1.2-beta-windows-amd64.zip -Algorithm SHA256
-Expand-Archive .\LayerHub-0.1.2-beta-windows-amd64.zip -DestinationPath .
-Set-Location .\LayerHub-0.1.2-beta
+Get-FileHash .\LayerHub-0.1.3-beta-windows-amd64.zip -Algorithm SHA256
+Expand-Archive .\LayerHub-0.1.3-beta-windows-amd64.zip -DestinationPath .
+Set-Location .\LayerHub-0.1.3-beta
 .\start.cmd
 ```
 
 Linux：
 
 ```sh
-grep 'LayerHub-0.1.2-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
-tar -xzf LayerHub-0.1.2-beta-linux-amd64.tar.gz
-cd LayerHub-0.1.2-beta
+grep 'LayerHub-0.1.3-beta-linux-amd64.tar.gz$' SHA256SUMS | sha256sum -c -
+tar -xzf LayerHub-0.1.3-beta-linux-amd64.tar.gz
+cd LayerHub-0.1.3-beta
 sh start.sh
 ```
 
