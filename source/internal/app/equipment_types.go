@@ -11,25 +11,30 @@ import (
 
 // Device readings are separate from the manually maintained inventory ledger.
 type ExtruderReading struct {
-	ID               int      `json:"id"`
-	Name             string   `json:"name"`
-	Temperature      *int     `json:"temperature"`
-	TemperatureExact *float64 `json:"temperatureExact,omitempty"`
-	Target           *int     `json:"target"`
-	CurrentSource    string   `json:"currentSource"`
-	TargetSource     string   `json:"targetSource"`
+	Updated          time.Time `json:"updated"`
+	HasFilament      *bool     `json:"hasFilament,omitempty"`
+	ID               int       `json:"id"`
+	Name             string    `json:"name"`
+	Temperature      *int      `json:"temperature"`
+	TemperatureExact *float64  `json:"temperatureExact,omitempty"`
+	Target           *int      `json:"target"`
+	CurrentSource    string    `json:"currentSource"`
+	TargetSource     string    `json:"targetSource"`
 }
 type FeedReading struct {
-	Kind          string    `json:"kind"`
-	Slot          string    `json:"slot"`
-	Label         string    `json:"label"`
-	Material      string    `json:"material"`
-	ProfileID     string    `json:"profileId,omitempty"`
-	Color         string    `json:"color"`
-	Remaining     *int      `json:"remaining"`
-	RemainingUnit string    `json:"remainingUnit"`
-	Present       *bool     `json:"present"`
-	Updated       time.Time `json:"updated"`
+	NozzleMin      *int      `json:"nozzleMin,omitempty"`
+	NozzleMax      *int      `json:"nozzleMax,omitempty"`
+	ControlUpdated time.Time `json:"controlUpdated"`
+	Kind           string    `json:"kind"`
+	Slot           string    `json:"slot"`
+	Label          string    `json:"label"`
+	Material       string    `json:"material"`
+	ProfileID      string    `json:"profileId,omitempty"`
+	Color          string    `json:"color"`
+	Remaining      *int      `json:"remaining"`
+	RemainingUnit  string    `json:"remainingUnit"`
+	Present        *bool     `json:"present"`
+	Updated        time.Time `json:"updated"`
 }
 
 type AMSUnitReading struct {
@@ -73,6 +78,7 @@ type SettingReading struct {
 	Updated  time.Time `json:"updated"`
 }
 type Equipment struct {
+	Filament     FilamentReading   `json:"filament"`
 	BedExact     *float64          `json:"bedExact,omitempty"`
 	Motion       MotionReading     `json:"motion"`
 	ControlIssue string            `json:"controlIssue,omitempty"`

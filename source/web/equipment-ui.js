@@ -6,11 +6,27 @@ const EquipmentUI=(()=>{
  const speedNames={1:I18n.t('静音 · 50%'),2:I18n.t('标准 · 100%'),3:I18n.t('运动 · 124%'),4:I18n.t('狂暴 · 166%')};
  const label=a=>a.startsWith('set:')?I18n.t('设置')+(names[a.slice(4)]||a.slice(4)):a;
  const value=s=>s.key==='speed'?(speedNames[s.value]||s.value):s.key.startsWith('chamber_light')?(s.value?I18n.t('开启'):I18n.t('关闭')):s.value+' '+s.unit;
+ // Bambu Studio DevFilaSystem: info bits 4..7, dry_time in minutes.
+ function dryerUnits(p){
+  const stamps=(p?.equipment?.amsUnits||[]);return (Array.isArray(p?.ams?.ams)?p.ams.ams:[]).map(u=>{
+   const raw=String(u.info||'');if(!/^[0-9a-f]{1,8}$/i.test(raw))return null;
+   const n=Number.parseInt(raw,16),kind=n&15,status=(n>>>4)&15;if(![3,4].includes(kind))return null;
+   const stamp=stamps.find(x=>String(x.id)===String(u.id))?.updated;
+   return {id:u.id,status,remaining:Number.isInteger(u.dry_time)&&u.dry_time>=0?u.dry_time:null,temp:u.temp,target:u.dry_setting?.dry_temperature,updated:stamp};
+  }).filter(Boolean);
+ }
+ function dryingReason(p){
+  if(!Remote.printerFresh(p))return '';
+  const active=dryerUnits(p).filter(u=>[1,2,3,4,5,6,7].includes(u.status));
+  return active.length?I18n.t('AMS 烘干流程进行中，暂不可启动打印；结束后请核对供料状态。'):'';
+ }
+ function decorateDrying(snapshot){for(const p of snapshot.printers||[]){const reason=dryingReason(p);if(reason&&p.enabled&&p.connected&&p.state==='idle'){p.state='drying';p.warning=[p.warning,reason].filter(Boolean).join(' · ')}}}
  function canSet(p,j){return (!['printing','pause'].includes(p.state)||['printing','paused'].includes(j?.state))&&Remote.printerFresh(p)&&!Remote.deviceBlocked(p.id)&&p.enabled&&!data.capabilities?.restorePending&&(data.user?.admin||j&&canManageJob(j)&&['printing','paused'].includes(j.state))}
+ function temperatureDisplay(p,n){return n===null||n===undefined||!Number.isFinite(Number(n))?'—':p.modelId==='a1'?Math.round(Number(n)):n}
  function render(p,j,records,busy,root=$('#controlRoot')){
   if(!root)return;const eq=p.equipment||{},slots=Workspace.slots(p),source=id=>slots.find(s=>s.id===id)?.label||id||I18n.t('未上报');
   const temperatures=$('.control-temperatures',root),readings=eq.extruders||[];
-  temperatures.innerHTML=(readings.length?readings:[{name:I18n.t('喷嘴状态待上报'),temperature:null,target:null}]).map(x=>`<div>${icon('temperature')}<span>${esc(I18n.system(x.name))}<strong>${p.connected?(x.temperatureExact??x.temperature??'—'):'—'}<small> / ${p.connected?(x.target??'—'):'—'} °C</small></strong></span></div>`).join('')+I18n.html`<div>${icon('layers')}<span>热床<strong>${p.connected?(eq.bedExact??eq.bed??'—'):'—'}<small> / ${p.connected?(eq.bedTarget??'—'):'—'} °C</small></strong></span><i>HEATBED</i></div>`;
+  temperatures.innerHTML=(readings.length?readings:[{name:I18n.t('喷嘴状态待上报'),temperature:null,target:null}]).map(x=>`<div>${icon('temperature')}<span>${esc(I18n.system(x.name))}<strong>${p.connected?temperatureDisplay(p,x.temperatureExact??x.temperature):'—'}<small> / ${p.connected?(x.target??'—'):'—'} °C</small></strong></span></div>`).join('')+I18n.html`<div>${icon('layers')}<span>热床<strong>${p.connected?temperatureDisplay(p,eq.bedExact??eq.bed):'—'}<small> / ${p.connected?(eq.bedTarget??'—'):'—'} °C</small></strong></span><i>HEATBED</i></div>`;
   $('.control-readonly',root).textContent=readings.length>1?I18n.t('各喷嘴独立读数 · 编号沿用设备上报'):I18n.t('当前温度 / 目标温度 · 缺失数据显示 —');
   if(readings.length){const paths=document.createElement('div');paths.className='equipment-paths';paths.innerHTML=readings.map(x=>`<div><span>${esc(I18n.system(x.name))}</span><strong>${esc(source(x.currentSource))}</strong>${x.targetSource&&x.targetSource!==x.currentSource?I18n.html`<small>目标：${esc(source(x.targetSource))}</small>`:''}</div>`).join('')+(eq.switching?I18n.html('<p>机器正在切换喷嘴或供料</p>'):'');$('.control-visual',root).append(paths)}
   const pending=records.some(r=>r.state==='pending'),uncertain=records.some(r=>r.state==='uncertain'),disabled=!canSet(p,j)||pending||uncertain||busy||pendingSettings.has(p.id);
@@ -24,7 +40,7 @@ const EquipmentUI=(()=>{
    if(kind==='thermal'){
     const extruder=s.key.startsWith('nozzle:')?readings.find(x=>x.id===Number(s.key.split(':')[1])):readings[0];
     const actual=Remote.printerFresh(p)?(s.key==='bed'?(eq.bedExact??eq.bed):s.readonly?s.observed:(extruder?.temperatureExact??extruder?.temperature)):null;
-    body=I18n.html`<span>${esc(label.replace(I18n.t('温度'),''))}</span><strong class="setting-temperature">${actual??'—'}<small>°C</small></strong><span class="setting-target">目标 <b>${s.value??'—'}</b> °C <i aria-hidden="true">↗</i></span>`;
+    body=I18n.html`<span>${esc(label.replace(I18n.t('温度'),''))}</span><strong class="setting-temperature">${temperatureDisplay(p,actual)}<small>°C</small></strong><span class="setting-target">目标 <b>${s.value??'—'}</b> °C <i aria-hidden="true">↗</i></span>`;
    }else if(kind==='fans'){
     body=`<span>${esc(label)}</span><strong>${s.value}<small>%</small></strong><span class="setting-meter" aria-hidden="true"><i style="width:${Math.max(0,Math.min(100,s.value))}%"></i></span><small class="setting-action">${blocked?I18n.t('当前读数'):I18n.t('调整 →')}</small>`;
    }else{
@@ -48,9 +64,9 @@ const EquipmentUI=(()=>{
   if(root.querySelector('#resolveSettings'))root.querySelector('#resolveSettings').onclick=()=>confirmAction(I18n.t('核对设备设置'),I18n.t('请先检查机器的实际目标温度、灯光或风扇状态，确认后解除未确认设置的限制。'),async()=>{try{await Remote.request('/api/printers/settings',{printerId:p.id,key:'resolve_settings',value:0});PrinterControl.open(p.id);toast(I18n.t('设备设置核对已记录'))}catch(e){toast(I18n.system(e.message))}},{printerId:p.id,review:true});
   $$('.control-spool',root).forEach(card=>{const index=[...card.parentElement.children].indexOf(card),slot=slots[index];if(!slot)return;const feed=(eq.feeds||[]).find(f=>f.slot===slot.id);if(feed){const el=document.createElement('p');el.className='equipment-feed';el.textContent=I18n.t('机器上报：')+(feed.material||I18n.t('材质未知'))+(feed.remaining!==null&&feed.remaining!==undefined?' · '+feed.remaining+feed.remainingUnit:I18n.t(' · 余量未知'));if(/^#?[0-9a-f]{6}([0-9a-f]{2})?$/i.test(feed.color||'')){const dot=document.createElement('i');dot.className='equipment-feed-color';dot.style.backgroundColor='#'+feed.color.replace('#','').slice(0,6);dot.title=I18n.t('机器上报颜色');el.prepend(dot)}card.append(el)}});
   const live=document.createElement('section');live.className='equipment-live-supply';
-  const units=(eq.amsUnits||[]),feeds=(eq.feeds||[]),currentSources=readings.map(x=>x.currentSource).filter(Boolean);
-  const feedCard=slot=>{const f=feeds.find(x=>x.slot===slot.id),empty=f?.present===false,color=f&&!empty?colorHex(f.color):null,material=empty?I18n.t('未装载'):f?.material||I18n.t('材质未上报'),remaining=f&&!empty&&f.remaining!==null&&f.remaining!==undefined?I18n.t('设备估算 ')+f.remaining+(f.remainingUnit||''):I18n.t('余量未上报');return `<article class="machine-feed ${empty?'empty':''} ${currentSources.includes(slot.id)?'active':''}" data-machine-slot="${esc(slot.id)}"><div class="machine-feed-head"><span>${esc(I18n.system(slot.label))}</span>${currentSources.includes(slot.id)?I18n.html('<b>当前料源</b>'):''}</div><div class="machine-feed-material"><i class="machine-feed-swatch ${color?'':'unknown'}" ${color?'style="background:'+color+'"':''}></i><strong>${esc(f?material:I18n.t('未上报'))}</strong></div><small>${esc(empty?I18n.t('机器上报为空位置'):f?remaining:I18n.t('等待机器提供装载信息'))}</small>${f&&!empty?MachineMaterials.action(p,f):''}</article>`};
-  live.innerHTML=I18n.html`<div class="control-section-heading"><div><span class="control-section-label">机器供料状态</span><small>${p.connected?I18n.t('设备实时上报 · 与库存登记分别记录'):I18n.t('设备离线 · 以下保留最后读数')}</small></div><span class="equipment-tag">${Remote.printerFresh(p)?I18n.t('遥测已连接'):I18n.t('遥测待更新')}</span></div>${units.length?`<div class="ams-unit-strip">${units.map(u=>I18n.html`<div><strong>${esc(u.kind)} · 单元 ${esc(u.id)}</strong><span>${u.temperature!==null&&u.temperature!==undefined?esc(u.temperature)+'°C':I18n.t('温度未上报')}${u.humidityIndex!==null&&u.humidityIndex!==undefined?I18n.t(' · 湿度等级 ')+esc(u.humidityIndex):I18n.t(' · 湿度未上报')}</span></div>`).join('')}</div>`:''}<div class="machine-feed-grid">${slots.filter(s=>!s.id.startsWith('external')).map(feedCard).join('')}</div><div class="machine-external-heading">外挂供料位置</div><div class="machine-feed-grid external">${slots.filter(s=>s.id.startsWith('external')).map(feedCard).join('')}</div><p class="machine-feed-note">百分比是机器估算值；库存克数和料卷归属仍以耗材库登记为准。</p>`;
+  const units=(eq.amsUnits||[]),feeds=(eq.feeds||[]),currentSources=readings.filter(x=>x.hasFilament!==false).map(x=>x.currentSource).filter(Boolean);
+  const feedCard=slot=>{const f=feeds.find(x=>x.slot===slot.id),empty=f?.present===false,color=f&&!empty?colorHex(f.color):null,material=empty?I18n.t('未装载'):f?.material||I18n.t('材质未上报'),remaining=f&&!empty&&f.remaining!==null&&f.remaining!==undefined?I18n.t('设备估算 ')+f.remaining+(f.remainingUnit||''):I18n.t('余量未上报');return `<article class="machine-feed ${empty?'empty':''} ${currentSources.includes(slot.id)?'active':''}" data-machine-slot="${esc(slot.id)}"><div class="machine-feed-head"><span>${esc(I18n.system(slot.label))}</span>${currentSources.includes(slot.id)?I18n.html('<b>当前料源</b>'):''}</div><div class="machine-feed-material"><i class="machine-feed-swatch ${color?'':'unknown'}" ${color?'style="background:'+color+'"':''}></i><strong>${esc(f?material:I18n.t('未上报'))}</strong></div><small>${esc(empty?I18n.t('机器上报为空位置'):f?remaining:I18n.t('等待机器提供装载信息'))}</small>${MachineMaterials.notice(p,f)}${f&&!empty?MachineMaterials.action(p,f):''}</article>`};
+  live.innerHTML=I18n.html`<div class="control-section-heading"><div><span class="control-section-label">机器供料状态</span><small>${p.connected?I18n.t('设备实时上报 · 与库存登记分别记录'):I18n.t('设备离线 · 以下保留最后读数')}</small></div><span class="equipment-tag">${Remote.printerFresh(p)?I18n.t('遥测已连接'):I18n.t('遥测待更新')}</span></div>${dryerUnits(p).filter(u=>u.status!==0).map(u=>I18n.html`<div class="detail-notice warning" data-dryer-status><strong>AMS 烘干 · 单元 ${esc(u.id)}</strong><p>${esc(dryingReason(p))}</p><span>${esc(u.temp??'—')} °C / ${esc(u.target??'—')} °C · ${u.remaining===null?I18n.t('剩余时间未上报'):I18n.msg`剩余 ${u.remaining} 分钟`}</span></div>`).join('')}${units.length?`<div class="ams-unit-strip">${units.map(u=>I18n.html`<div><strong>${esc(u.kind)} · 单元 ${esc(u.id)}</strong><span>${u.temperature!==null&&u.temperature!==undefined?esc(u.temperature)+'°C':I18n.t('温度未上报')}${u.humidityIndex!==null&&u.humidityIndex!==undefined?I18n.t(' · 湿度等级 ')+esc(u.humidityIndex):I18n.t(' · 湿度未上报')}</span></div>`).join('')}</div>`:''}<div class="machine-feed-grid">${slots.filter(s=>!s.id.startsWith('external')).map(feedCard).join('')}</div><div class="machine-external-heading">外挂供料位置</div><div class="machine-feed-grid external">${slots.filter(s=>s.id.startsWith('external')).map(feedCard).join('')}</div><p class="machine-feed-note">百分比是机器估算值；库存克数和料卷归属仍以耗材库登记为准。</p>`;
   $('.control-supply',root).before(live);
   MachineMaterials.bind(live);
   if(editor?.printerId===p.id)editor.sync(p,disabled);
@@ -67,13 +83,14 @@ const EquipmentUI=(()=>{
  function edit(p,s){
   if(editor)editor.close();
   const isFan=s.key.startsWith('fan:')||s.key.endsWith('_fan'),isSpeed=s.key==='speed',unit=isFan?'%':s.unit||'°C';
-  const min=Number.isFinite(s.min)?s.min:0,max=Number.isFinite(s.max)?s.max:100;
+  const step=isFan?10:1,min=Math.ceil((Number.isFinite(s.min)?s.min:0)/step)*step,max=Math.floor((Number.isFinite(s.max)?s.max:100)/step)*step;
+  const initial=Math.max(min,Math.min(max,Math.floor(s.value/step)*step));
   const returnScroll=$('#modal').scrollTop,d=document.createElement('dialog');
   d.id='equipmentDialog';d.className='device-setting-dialog '+(isFan?'fan-editor':isSpeed?'speed-editor':'temperature-editor');
   const title=names[s.key]||I18n.system(s.label);
-  const presets=(isFan?[0,25,50,75,100]:s.key==='bed'?[0,40,50,60]:[0,150,200,220]).filter(v=>v>=min&&v<=max);
-  const numeric=`<input id="settingValue" name="value" type="number" inputmode="numeric" min="${min}" max="${max}" step="1" required value="${s.value}" aria-label="${isFan?I18n.t('风扇速度'):I18n.t('目标温度')}"><span>${esc(unit)}</span>`;
-  d.innerHTML=I18n.html`<div class="setting-editor-heading"><div><span class="setting-editor-kicker">${isFan?'FAN CONTROL':isSpeed?'PRINT SPEED':'TEMPERATURE'}</span><h2>${esc(title)}</h2><p>${esc(p.name)}</p></div><button type="button" class="icon-button" data-setting-close aria-label="返回打印机控制台">${icon('close')}</button></div><form id="equipmentForm" data-printer-id="${p.id}"><div class="setting-live-summary"><span>${isFan||isSpeed?I18n.t('当前设备上报'):I18n.t('当前温度')} <strong data-live-actual>—</strong></span><span>设备目标 <b data-current-target>${esc(value(s))}</b></span></div>${isSpeed?`<div class="speed-options">${Object.entries(speedNames).map(([k,n])=>`<label><input type="radio" name="value" value="${k}" ${+k===s.value?'checked':''}><span>${esc(n)}</span></label>`).join('')}</div>`:isFan?I18n.html`<div class="fan-dial" style="--fan-fill:${s.value}%"><div class="setting-number">${numeric}</div><span>风扇速度</span></div><label class="setting-range-label" for="settingRange">拖动调整</label><input id="settingRange" class="setting-editor-range" type="range" min="${min}" max="${max}" value="${s.value}" step="1" aria-label="风扇速度滑杆"><div class="setting-range-bounds"><span>${min}%</span><span>${max}%</span></div>`:I18n.html`<label class="setting-target-label" for="settingValue">目标温度</label><div class="temperature-stepper"><button type="button" data-temperature-step="-5" aria-label="降低 5°C">−</button><div class="setting-number">${numeric}</div><button type="button" data-temperature-step="5" aria-label="升高 5°C">+</button></div><p class="setting-temperature-hint" data-temperature-hint></p>`}${!isSpeed?`<div class="setting-presets" aria-label="${isFan?I18n.t('常用风速'):I18n.t('快捷温度')}">${presets.map(n=>`<button type="button" data-setting-preset="${n}">${n===0?(isFan?I18n.t('关闭'):I18n.t('关闭加热')):n+unit}</button>`).join('')}</div>`:''}<p class="setting-editor-help">${isSpeed?I18n.t('选择档位后确认应用。'):I18n.t('选值不会操作机器，确认后发送指令。')}</p><p class="form-error" id="equipmentError" role="status"></p><div class="setting-editor-actions"><button type="button" class="button" id="equipmentBack">取消</button><button class="button primary" type="submit" form="equipmentForm" id="applyEquipment">确认应用</button></div></form>`;
+  const presets=(isFan?[0,20,50,80,100]:s.key==='bed'?[0,40,50,60]:[0,150,200,220]).filter(v=>v>=min&&v<=max);
+  const numeric=`<input id="settingValue" name="value" type="number" inputmode="numeric" min="${min}" max="${max}" step="${step}" required value="${initial}" aria-label="${isFan?I18n.t('风扇速度'):I18n.t('目标温度')}"><span>${esc(unit)}</span>`;
+  d.innerHTML=I18n.html`<div class="setting-editor-heading"><div><span class="setting-editor-kicker">${isFan?'FAN CONTROL':isSpeed?'PRINT SPEED':'TEMPERATURE'}</span><h2>${esc(title)}</h2><p>${esc(p.name)}</p></div><button type="button" class="icon-button" data-setting-close aria-label="返回打印机控制台">${icon('close')}</button></div><form id="equipmentForm" data-printer-id="${p.id}"><div class="setting-live-summary"><span>${isFan||isSpeed?I18n.t('当前设备上报'):I18n.t('当前温度')} <strong data-live-actual>—</strong></span><span>设备目标 <b data-current-target>${esc(value(s))}</b></span></div>${isSpeed?`<div class="speed-options">${Object.entries(speedNames).map(([k,n])=>`<label><input type="radio" name="value" value="${k}" ${+k===s.value?'checked':''}><span>${esc(n)}</span></label>`).join('')}</div>`:isFan?I18n.html`<div class="fan-dial" style="--fan-fill:${s.value}%"><div class="setting-number">${numeric}</div><span>风扇速度</span></div><label class="setting-range-label" for="settingRange">拖动调整</label><input id="settingRange" class="setting-editor-range" type="range" min="${min}" max="${max}" value="${initial}" step="${step}" aria-label="风扇速度滑杆"><div class="setting-range-bounds"><span>${min}%</span><span>${max}%</span></div>`:I18n.html`<label class="setting-target-label" for="settingValue">目标温度</label><div class="temperature-stepper"><button type="button" data-temperature-step="-5" aria-label="降低 5°C">−</button><div class="setting-number">${numeric}</div><button type="button" data-temperature-step="5" aria-label="升高 5°C">+</button></div><p class="setting-temperature-hint" data-temperature-hint></p>`}${!isSpeed?`<div class="setting-presets" aria-label="${isFan?I18n.t('常用风速'):I18n.t('快捷温度')}">${presets.map(n=>`<button type="button" data-setting-preset="${n}">${n===0?(isFan?I18n.t('关闭'):I18n.t('关闭加热')):n+unit}</button>`).join('')}</div>`:''}<p class="setting-editor-help">${isSpeed?I18n.t('选择档位后确认应用。'):isFan?I18n.t('风速按 10% 一档调整；选择后确认应用。'):I18n.t('选值不会操作机器，确认后发送指令。')}</p><p class="form-error" id="equipmentError" role="status"></p><div class="setting-editor-actions"><button type="button" class="button" id="equipmentBack">取消</button><button class="button primary" type="submit" form="equipmentForm" id="applyEquipment">确认应用</button></div></form>`;
   document.body.append(d);
   const form=d.querySelector('form'),input=d.querySelector('#settingValue'),range=d.querySelector('#settingRange'),apply=d.querySelector('#applyEquipment');
   let sending=false,contextBlocked=false,observer;
@@ -81,7 +98,7 @@ const EquipmentUI=(()=>{
   const ready=()=>Remote.ready()&&Remote.printerFresh(data.printers.find(x=>x.id===p.id))&&!Remote.deviceBlocked(p.id);
   const chosen=()=>isSpeed?Number(new FormData(form).get('value')):input.value===''?NaN:Number(input.value);
   function update(){
-   const n=chosen(),valid=Number.isInteger(n)&&n>=min&&n<=max;
+   const n=chosen(),valid=Number.isInteger(n)&&n>=min&&n<=max&&n%step===0;
    apply.disabled=sending||contextBlocked||!ready()||!valid;
    apply.textContent=sending?I18n.t('正在提交…'):!valid?I18n.t('确认应用'):isSpeed?I18n.t('应用 ')+(speedNames[n]||n):n===0?(isFan?I18n.t('关闭风扇'):I18n.t('关闭加热')):I18n.t('应用 ')+n+unit;
    if(range&&valid)range.value=String(n);
@@ -98,7 +115,7 @@ const EquipmentUI=(()=>{
    const live=(eq.settings||[]).find(x=>x.key===s.key);
    const stamp=Date.parse(live?.updated);
    contextBlocked=blocked||!live||!Number.isFinite(stamp)||Date.now()-stamp>90000||eq.controlIssue==='authorization_required'||isSpeed&&!['printing','pause'].includes(printer.state);
-   d.querySelector('[data-live-actual]').textContent=Remote.printerFresh(printer)?isFan||isSpeed?(live?value(live):'—'):(reading??'—')+'°C':'—';
+   d.querySelector('[data-live-actual]').textContent=Remote.printerFresh(printer)?isFan||isSpeed?(live?value(live):'—'):temperatureDisplay(printer,reading)+'°C':'—';
    d.querySelector('[data-current-target]').textContent=live?value(live):'—';update();
   }
   editor={dialog:d,printerId:p.id,close,sync};
@@ -109,7 +126,7 @@ const EquipmentUI=(()=>{
   if(input)input.oninput=update;if(range)range.oninput=()=>{input.value=range.value;update()};form.onchange=update;
   form.onsubmit=async event=>{
    event.preventDefault();if(sending||contextBlocked||!ready()||!form.reportValidity())return;
-   const n=chosen();if(!Number.isInteger(n)||n<min||n>max)return;
+   const n=chosen();if(!Number.isInteger(n)||n<min||n>max||n%step!==0)return;
    sending=true;form.dataset.submitting='true';pendingSettings.set(p.id,{key:s.key,value:n,phase:'sending'});update();PrinterControl.redraw();
    try{await Remote.request('/api/printers/settings',{printerId:p.id,key:s.key,value:n});pendingSettings.get(p.id).phase='waiting';if(current())close();toast(I18n.t('已提交设置，等待设备确认'));await PrinterControl.refresh({urgent:true})}
    catch(error){if(error.unconfirmed){if(current())close();PrinterControl.redraw();toast(I18n.system(error.message))}else if(current())d.querySelector('#equipmentError').textContent=I18n.system(error.message)}
@@ -120,10 +137,10 @@ const EquipmentUI=(()=>{
   d.showModal();sync(p,false);Remote.paintConnection();
  }
  function platePreview(j,plate){const grams=plate.filaments.reduce((n,f)=>n+f.grams,0);return I18n.html`<div class="project-preview">${plate.thumbnail?I18n.html`<img src="/api/jobs/thumbnail?jobId=${j.id}&plate=${plate.id}" alt="第 ${plate.id} 盘切片预览" onerror="this.hidden=true">`:I18n.html('<span class="project-no-preview">此文件没有缩略图</span>')}<div><small>第 ${plate.id} 盘 · 切片估算</small><strong>${plate.seconds?Math.ceil(plate.seconds/60)+I18n.t(' 分钟'):I18n.t('时间未提供')}</strong><span>耗材约 ${grams} g${plate.multiNozzle?I18n.t(' · 多喷嘴待适配'):''}</span></div></div>`}
- function temperatureSummary(p){if(!p.connected)return '—';const eq=p.equipment,values=(eq?.extruders||[]).map(x=>x.temperature===null?'—':(x.temperatureExact??x.temperature)+'°');return (values.length?values.join(' · '):'—')+' / '+(eq?.bed??'—')+'°C'}
+ function temperatureSummary(p){if(!p.connected)return '—';const eq=p.equipment,values=(eq?.extruders||[]).map(x=>temperatureDisplay(p,x.temperatureExact??x.temperature)+'°');return (values.length?values.join(' · '):'—')+' / '+temperatureDisplay(p,p.modelId==='a1'?(eq?.bedExact??eq?.bed):eq?.bed)+'°C'}
  const colorHex=v=>/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v||'')?'#'+v.replace('#','').slice(0,6).toLowerCase():null;
- function filamentChoices(j,p,f,ams,selected,grams){
-  const original=colorHex(f.color),candidates=data.spools.filter(s=>Workspace.visible(s,data)&&s.mount?.printerId===p?.id&&s.state==='available'&&(ams?['1','2','3','4'].includes(s.mount.slot):s.mount.slot==='external')&&s.material.toLowerCase()===f.material.toLowerCase());
+ function filamentChoices(j,p,f,ams,selected,grams,plate){
+  const original=colorHex(f.color),candidates=data.spools.filter(s=>Workspace.visible(s,data)&&s.mount?.printerId===p?.id&&s.state==='available'&&(ams?['1','2','3','4'].includes(s.mount.slot):s.mount.slot===PrintPrepare.externalSlot(p,plate))&&s.material.toLowerCase()===f.material.toLowerCase());
   candidates.sort((a,b)=>Number(colorHex(b.color)===original)-Number(colorHex(a.color)===original));
   const sameStock=data.spools.filter(s=>Workspace.visible(s,data)&&s.material.toLowerCase()===f.material.toLowerCase()&&s.state==='available'&&Workspace.available(data,s,j.id)>=f.grams);
   const actual=[...new Set((p?.equipment?.feeds||[]).filter(x=>x.present!==false&&x.material&&x.material!==I18n.t('个人耗材')).map(x=>x.material))];
@@ -133,6 +150,6 @@ const EquipmentUI=(()=>{
  function bindFilamentChoices(plate){
   for(const f of plate.filaments){const radios=$$(`input[name="spool-${f.index}"]`),summary=$(`[data-color-summary="${f.index}"]`);const update=()=>{const selected=radios.find(r=>r.checked&&!r.disabled),sp=selected&&spoolById(selected.value);if(!sp){summary.textContent=I18n.t('请选择一卷耗材的颜色');summary.classList.remove('changed');return}const different=colorHex(f.color)&&colorHex(sp.color)!==colorHex(f.color);summary.textContent=I18n.msg`将使用：${sp.colorName} · ${sp.material}${different?I18n.t('（与文件原色不同）'):''}`;summary.classList.toggle('changed',!!different)};radios.forEach(r=>r.onchange=update);update()}
  }
- return {render,label,pending:id=>pendingSettings.has(id),platePreview,temperatureSummary,filamentChoices,bindFilamentChoices};
+ return {dryerUnits,dryingReason,decorateDrying,render,label,pending:id=>pendingSettings.has(id),platePreview,temperatureSummary,filamentChoices,bindFilamentChoices};
 })();
 

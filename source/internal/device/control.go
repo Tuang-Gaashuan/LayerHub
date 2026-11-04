@@ -58,6 +58,10 @@ func printPayload(r app.PrintRequest) map[string]any {
 		modern[i] = map[string]int{"ams_id": 255, "slot_id": 255}
 	}
 	for _, v := range o.Mapping {
+		if !o.UseAMS && (r.ExternalSource == 254 || r.ExternalSource == 255) {
+			// Virtual trays stay -1 in the flat map; the modern map carries the route.
+			modern[v.Filament] = map[string]int{"ams_id": r.ExternalSource, "slot_id": 0}
+		}
 		if o.UseAMS {
 			legacy[v.Filament] = v.AMSID*4 + v.SlotID
 			modern[v.Filament] = map[string]int{"ams_id": v.AMSID, "slot_id": v.SlotID}

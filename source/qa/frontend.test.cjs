@@ -8,7 +8,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const {JSDOM}=require('./frontend-deps/node_modules/jsdom');
 const root=path.resolve(__dirname,'..');
-const read=name=>fs.readFileSync(path.join(root,'web',name),'utf8');
+const read=name=>fs.readFileSync(path.join(root,'web',name.split('?')[0]),'utf8');
 const testLocale={t:v=>v,system:v=>v,language:()=>"zh-CN",locale:()=>"zh-CN",html:(s,...v)=>typeof s==="string"?s:s.map((p,i)=>p+(i<v.length?v[i]:"")).join(""),msg:(s,...v)=>s.map((p,i)=>p+(i<v.length?v[i]:"")).join("")};
 async function motionApp(t,{mask=7,member=false}={}){
  const a=await app(t);const p=a.state.snapshot.printers[0];p.modelId='x2d';p.rawState='IDLE';p.state='idle';p.equipment.motion={nativeHome:true,nativeJog:true,homeMask:mask,homeAt:new Date().toISOString(),capabilitiesAt:new Date().toISOString()};a.state.snapshot.jobs=[];a.state.snapshot.user.admin=!member;
@@ -27,8 +27,8 @@ test('missing completed job stays visible across refresh and material reconcilia
  f.elements.task.value='job-16';const input=f.querySelector('[data-use]');input.value='12.125';a.state.failWrite=true;submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);const post=writes(a)[0];assert.equal(post.url,'/api/printers/orphans/settle');assert.equal(JSON.parse(post.options.body).uses[input.dataset.use],12.125);submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);assert.match(a.$('#orphanSettleError').textContent,/不要重复提交/);
 });
 
-test('A1 controls show decimal temperatures and describe camera source limits',async t=>{
- const a=await app(t),p=a.state.snapshot.printers[0];p.modelId='a1';p.equipment.extruders[0].temperatureExact=78.03;p.equipment.bedExact=52.59;p.equipment.settings=p.equipment.settings.filter(s=>!s.key.startsWith('chamber_light'));await a.Remote.refresh();a.PrinterControl.open(1);await settle();assert.match(a.$('.equipment-panel').textContent,/78.03/);assert.match(a.$('.equipment-panel').textContent,/52.59/);assert.equal(a.$('[data-equipment="chamber_light"]'),null);assert.match(a.$('[data-camera-hint]').textContent,/低帧率/);assert.doesNotMatch(a.$('[data-camera-mode]').textContent,/8 帧|2 帧/);assert.equal(writes(a).length,0);
+test('A1 controls round temperature display without changing telemetry and describe camera source limits',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];p.modelId='a1';p.equipment.extruders[0].temperatureExact=78.03;p.equipment.bedExact=52.59;p.equipment.settings=p.equipment.settings.filter(s=>!s.key.startsWith('chamber_light'));await a.Remote.refresh();a.PrinterControl.open(1);await settle();assert.match(a.$('[data-equipment="bed"] .setting-temperature').textContent,/53/);assert.doesNotMatch(a.$('.equipment-panel').textContent,/78\.03|52\.59/);assert.match(a.EquipmentUI.temperatureSummary(a.w.testing.data.printers[0]),/78°.*53°C/);a.$('[data-equipment="bed"]').click();assert.equal(a.$('[data-live-actual]').textContent,'53°C');assert.equal(a.w.testing.data.printers[0].equipment.bedExact,52.59);assert.equal(a.w.testing.data.printers[0].equipment.extruders[0].temperatureExact,78.03);assert.equal(a.$('[data-equipment="chamber_light"]'),null);assert.match(a.$('[data-camera-hint]').textContent,/低帧率/);assert.doesNotMatch(a.$('[data-camera-mode]').textContent,/8 帧|2 帧/);assert.equal(writes(a).length,0);
 });
 test('orphan recovery requires exact task identity and explicit review without creating jobs',async t=>{
  const a=await app(t),p=a.state.snapshot.printers[0];a.state.snapshot.jobs=[];p.file='job-16';p.rawState='RUNNING';p.state='printing';a.state.commands=[{id:83,jobId:16,action:'start',state:'uncertain',user:'Admin',created:Date.now(),message:'启动结果未确认'}];await a.Remote.refresh();a.PrinterControl.open(1);await settle();a.$('[data-orphan-id="83"]').click();const form=a.$('#orphanReview'),button=a.$('[form="orphanReview"]');assert.equal(button.disabled,true);form.elements.confirmTask.value='job-99';change(a.w,form.elements.confirmed,true);assert.equal(button.disabled,true);form.elements.confirmTask.value='job-16';form.dispatchEvent(new a.w.Event('input',{bubbles:true}));assert.equal(button.disabled,false);submitForm(a.w,form);await settle();assert.equal(writes(a).length,1);const post=writes(a)[0];assert.equal(post.url,'/api/printers/orphans/review');assert.equal(JSON.parse(post.options.body).confirmTask,'job-16');assert.equal(a.state.snapshot.jobs.length,0);
@@ -41,6 +41,36 @@ test('motion tab preserves selection and clearance on telemetry refresh; one cli
 test('motion requires all-axis home, admin access, and a separate home confirmation',async t=>{
  const a=await motionApp(t,{mask:6});change(a.w,a.$('[data-motion-clear]'),true);assert.equal(a.$('[data-motion-axis]').disabled,true);a.$('[data-motion-home]').click();assert.equal(writes(a).length,0);a.$('[data-motion-cancel]').click();assert.equal(writes(a).length,0);
  const member=await motionApp(t,{member:true});change(member.w,member.$('[data-motion-clear]'),true);assert.equal(member.$('[data-motion-axis]').disabled,true);assert.equal(member.$('[data-motion-home]').disabled,true);
+});
+
+test('motion explains real missing axes, tolerates the snapshot interval and refreshes without moving',async t=>{
+ const a=await motionApp(t,{mask:0}),p=a.state.snapshot.printers[0];change(a.w,a.$('[data-motion-clear]'),true);assert.match(a.$('.motion-panel .motion-status').textContent,/X \/ Y \/ Z/);assert.equal(a.$('[data-motion-axis]').disabled,true);
+ a.$('[data-motion-status]').click();await settle();assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/printers/motion/status');
+ p.equipment.motion.homeMask=7;p.equipment.motion.homeAt=p.equipment.motion.capabilitiesAt=new Date(Date.now()-30000).toISOString();await a.PrinterControl.refresh();assert.equal(a.$('[data-motion-axis]').disabled,false);
+ p.equipment.motion.homeAt=new Date(Date.now()-60000).toISOString();await a.PrinterControl.refresh();assert.equal(a.$('[data-motion-axis]').disabled,true);assert.match(a.$('.motion-panel .motion-status').textContent,/过期/);
+});
+
+async function filamentApp(t,options={}){
+ const a=await app(t,options),p=a.state.snapshot.printers[0],now=new Date().toISOString();p.modelId='x2d';p.state='idle';p.rawState='IDLE';a.state.snapshot.jobs=[];
+ p.equipment.filament={supported:true,extruder:1,hasFilament:false,busy:false,step:0,mainState:0,source:'',target:'',updated:now};
+ p.equipment.feeds=['FCE300FF','000000FF','001489FF','FFFFFFFF'].map((color,i)=>({slot:String(i+1),material:'PETG',color,present:true,nozzleMin:230,nozzleMax:260,controlUpdated:now}));
+ await a.Remote.refresh();a.PrinterControl.open(1);await settle();a.$('[data-control-tab="materials"]').click();return a;
+}
+test('filament selection is inert, shows actual colour and requires separate safety/operation confirmation',async t=>{
+ const a=await filamentApp(t),{$,w}=a;assert.equal($('[data-filament-action="load"]').disabled,true);$('[data-filament-slot="3"]').click();assert.match($('.filament-panel').textContent,/#001489/);assert.equal(writes(a).length,0);
+ change(w,$('[data-filament-clear]'),true);$('[data-filament-action="load"]').click();assert.equal(writes(a).length,0);assert.match($('.filament-confirm').textContent,/245°C/);
+ $('[data-filament-cancel]').click();assert.equal(writes(a).length,0);$('[data-filament-action="load"]').click();$('[data-filament-send]').click();$('[data-filament-send]')?.click();await settle();
+ assert.equal(writes(a).length,1);const body=JSON.parse(writes(a)[0].options.body);assert.equal(body.action,'load');assert.equal(body.slot,'3');assert.equal(body.clear,true);assert.equal($('[data-filament-clear]').checked,false);
+});
+test('filament confirmation is discarded on source changes and uncertainty never resubmits',async t=>{
+ const a=await filamentApp(t),{$,w,state}=a;$('[data-filament-slot="1"]').click();change(w,$('[data-filament-clear]'),true);$('[data-filament-action="load"]').click();
+ state.snapshot.printers[0].equipment.feeds[0].color='001489FF';await a.PrinterControl.refresh();assert.equal($('[data-filament-send]'),null);assert.equal(writes(a).length,0);
+ change(w,$('[data-filament-clear]'),true);$('[data-filament-action="load"]').click();state.failWrite=true;$('[data-filament-send]').click();await settle();assert.equal(writes(a).length,1);assert.ok($('[data-filament-reread]'));assert.equal($('[data-filament-action="load"]').disabled,true);assert.equal(a.Remote.needsReview(1),true);
+});
+test('filament actions stay blocked during purge, missing metadata and A1 testing holds',async t=>{
+ const a=await filamentApp(t),{$,w,state}=a;$('[data-filament-slot="3"]').click();change(w,$('[data-filament-clear]'),true);state.snapshot.printers[0].equipment.filament.step=7;await a.PrinterControl.refresh();assert.equal($('[data-filament-action="load"]').disabled,true);
+ state.snapshot.printers[0].equipment.filament.step=0;state.snapshot.printers[0].equipment.feeds[2].material='PLA';await a.PrinterControl.refresh();assert.equal($('[data-filament-action="load"]').disabled,true);assert.equal(writes(a).length,0);
+ state.snapshot.printers[0].modelId='a1';await a.PrinterControl.refresh();assert.equal($('.filament-panel'),null);assert.equal($('[data-motion-axis]').disabled,true);
 });
 test('lost motion response blocks resends and restart persists the connection review',async t=>{
  const a=await motionApp(t);change(a.w,a.$('[data-motion-clear]'),true);a.state.failWrite=true;a.$('[data-motion-axis="X"]').click();await settle();assert.equal(writes(a).length,1);assert.ok(a.$('[data-motion-reread]'));assert.equal(a.$('[data-motion-axis]').disabled,true);assert.equal(a.Remote.needsReview(1),true);assert.match(a.w.sessionStorage.getItem('layerhub.pendingReview'),/printers\/motion/);
@@ -105,8 +135,8 @@ test('English printer settings keep physical control keys and numeric payloads u
  const a=await app(t,{language:'en'}),{$,w}=a;a.PrinterControl.open(1);await settle();
  assert.match($('#controlRoot').textContent,/Monitor & control/);assert.match($('#controlRoot').textContent,/Chamber light/);
  $('[data-equipment="fan:1"]').click();assert.match($('#equipmentDialog').textContent,/Fan speed/);
- $('[data-setting-preset="75"]').click();assert.equal(writes(a).length,0);$('#equipmentForm').requestSubmit();await settle();
- assert.deepEqual(JSON.parse(writes(a)[0].options.body),{printerId:1,key:'fan:1',value:75});
+ $('[data-setting-preset="80"]').click();assert.equal(writes(a).length,0);$('#equipmentForm').requestSubmit();await settle();
+ assert.deepEqual(JSON.parse(writes(a)[0].options.body),{printerId:1,key:'fan:1',value:80});
  assert.equal(writes(a)[0].options.headers['Accept-Language'],'en');
  assert.equal(w.document.querySelector('#equipmentDialog'),null);
 });
@@ -300,13 +330,65 @@ test('unified one confirmation creates once, saves exact material mapping, and d
 });
 
 test('unified multi-plate enqueue keeps actual plate IDs and saves each preparation without starting',async t=>{
- const a=await unifiedPreparation(t,{multi:true});assert.equal(a.$('#upStart').disabled,true);a.$('#upAll').click();assert.match(a.$('#upTotal').textContent,/2 盘.*22 g/);a.$('#upStart').click();await settle();
+ const a=await unifiedPreparation(t,{multi:true});assert.equal(a.$('#upStart').disabled,true);a.$('#upAll').click();assert.match(a.$('#upTotal').textContent,/2 盘.*22 g/);a.$('#upQueue').click();await settle();
  const calls=writes(a),batch=JSON.parse(calls.find(c=>c.url==='/api/upload/batch').options.body.get('batch'));assert.deepEqual(batch.items.map(i=>[i.plate,i.grams,i.spoolId]),[[1,10,'white'],[7,12,'blue']]);assert.equal(calls.filter(c=>c.url==='/api/jobs/options').length,2);assert.equal(calls.some(c=>/dispatch|\/start/.test(c.url)),false);assert.equal(a.w.location.hash,'#queues');
+});
+
+test('unified multi-plate confirmation prepares all plates and starts only the explicitly chosen first plate once',async t=>{
+ const a=await unifiedPreparation(t,{multi:true});a.$('#upAll').click();
+ assert.equal(a.$('#upFirstRow').hidden,false);assert.equal(a.$('#upStart').disabled,true);
+ change(a.w,a.$('#upClear'),true);change(a.w,a.$('#upFirst'),'7');assert.equal(a.$('#upClear').checked,false);
+ assert.match(a.$('#upPrinterNote').textContent,/先打印第 7 盘/);change(a.w,a.$('#upClear'),true);
+ a.$('#upStart').click();a.$('#upStart').click();await settle();
+ const calls=writes(a),batch=JSON.parse(calls.find(c=>c.url==='/api/upload/batch').options.body.get('batch'));
+ assert.deepEqual(batch.items.map(i=>i.plate),[7,1]);assert.equal(calls.filter(c=>c.url==='/api/jobs/options').length,2);
+ const starts=calls.filter(c=>c.url==='/api/jobs/dispatch');assert.equal(starts.length,1);assert.equal(JSON.parse(starts[0].options.body).jobId,21);
+ assert.equal(a.state.snapshot.jobs.find(j=>j.selectedPlate===7).state,'uploading');assert.equal(a.state.snapshot.jobs.find(j=>j.selectedPlate===1).state,'queued');
+ assert.equal(a.w.sessionStorage.getItem('layerhub.pendingImport.1'),null);
+});
+
+test('unified upload explains an existing queue and never jumps ahead of it',async t=>{
+ const a=await unifiedPreparation(t);a.state.snapshot.jobs.push({id:9,printer:1,state:'queued',order:1,filename:'earlier.3mf',user:'测试员',spoolId:'white',grams:1,estimate:1});await a.Remote.refresh({renderPage:false});a.UploadPreparation.open(a.file);
+ assert.match(a.$('#upPrinterNote').textContent,/已有等待任务/);assert.match(a.$('#upStart').textContent,/加入队列/);a.$('#upStart').click();await settle();assert.equal(writes(a).some(c=>c.url==='/api/jobs/dispatch'),false);
+});
+
+test('unified start intent cannot silently become enqueue when printer state changes before clicking',async t=>{
+ const a=await unifiedPreparation(t);change(a.w,a.$('#upClear'),true);a.state.snapshot.printers[0].state='printing';await a.Remote.refresh({renderPage:false});
+ a.$('#upStart').click();await settle();assert.match(a.$('#upStatus').textContent,/尚未提交/);assert.equal(a.$('#upClear').checked,false);assert.equal(writes(a).some(c=>c.url==='/api/upload/batch'),false);
+});
+
+test('unified recovery request failure remains visible after repaint and never repeats upload',async t=>{
+ const a=await unifiedPreparation(t),base=a.w.fetch;
+ a.w.fetch=async(url,o)=>{if(url==='/api/upload/batch'){a.state.calls.push({url,options:o});throw Error('upload reply lost')}if(url.startsWith('/api/jobs/import-receipt'))throw Error('receipt connection unavailable');return base(url,o)};
+ change(a.w,a.$('#upClear'),true);a.$('#upStart').click();await settle();assert.match(a.$('#upStatus').textContent,/upload reply lost/);
+ a.$('#upRead').click();await settle();assert.match(a.$('#upStatus').textContent,/服务链路不可用/);assert.equal(a.$('#upRead').disabled,false);assert.equal(writes(a).filter(c=>c.url==='/api/upload/batch').length,1);assert.equal(writes(a).some(c=>c.url==='/api/jobs/dispatch'),false);
+});
+
+test('unified preparation failure preserves the actual error and never dispatches partly prepared plates',async t=>{
+ const a=await unifiedPreparation(t,{multi:true}),base=a.w.fetch;a.$('#upAll').click();
+ a.w.fetch=async(url,o)=>{if(url==='/api/jobs/options')return reply(409,{ok:false,error:'material mapping changed'});return base(url,o)};
+ change(a.w,a.$('#upClear'),true);a.$('#upStart').click();await settle();assert.match(a.$('#upStatus').textContent,/material mapping changed/);assert.equal(a.state.snapshot.jobs.length,2);assert.equal(writes(a).some(c=>c.url==='/api/jobs/dispatch'),false);assert.equal(a.$('#upRead').hidden,false);
 });
 
 test('unified busy printer can only queue, while missing material blocks submission',async t=>{
  const a=await unifiedPreparation(t,{busy:true});assert.equal(a.$('#upClearRow').hidden,true);assert.match(a.$('#upStart').textContent,/加入队列/);a.$('#upStart').click();await settle();assert.equal(writes(a).some(c=>c.url==='/api/jobs/dispatch'),false);
  const b=await unifiedPreparation(t);b.state.snapshot.spools.forEach(s=>s.mount=null);await b.Remote.refresh({renderPage:false});b.UploadPreparation.open(b.file);assert.equal(b.$('#upStart').disabled,true);assert.match(b.$('#upMaterials').textContent,/没有匹配/);
+});
+
+test('unified open dialog follows fresh busy-to-idle snapshots and starts once after renewed clearance',async t=>{
+ const a=await unifiedPreparation(t,{busy:true});const watcher=a.intervals.at(-1);assert.equal(watcher.ms,1000);
+ a.state.snapshot.user.admin=false;a.state.snapshot.user.owner=false;
+ a.state.snapshot.printers[0].state='idle';a.state.snapshot.printers[0].rawState='IDLE';await a.Remote.refresh({renderPage:false});watcher.fn();
+ assert.match(a.$('#upStart').textContent,/确认并开始打印/);assert.equal(a.$('#upClearRow').hidden,false);assert.equal(a.$('#upClear').checked,false);assert.match(a.$('#upStatus').textContent,/设备已可启动/);assert.equal(a.$('#upStart').disabled,true);
+ change(a.w,a.$('#upClear'),true);a.$('#upStart').click();await settle();assert.equal(writes(a).filter(c=>c.url==='/api/jobs/dispatch').length,1);
+});
+
+test('unified availability changes clear safety confirmation but ordinary telemetry preserves the draft',async t=>{
+ const a=await unifiedPreparation(t);const watcher=a.intervals.at(-1);change(a.w,a.$('#upClear'),true);
+ const radio=a.$('[data-up-spool]:checked');watcher.fn();assert.equal(a.$('[data-up-spool]:checked'),radio);assert.equal(a.$('#upClear').checked,true);
+ a.state.snapshot.printers[0].state='printing';await a.Remote.refresh({renderPage:false});watcher.fn();assert.equal(a.$('#upClear').checked,false);assert.match(a.$('#upStart').textContent,/加入队列/);assert.match(a.$('#upStatus').textContent,/状态已变化/);
+ a.state.snapshot.printers[0].state='idle';await a.Remote.refresh({renderPage:false});watcher.fn();assert.equal(a.$('#upClear').checked,false);assert.equal(a.$('#upStart').disabled,true);assert.equal(writes(a).some(c=>c.url==='/api/upload/batch'),false);
+ a.$('#upCancel').click();watcher.fn();assert.equal(a.$('#modal').open,false);
 });
 
 test('unified lost import reply survives leaving and rereads the original receipt without dispatch',async t=>{
@@ -324,6 +406,17 @@ test('unified lost dispatch reply never repeats dispatch when the receipt is rer
 
 test('unified English preparation translates controls and never changes the original filename',async t=>{
  const a=await unifiedPreparation(t,{language:'en'});assert.match(a.$('#upStart').textContent,/Confirm and start/);const copy=a.$('#uploadPreparation').cloneNode(true);copy.querySelectorAll('.up-spool,#upPrinter,#upPrinterNote').forEach(n=>n.remove());assert.doesNotMatch(copy.textContent,/[\u3400-\u9fff]/u);assert.match(a.$('.up-file').textContent,/<img src=x>/);assert.equal(a.$('.up-file img'),null);a.$('#upCancel').click();assert.equal(a.w.location.hash,'#queues');
+});
+
+test('background file inspection returns to a saved list and resumes preparation without uploading the file again',async t=>{
+ const a=await betaIntakeApp(t),base=a.w.fetch;
+ a.state.snapshot.jobs=[];a.state.snapshot.printers[0].state='idle';a.state.snapshot.capabilities.backgroundFileInspect=true;
+ a.review.sliced.info.model='P1S';a.review.sliced.info.plates=[plate(1,'#EEEAE2',10)];
+ const task={id:'saved-inspection',filename:'large.gcode.3mf',bytes:123,state:'parsing',review:a.review};
+ a.w.fetch=async(url,o={})=>{if(url==='/api/files/inspect?background=1'){a.state.calls.push({url,options:o});return reply(202,{ok:true,inspectionId:task.id})}if(url.startsWith('/api/files/inspections'))return reply(200,{ok:true,inspections:[task]});return base(url,o)};
+ await a.Remote.refresh();await a.FileIntake.open(a.file);await settle();assert.ok(a.$('#inspectionWaitStatus'));a.$('#modal [data-cancel]').click();task.state='ready';await a.FileIntake.background(true);assert.equal(a.$('#fileIntakePanel'),null);assert.ok(a.$('[data-resume-inspection]'));
+ a.$('[data-resume-inspection]').click();await settle();assert.ok(a.$('#uploadPreparation'));assert.match(a.$('.up-file').textContent,/large.gcode.3mf/);
+ assert.equal(writes(a).filter(c=>c.url==='/api/files/inspect?background=1').length,1);assert.equal(writes(a).some(c=>/upload\/batch|jobs\/dispatch/.test(c.url)),false);
 });
 
 
@@ -457,11 +550,11 @@ test('light feedback is immediate, fast polling reads only, and device confirmat
 
 test('fan slider and presets stay local until confirmation, and survive parent telemetry refresh',async t=>{
  const a=await app(t);a.PrinterControl.open(1);await settle();a.$('[data-equipment="fan:1"]').click();
- const dialog=a.$('#equipmentDialog'),input=a.$('#settingValue');input.value='42';input.dispatchEvent(new a.w.Event('input'));
- assert.equal(a.$('#settingRange').value,'42');a.$('[data-setting-preset="75"]').click();assert.equal(input.value,'75');assert.equal(writes(a).length,0);
- a.intervals.find(i=>i.ms===2000).fn();await settle();assert.equal(a.$('#equipmentDialog'),dialog);assert.equal(input.value,'75');
+ const dialog=a.$('#equipmentDialog'),input=a.$('#settingValue');input.value='40';input.dispatchEvent(new a.w.Event('input'));
+ assert.equal(a.$('#settingRange').value,'40');a.$('[data-setting-preset="80"]').click();assert.equal(input.value,'80');assert.equal(writes(a).length,0);
+ a.intervals.find(i=>i.ms===2000).fn();await settle();assert.equal(a.$('#equipmentDialog'),dialog);assert.equal(input.value,'80');
  a.$('#equipmentForm').requestSubmit();await settle();assert.equal(writes(a).length,1);
- assert.deepEqual(JSON.parse(writes(a)[0].options.body),{printerId:1,key:'fan:1',value:75});assert.ok(a.$('#controlRoot'));
+ assert.deepEqual(JSON.parse(writes(a)[0].options.body),{printerId:1,key:'fan:1',value:80});assert.ok(a.$('#controlRoot'));
 });
 
 test('temperature stepper enforces bounds and closing heat is an explicit confirmed zero target',async t=>{
@@ -470,6 +563,25 @@ test('temperature stepper enforces bounds and closing heat is an explicit confir
  a.$('#settingValue').value='99';a.$('[data-temperature-step="5"]').click();assert.equal(a.$('#settingValue').value,'100');
  a.$('[data-setting-preset="0"]').click();assert.equal(a.$('#settingValue').value,'0');assert.equal(writes(a).length,0);
  a.$('#equipmentForm').requestSubmit();await settle();assert.equal(writes(a).length,1);assert.equal(JSON.parse(writes(a)[0].options.body).value,0);
+});
+
+test('fan editor uses ten-percent levels and rejects typed off-level input without sending',async t=>{
+ const a=await app(t);a.PrinterControl.open(1);await settle();a.$('[data-equipment="fan:1"]').click();
+ assert.equal(a.$('#settingValue').step,'10');assert.equal(a.$('#settingRange').step,'10');
+ assert.equal(a.$('[data-setting-preset="25"]'),null);assert.equal(a.$('[data-setting-preset="75"]'),null);
+ const input=a.$('#settingValue');input.value='25';input.dispatchEvent(new a.w.Event('input'));
+ assert.equal(a.$('#applyEquipment').disabled,true);
+ submitForm(a.w,a.$('#equipmentForm'));await settle();assert.equal(writes(a).length,0);
+ a.$('[data-setting-preset="20"]').click();assert.equal(a.$('#applyEquipment').disabled,false);
+ a.$('#equipmentForm').requestSubmit();await settle();assert.equal(writes(a).length,1);
+ assert.deepEqual(JSON.parse(writes(a)[0].options.body),{printerId:1,key:'fan:1',value:20});
+});
+
+test('fan editor keeps off-level observed value visible but drafts a supported level without auto-applying',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];p.equipment.settings.find(s=>s.key==='fan:1').value=25;
+ await a.Remote.refresh();a.PrinterControl.open(1);await settle();a.$('[data-equipment="fan:1"]').click();
+ assert.match(a.$('[data-live-actual]').textContent,/25/);assert.equal(a.$('#settingValue').value,'20');
+ assert.equal(writes(a).length,0);a.$('#equipmentBack').click();assert.equal(writes(a).length,0);
 });
 
 test('setting backdrop, close and Escape return to the same console and scroll position without writing',async t=>{
@@ -841,21 +953,69 @@ async function readySlice(t,{unknownPromote=false}={}){
 
 
 test('display preferences are account scoped, validated and never written to the service',async t=>{
- const a=await app(t),{w,$,state}=a,html=w.document.documentElement;assert.equal(html.dataset.uiSize,'comfortable');$('#accountBtn').click();$('#appearanceSettings').click();const form=$('#appearanceForm');change(w,form.elements.size,'large');change(w,form.elements.contrast,'strong');change(w,form.elements.weight,'medium');assert.equal(html.dataset.uiSize,'comfortable');assert.equal($('#appearancePreview').dataset.uiSize,'large');submitForm(w,form);assert.equal(html.dataset.uiSize,'large');assert.equal(html.dataset.uiContrast,'strong');assert.equal(html.dataset.uiWeight,'medium');assert.equal(writes(a).length,0);
+ const a=await app(t),{w,$,state}=a,html=w.document.documentElement;assert.equal(html.dataset.uiSize,'comfortable');$('#accountBtn').click();$('#appearanceSettings').click();const form=$('#appearanceForm');change(w,form.elements.size,'large');change(w,form.elements.contrast,'strong');change(w,form.elements.weight,'medium');assert.equal(html.dataset.uiSize,'large');assert.equal($('#appearancePreview').dataset.uiSize,'large');submitForm(w,form);assert.equal(html.dataset.uiSize,'large');assert.equal(html.dataset.uiContrast,'strong');assert.equal(html.dataset.uiWeight,'medium');assert.equal(writes(a).length,0);
  state.snapshot.user.id=2;await a.Remote.refresh();assert.equal(html.dataset.uiSize,'comfortable');state.snapshot.user.id=1;await a.Remote.refresh();assert.equal(html.dataset.uiSize,'large');
  $('#accountBtn').click();$('#appearanceSettings').click();$('#appearanceReset').click();submitForm(w,$('#appearanceForm'));assert.equal(html.dataset.uiSize,'comfortable');assert.equal(html.dataset.uiContrast,'clear');
  const b=await app(t,{appearancePreference:'{"size":"huge; background:red","font":"url(evil)","weight":"medium"}'});assert.equal(b.w.document.documentElement.dataset.uiSize,'comfortable');assert.equal(b.w.document.documentElement.dataset.uiFont,'system');assert.equal(b.w.document.documentElement.dataset.uiWeight,'medium');
 });
 
-test('font choices are grouped and webfonts load only when chosen; previews keep saved appearance intact',async t=>{
- const a=await app(t),{w,$}=a;assert.equal(w.document.querySelectorAll('link[data-reading-font]').length,0);$('#accountBtn').click();$('#appearanceSettings').click();const form=$('#appearanceForm');assert.equal(form.elements.font.options.length,10);assert.equal(form.elements.font.querySelectorAll('optgroup').length,3);
- for(const [id,path] of [['wenkai','lxgw-wenkai'],['notoserif','noto-serif-sc'],['xiaowei','zcool-xiaowei'],['kuaile','zcool-kuaile'],['noto','noto-sans-sc']]){change(w,form.elements.font,id);assert.equal($('#appearancePreview').dataset.uiFont,id);assert.equal(w.document.documentElement.dataset.uiFont,'system');assert.equal(w.document.querySelector(`link[data-reading-font="${id}"]`).getAttribute('href'),`./assets/fonts/${path}/font.css`);assert.match($('#appearanceFontHint').textContent,/本服务器按需加载/)}
+test('font choices preview across the interface and saved values change only on save',async t=>{
+ const a=await app(t),{w,$}=a;assert.equal(w.document.querySelectorAll('link[data-reading-font]').length,0);$('#accountBtn').click();$('#appearanceSettings').click();const form=$('#appearanceForm');assert.equal(form.elements.font.options.length,20);assert.equal(form.elements.font.querySelectorAll('optgroup').length,3);
+ for(const [id,path] of [['wenkai','lxgw-wenkai'],['notoserif','noto-serif-sc'],['xiaowei','zcool-xiaowei'],['kuaile','zcool-kuaile'],['noto','noto-sans-sc']]){change(w,form.elements.font,id);assert.equal($('#appearancePreview').dataset.uiFont,id);assert.equal(w.document.documentElement.dataset.uiFont,id);assert.equal(w.document.querySelector(`link[data-reading-font="${id}"]`).getAttribute('href'),`./assets/fonts/${path}/font.css`);assert.match($('#appearanceFontHint').textContent,/本服务器按需加载/)}
  const count=w.document.querySelectorAll('link[data-reading-font]').length;change(w,form.elements.font,'wenkai');assert.equal(w.document.querySelectorAll('link[data-reading-font]').length,count);submitForm(w,form);assert.equal(w.document.documentElement.dataset.uiFont,'wenkai');assert.equal(writes(a).length,0);
- $('#accountBtn').click();$('#appearanceSettings').click();change(w,$('#appearanceForm').elements.font,'kaiti');assert.match($('#appearanceFontHint').textContent,/电脑已安装/);assert.equal(w.document.querySelectorAll('link[data-reading-font]').length,count);$('#appearanceReset').click();assert.equal($('#appearancePreview').dataset.uiFont,'system');assert.equal(w.document.documentElement.dataset.uiFont,'wenkai');
+ $('#accountBtn').click();$('#appearanceSettings').click();change(w,$('#appearanceForm').elements.font,'kaiti');assert.match($('#appearanceFontHint').textContent,/电脑已安装/);assert.equal(w.document.querySelectorAll('link[data-reading-font]').length,count);$('#appearanceReset').click();assert.equal($('#appearancePreview').dataset.uiFont,'system');assert.equal(w.document.documentElement.dataset.uiFont,'system');
+});
+
+test('theme preview survives telemetry refresh and cancel restores the entire saved appearance',async t=>{
+ const a=await app(t),{w,$}=a,html=w.document.documentElement;
+ $('#accountBtn').click();$('#appearanceSettings').click();
+ const form=$('#appearanceForm'),saved=w.localStorage.getItem('layerhub.ui.appearance.user.1');
+ change(w,form.elements.mode,'dark');$('[data-accent="purple"]').click();change(w,form.elements.density,'roomy');
+ assert.equal(html.dataset.uiColorScheme,'dark');assert.equal(html.dataset.uiAccent,'purple');assert.equal(html.dataset.uiDensity,'roomy');
+ await a.Remote.refresh();assert.equal(html.dataset.uiAccent,'purple');assert.equal($('#appearanceForm'),form);
+ assert.equal(w.localStorage.getItem('layerhub.ui.appearance.user.1'),saved);assert.equal(writes(a).length,0);
+ $('[data-cancel]').click();assert.equal(html.dataset.uiColorScheme,'light');assert.equal(html.dataset.uiAccent,'blue');assert.equal(html.dataset.uiDensity,'comfortable');
+});
+
+test('custom accents are validated, readable on white text, and never become a device request',async t=>{
+ const a=await app(t,{language:'en'}),{w,$}=a;$('#accountBtn').click();$('#appearanceSettings').click();
+ assert.match($('#appearanceForm').textContent,/Accent colour/);const form=$('#appearanceForm');
+ form.elements.customColor.value='#ffffff';form.elements.customColor.dispatchEvent(new w.Event('input'));
+ const color=w.document.documentElement.style.getPropertyValue('--accent-button'),v=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255),l=v.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4).reduce((n,x,i)=>n+x*[.2126,.7152,.0722][i],0);
+ assert.ok(1.05/(l+.05)>=4.5);submitForm(w,form);
+ assert.equal(JSON.parse(w.localStorage.getItem('layerhub.ui.appearance.user.1')).customColor,'#ffffff');assert.equal(writes(a).length,0);
+ $('#accountBtn').click();$('#appearanceSettings').click();const next=$('#appearanceForm');next.elements.customColor.value='url(x)';next.elements.customColor.dispatchEvent(new w.Event('input'));
+ assert.equal($('[type="submit"][form="appearanceForm"]').disabled,true);submitForm(w,next);assert.equal(JSON.parse(w.localStorage.getItem('layerhub.ui.appearance.user.1')).customColor,'#ffffff');
+ $('[data-close]').click();assert.equal(w.document.documentElement.dataset.uiCustomColor,'#ffffff');
+});
+
+test('appearance reset is a reversible preview and account changes discard the previous account draft',async t=>{
+ const a=await app(t,{appearancePreference:'{"mode":"dark","accent":"green","density":"compact","font":"serif"}'}),{w,$}=a;
+ $('#accountBtn').click();$('#appearanceSettings').click();$('#appearanceReset').click();assert.equal(w.document.documentElement.dataset.uiColorScheme,'light');
+ $('[data-cancel]').click();assert.equal(w.document.documentElement.dataset.uiColorScheme,'dark');assert.equal(w.document.documentElement.dataset.uiFont,'serif');
+ $('#accountBtn').click();$('#appearanceSettings').click();change(w,$('#appearanceForm').elements.accent,'rose');
+ a.state.snapshot.user.id=2;await a.Remote.refresh();assert.equal(w.document.documentElement.dataset.uiAccent,'blue');
+ a.state.snapshot.user.id=1;await a.Remote.refresh();assert.equal(w.document.documentElement.dataset.uiAccent,'green');assert.equal(writes(a).length,0);
 });
 test('saved webfont and old serif preferences remain usable after upgrading',async t=>{
  const a=await app(t,{appearancePreference:'{"font":"wenkai"}'});assert.equal(a.w.document.documentElement.dataset.uiFont,'wenkai');assert.equal(a.w.document.querySelectorAll('link[data-reading-font]').length,1);
  const b=await app(t,{appearancePreference:'{"font":"serif"}'});assert.equal(b.w.document.documentElement.dataset.uiFont,'serif');assert.equal(b.w.document.querySelectorAll('link[data-reading-font]').length,0);
+});
+
+test('additional local fonts preview without downloads and persist independently of theme changes',async t=>{
+ const a=await app(t,{language:'en',appearancePreference:'{"font":"serif","mode":"dark"}'}),{w,$}=a;
+ $('#accountBtn').click();$('#appearanceSettings').click();const form=$('#appearanceForm');
+ assert.match(form.textContent,/Font · 20 choices/);
+ for(const id of ['theme','monospace','stzhongsong','stsong','stxihei','stkaiti','youyuan','lishu','sthupo','bahnschrift']){
+  change(w,form.elements.font,id);assert.equal(w.document.documentElement.dataset.uiFont,id);
+  assert.equal(JSON.parse(w.localStorage.getItem('layerhub.ui.appearance.user.1')).font,'serif');
+  assert.match($('#appearanceFontHint').textContent,/local|system/i);
+ }
+ assert.equal(w.document.querySelectorAll('link[data-reading-font]').length,0);
+ submitForm(w,form);await a.Remote.refresh();assert.equal(w.document.documentElement.dataset.uiFont,'bahnschrift');
+ $('#accountBtn').click();$('#appearanceSettings').click();change(w,$('#appearanceForm').elements.mode,'light');
+ $('#modal [data-cancel]').click();assert.equal(w.document.documentElement.dataset.uiFont,'bahnschrift');assert.equal(w.document.documentElement.dataset.uiColorScheme,'dark');
+ assert.equal(writes(a).length,0);
 });
 
 
@@ -1083,4 +1243,158 @@ test('Studio rejects command lines, UNC executables and injected registry conten
 
 test('Studio setup translates its instructions and does not require a NAS connection to show local settings',async t=>{
  const a=await app(t,{language:'en'});a.$('#studioShortcut').click();assert.match(a.$('#modal').textContent,/Local Bambu Studio/);assert.doesNotMatch(a.$('#modal').textContent,/[\u3400-\u9fff]/u);assert.equal(writes(a).length,0);
+});
+
+
+test('IP replacement is available offline, validates before writing and only sends id and IP',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];p.connected=false;p.ip='192.168.1.121';await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();
+ const f=a.$('#printerIPForm');assert.equal(f.elements.code,undefined);assert.match(a.$('#modalContent').textContent,/192.168.1.121/);
+ f.elements.ip.value='192.168.1.999';submitForm(a.w,f);await settle();assert.equal(writes(a).length,0);assert.match(a.$('#printerIPError').textContent,/有效/);
+ f.elements.ip.value=p.ip;submitForm(a.w,f);await settle();assert.equal(writes(a).length,0);
+ const base=a.w.fetch;a.w.fetch=async(url,o={})=>{if(url==='/api/printers'&&o.method==='POST'){p.ip=JSON.parse(o.body).ip;p.connected=false}return base(url,o)};
+ f.elements.ip.value='192.168.1.100';submitForm(a.w,f);submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);assert.deepEqual(JSON.parse(writes(a)[0].options.body),{id:1,ip:'192.168.1.100'});assert.match(a.$('#printerIPStatus').textContent,/地址已保存.*等待/);assert.equal(a.$('#printerIPSave').hidden,true);
+ p.connected=true;p.updated=Date.now()/1000+1;await a.Remote.refresh({renderPage:false});a.Remote.paintConnection();assert.match(a.$('#printerIPStatus').textContent,/已连接/);
+ a.$('#printerIPRead').click();await settle();assert.equal(writes(a).length,1);
+});
+
+test('IP replacement never retries uncertain writes; reread recovers a saved address',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];p.ip='192.168.1.121';await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();const f=a.$('#printerIPForm');f.elements.ip.value='192.168.1.100';a.state.failWrite=true;submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);assert.equal(a.$('#printerIPSave').disabled,true);assert.match(a.$('#printerIPError').textContent,/尚未确认/);
+ submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);p.ip='192.168.1.100';p.connected=true;p.updated=Date.now()/1000+1;a.$('#printerIPRead').click();await settle();assert.match(a.$('#printerIPStatus').textContent,/已连接/);assert.equal(writes(a).length,1);
+});
+
+test('IP replacement rejects duplicate addresses and is hidden from members',async t=>{
+ const a=await app(t);a.state.snapshot.printers.push({...a.state.snapshot.printers[0],id:2,ip:'192.168.1.106'});await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();const f=a.$('#printerIPForm');f.elements.ip.value='192.168.1.106';submitForm(a.w,f);await settle();assert.equal(writes(a).length,0);assert.match(a.$('#printerIPError').textContent,/其他设备/);
+ a.$('#modal').close();a.state.snapshot.user.admin=false;await a.Remote.refresh();a.$('[data-page="admin"]').click();assert.equal(a.$('[data-change-ip]'),null);
+});
+
+
+async function backgroundAutoApp(t){
+ const a=await betaIntakeApp(t),base=a.w.fetch;Object.defineProperty(a.w.document,'visibilityState',{configurable:true,value:'visible'});
+ a.state.snapshot.jobs=[];a.state.snapshot.printers[0].state='idle';a.state.snapshot.capabilities.backgroundFileInspect=true;a.review.sliced.info.model='P1S';a.review.sliced.info.plates=[plate(1,'#EEEAE2',10)];
+ const task={id:'auto-inspection',filename:'auto.gcode.3mf',bytes:123,state:'parsing',review:a.review};
+ a.w.fetch=async(url,o={})=>{if(url==='/api/files/inspect?background=1'){a.state.calls.push({url,options:o});return reply(202,{ok:true,inspectionId:task.id})}if(url.startsWith('/api/files/inspections'))return reply(200,{ok:true,inspections:[structuredClone(task)]});return base(url,o)};
+ await a.Remote.refresh();await a.FileIntake.open(a.file);await settle();return {...a,task};
+}
+
+test('background parsing automatically opens confirmation once without another upload or creating jobs',async t=>{
+ const a=await backgroundAutoApp(t);assert.ok(a.$('#inspectionWaitStatus'));assert.equal(a.$('#uploadPreparation'),null);a.task.state='ready';await a.FileIntake.background(true);await settle();assert.ok(a.$('#uploadPreparation'));assert.match(a.$('.up-file').textContent,/auto.gcode.3mf/);const root=a.$('#uploadPreparation');await a.FileIntake.background(true);assert.equal(a.$('#uploadPreparation'),root);assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/files/inspect?background=1');
+});
+
+test('leaving background wait prevents late completion from opening confirmation; resume still works',async t=>{
+ const a=await backgroundAutoApp(t);a.$('#modal [data-cancel]').click();a.task.state='ready';await a.FileIntake.background(true);await settle();assert.equal(a.$('#uploadPreparation'),null);a.$('[data-resume-inspection]').click();await settle();assert.ok(a.$('#uploadPreparation'));assert.equal(writes(a).length,1);
+});
+
+test('background wait cannot advance in a hidden tab or across account changes',async t=>{
+ const a=await backgroundAutoApp(t);Object.defineProperty(a.w.document,'visibilityState',{configurable:true,value:'hidden'});a.task.state='ready';await a.FileIntake.background(true);assert.equal(a.$('#uploadPreparation'),null);
+ Object.defineProperty(a.w.document,'visibilityState',{configurable:true,value:'visible'});a.state.snapshot.user.id=99;await a.Remote.refresh({renderPage:false});await a.FileIntake.background(true);await settle();assert.equal(a.$('#uploadPreparation'),null);assert.equal(writes(a).length,1);
+});
+
+
+async function mismatchApp(t,language='zh-CN'){
+ const a=await app(t,{language}),p=a.state.snapshot.printers[0];p.modelId='a1';p.configuration='bare';p.equipment.feeds=[{slot:'external',material:'PETG',color:'F6DA5AFF',present:true,updated:new Date().toISOString()}];await a.Remote.refresh();a.PrinterControl.open(1);await settle();a.$('[data-control-tab="materials"]').click();return a;
+}
+
+test('mount mismatch keeps printer feedback primary and never replaces library stock or sends commands',async t=>{
+ const a=await mismatchApp(t);const card=a.$('[data-machine-slot="external"]');assert.match(card.querySelector('.machine-feed-material').textContent,/PETG/);assert.match(card.querySelector('[data-mount-mismatch]').textContent,/材质不同.*颜色不同/);assert.match(card.querySelector('[data-mount-mismatch]').textContent,/库中登记：PLA/);assert.match(a.$('.control-supply').textContent,/PLA.*黑色/);assert.equal(writes(a).length,0);
+ a.$('#modal').close();a.$('[data-page="materials"]').click();assert.ok(a.$('.filament-card [data-mount-mismatch]'));assert.equal(a.state.snapshot.spools.find(s=>s.id==='external').remaining,800);
+});
+
+test('mount mismatch clears on matching telemetry, normalizes alpha and stays silent for unknown or stale feedback',async t=>{
+ const a=await mismatchApp(t),p=a.state.snapshot.printers[0],f=p.equipment.feeds[0];f.material='pla';f.color='222222FF';await a.PrinterControl.refresh();assert.equal(a.$('[data-mount-mismatch]'),null);
+ f.material='PETG';f.updated=new Date(Date.now()-100000).toISOString();await a.PrinterControl.refresh();assert.equal(a.$('[data-mount-mismatch]'),null);
+ f.updated=new Date().toISOString();f.material='';f.color='';f.present=null;await a.PrinterControl.refresh();assert.equal(a.$('[data-mount-mismatch]'),null);
+ f.present=false;await a.PrinterControl.refresh();assert.match(a.$('[data-mount-mismatch]').textContent,/未装载/);assert.equal(writes(a).length,0);
+});
+
+test('mount comparison does not reveal other users private spools and follows actual slot identity',async t=>{
+ const a=await mismatchApp(t),p=a.state.snapshot.printers[0];a.state.snapshot.spools=a.state.snapshot.spools.filter(s=>s.id!=='external');a.state.snapshot.occupiedSlots=[{printerId:1,slot:'external'}];await a.PrinterControl.refresh();assert.equal(a.$('[data-mount-mismatch]'),null);assert.match(a.$('[data-machine-slot="external"]').textContent,/私有耗材/);assert.equal(writes(a).length,0);
+});
+
+test('English mount warning translates reasons without changing material names or inventory',async t=>{
+ const a=await mismatchApp(t,'en'),notice=a.$('[data-mount-mismatch]');assert.match(notice.textContent,/Material mismatch/);assert.match(notice.textContent,/Printer feedback: PETG/);assert.match(notice.textContent,/Library record: PLA/);assert.doesNotMatch(notice.textContent,/[耗材颜库核实]/);assert.equal(writes(a).length,0);
+});
+
+
+async function deleteSpoolApp(t){const a=await app(t);a.state.snapshot.capabilities.spoolDelete=true;const sp=a.state.snapshot.spools.find(s=>s.id==='external');sp.mount=null;sp.revision=3;await a.Remote.refresh();a.Remote.spoolForm(a.Remote? a.w.testing.data.spools.find(s=>s.id==='external'):sp);await settle();return a}
+test('spool deletion requires a separate confirmation, sends only id/revision and never controls a printer',async t=>{
+ const a=await deleteSpoolApp(t);[...a.w.document.querySelectorAll('.modal-actions button')].find(b=>b.textContent==='删除耗材').click();assert.equal(writes(a).length,0);a.$('#modal [data-cancel]').click();assert.equal(writes(a).length,0);
+ a.Remote.spoolForm(a.w.testing.data.spools.find(s=>s.id==='external'));[...a.w.document.querySelectorAll('.modal-actions button')].find(b=>b.textContent==='删除耗材').click();const base=a.w.fetch;a.w.fetch=async(url,o)=>{if(url==='/api/spools/delete')a.state.snapshot.spools=a.state.snapshot.spools.filter(s=>s.id!=='external');return base(url,o)};a.$('#spoolDeleteConfirm').click();a.$('#spoolDeleteConfirm').click();await settle();assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/spools/delete');assert.deepEqual(JSON.parse(writes(a)[0].options.body),{id:'external',revision:3});assert.equal(a.w.testing.data.spools.some(s=>s.id==='external'),false);
+});
+test('uncertain spool deletion stays locked and checks result without retrying',async t=>{
+ const a=await deleteSpoolApp(t);[...a.w.document.querySelectorAll('.modal-actions button')].find(b=>b.textContent==='删除耗材').click();a.state.failWrite=true;a.$('#spoolDeleteConfirm').click();await settle();assert.equal(writes(a).length,1);assert.equal(a.$('#spoolDeleteConfirm').disabled,true);assert.match(a.$('#spoolDeleteError').textContent,/尚未确认/);a.$('#spoolDeleteRead').click();await settle();assert.equal(writes(a).length,1);assert.equal(a.$('#spoolDeleteConfirm').disabled,true);
+});
+
+
+test('AMS drying blocks the web start route, shows telemetry and clears only on reported off',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];p.state='idle';p.ams={ams:[{id:'0',info:'11401123',dry_time:188,temp:'60.0',dry_setting:{dry_temperature:65}}]};await a.Remote.refresh();assert.equal(a.w.testing.data.printers[0].state,'drying');assert.match(a.w.testing.data.printers[0].warning,/AMS/);await assert.rejects(a.Remote.request('/api/jobs/dispatch',{jobId:1}),/AMS/);assert.equal(writes(a).length,0);a.PrinterControl.open(1);await settle();assert.match(a.$('[data-dryer-status]').textContent,/188/);p.ams.ams[0].info='11401103';await a.Remote.refresh();assert.equal(a.w.testing.data.printers[0].state,'idle');
+});
+
+async function externalTPUPreparation(t,{language='zh-CN'}={}){
+ const a=await unifiedPreparation(t,{language}),p=a.state.snapshot.printers[0],info=a.review.sliced.info;
+ Object.assign(p,{modelId:'x2d',model:'X2D',configuration:'ams'});Object.assign(a.state.snapshot.capabilities,{x2dSingleNozzlePrint:true,x2dExternalPrint:true});
+ info.model='Bambu Lab X2D';const plate=info.plates[0];plate.nozzle={logical:0,physical:1,diameter:'0.4',volume:'Standard'};Object.assign(plate.filaments[0],{material:'TPU',profileId:'GFU03'});
+ const sp=a.state.snapshot.spools.find(s=>s.id==='white');Object.assign(sp,{material:'TPU',mount:{printerId:1,slot:'external:1'}});
+ p.equipment.feeds=[{slot:'external:1',material:'TPU',profileId:'GFU03',present:true,updated:new Date().toISOString()}];
+ await a.Remote.refresh({renderPage:false});a.UploadPreparation.open(a.file);return a;
+}
+test('X2D TPU chooses the exact external port despite equipped AMS and dispatches the external preparation once',async t=>{
+ const a=await externalTPUPreparation(t);assert.equal(a.$('[data-up-source]').value,'external');assert.equal(a.$('[data-up-spool]:checked').value,'white');assert.equal(a.w.document.querySelectorAll('[data-up-spool]').length,1);
+ change(a.w,a.$('#upClear'),true);assert.equal(a.$('#upStart').disabled,false,a.$('#upChecks').textContent);a.$('#upStart').click();await settle();
+ const calls=writes(a),o=JSON.parse(calls.find(c=>c.url==='/api/jobs/options').options.body).options;assert.equal(o.useAMS,false);assert.equal(o.mapping[0].spoolId,'white');assert.equal(calls.filter(c=>c.url==='/api/jobs/dispatch').length,1);
+});
+test('external source changes clear clearance and TPU cannot silently fall back to AMS',async t=>{
+ const a=await externalTPUPreparation(t);change(a.w,a.$('#upClear'),true);change(a.w,a.$('[data-up-source]'),'ams');assert.equal(a.$('#upClear').checked,false);assert.equal(a.$('[data-up-spool]'),null);assert.equal(a.$('#upStart').disabled,true);
+ change(a.w,a.$('[data-up-source]'),'external');assert.equal(a.$('[data-up-spool]:checked').value,'white');assert.equal(a.$('#upStart').disabled,true);assert.equal(writes(a).filter(c=>c.url!=='/api/files/inspect').length,0);
+});
+test('X2D external TPU explains preset mismatch and cannot use a different physical port or an old backend',async t=>{
+ const a=await externalTPUPreparation(t),p=a.state.snapshot.printers[0];p.equipment.feeds[0].material='TPU-AMS';p.equipment.feeds[0].profileId='GFU02';await a.Remote.refresh({renderPage:false});a.UploadPreparation.open(a.file);assert.match(a.$('#upChecks').textContent,/外置耗材设置与切片不一致/);change(a.w,a.$('#upClear'),true);assert.equal(a.$('#upStart').disabled,true);
+ p.equipment.feeds[0].material='TPU';p.equipment.feeds[0].profileId='GFU03';a.state.snapshot.spools.find(s=>s.id==='white').mount.slot='external';await a.Remote.refresh({renderPage:false});a.UploadPreparation.open(a.file);assert.equal(a.$('[data-up-spool]'),null);
+ a.state.snapshot.spools.find(s=>s.id==='white').mount.slot='external:1';a.state.snapshot.capabilities.x2dExternalPrint=false;await a.Remote.refresh({renderPage:false});a.UploadPreparation.open(a.file);assert.match(a.$('#upChecks').textContent,/服务器尚未开放/);assert.equal(a.$('#upStart').disabled,true);
+ assert.equal(writes(a).filter(c=>c.url!=='/api/files/inspect').length,0);
+});
+test('X2D external TPU preparation is translated in English',async t=>{
+ const a=await externalTPUPreparation(t,{language:'en'});assert.match(a.$('#upMaterials').textContent,/Feed source for this plate/);assert.match(a.$('#upMaterials').textContent,/External spool/);assert.doesNotMatch(a.$('#upMaterials').textContent,/本盘|外挂|供料/);
+});
+test('advanced X2D TPU preparation defaults to external and lists the physically mapped port',async t=>{
+ const a=await externalTPUPreparation(t),sp=a.state.snapshot.spools.find(s=>s.id==='white');a.state.slice=structuredClone(a.review.sliced.info);a.state.snapshot.jobs=[{id:4,printer:1,state:'queued',filename:'tpu.3mf',userId:1,user:a.state.snapshot.user.name,spoolId:sp.id,grams:10,estimate:10}];await a.Remote.refresh({renderPage:false});await a.PrinterControl.options(a.data.jobs[0]);assert.equal(a.$('#projectAMS').checked,false);assert.ok(a.$('input[name="spool-0"][value="white"]'));assert.equal(a.w.document.querySelectorAll('input[name="spool-0"]').length,1);assert.equal(writes(a).filter(c=>c.url!=='/api/files/inspect').length,0);
+});
+
+
+test('editing TPU for AMS selects its actual protocol material and unrelated saves never convert it to PLA',async t=>{
+ const a=await app(t),sp=a.state.snapshot.spools.find(s=>s.id==='white');Object.assign(sp,{label:'TPU for AMS',material:'TPU-AMS',revision:6});await a.Remote.refresh({renderPage:false});a.Remote.spoolForm(a.w.testing.data.spools.find(s=>s.id===sp.id));
+ const f=a.$('#spoolForm'),m=f.elements.material;assert.equal(m.value,'TPU-AMS');assert.equal(m.selectedOptions[0].textContent,'TPU for AMS');assert.equal([...m.options].filter(o=>o.value==='TPU-AMS').length,1);assert.equal(writes(a).length,0);
+ f.elements.label.value='My TPU for AMS';submitForm(a.w,f);await settle();const post=writes(a).find(c=>c.url==='/api/spools'),body=JSON.parse(post.options.body);assert.equal(body.material,'TPU-AMS');assert.equal(body.remaining,sp.remaining);assert.deepEqual(body.mount,sp.mount);assert.equal(body.revision,6);assert.equal(writes(a).length,1);
+});
+test('editing unlisted and machine-reported materials preserves exact values and escapes option markup',async t=>{
+ for(const material of ['PETG-CF','TPU-95A','Custom <x>&"']){
+  const a=await app(t),sp=a.state.snapshot.spools.find(s=>s.id==='white');sp.material=material;await a.Remote.refresh({renderPage:false});a.Remote.spoolForm(a.w.testing.data.spools.find(s=>s.id===sp.id));const f=a.$('#spoolForm');assert.equal(f.elements.material.value,material);assert.equal(f.querySelector('x'),null);submitForm(a.w,f);await settle();assert.equal(JSON.parse(writes(a)[0].options.body).material,material);assert.equal(writes(a).length,1);
+ }
+});
+test('English material editing preserves protocol values including unknown and Other materials',async t=>{
+ const a=await app(t,{language:'en'}),sp=a.state.snapshot.spools.find(s=>s.id==='white');sp.material='TPU-AMS';await a.Remote.refresh({renderPage:false});a.Remote.spoolForm(a.w.testing.data.spools.find(s=>s.id===sp.id));assert.equal(a.$('#spoolForm').elements.material.value,'TPU-AMS');assert.equal(a.$('option[value="其他"]').textContent,'Other');assert.equal(writes(a).length,0);
+});
+
+
+async function syncSpoolApp(t,language='zh-CN'){
+ const a=await mismatchApp(t,language),s=a.state.snapshot.spools.find(s=>s.id==='external');s.revision=4;await a.Remote.refresh({renderPage:false});a.$('#modal').close();a.$('[data-page="materials"]').click();return a;
+}
+test('one-click printer sync updates exact mounted material and colour once while preserving ledger fields',async t=>{
+ const a=await syncSpoolApp(t),before=structuredClone(a.state.snapshot.spools.find(s=>s.id==='external')),base=a.w.fetch;
+ a.w.fetch=async(url,o={})=>{if(url==='/api/spools'){const b=JSON.parse(o.body);Object.assign(a.state.snapshot.spools.find(s=>s.id===b.id),b,{revision:b.revision+1})}return base(url,o)};
+ const button=a.$('[data-sync-spool="external"]');assert.equal(button.disabled,false);button.click();button.click();await settle();const calls=writes(a);assert.equal(calls.length,1);assert.equal(calls[0].url,'/api/spools');const b=JSON.parse(calls[0].options.body);assert.equal(b.material,'PETG');assert.equal(b.color,'#f6da5a');assert.equal(b.colorName,'#f6da5a');
+ for(const key of ['label','brand','remaining','capacity','owner','shared','state','location','mount'])assert.deepEqual(b[key],before[key]);assert.equal(b.revision,4);
+ a.$('[data-sync-spool="external"]').click();await settle();assert.equal(writes(a).length,1);
+});
+test('printer sync refuses empty stale offline and remounted sources without inventory writes',async t=>{
+ for(const mode of ['empty','stale','offline','remount','revision']){
+  const a=await syncSpoolApp(t),p=a.state.snapshot.printers[0],s=a.state.snapshot.spools.find(s=>s.id==='external');
+  if(mode==='empty')p.equipment.feeds[0].present=false;if(mode==='stale')p.equipment.feeds[0].updated=new Date(Date.now()-100000).toISOString();if(mode==='offline')p.connected=false;if(mode==='remount')s.mount.slot='1';if(mode==='revision')s.revision++;
+  a.$('[data-sync-spool="external"]').click();await settle();assert.equal(writes(a).length,0,mode);
+ }
+});
+test('printer sync preserves a named colour when RGB matches and does not invent missing colours',async t=>{
+ const a=await syncSpoolApp(t),s=a.state.snapshot.spools.find(s=>s.id==='external'),f=a.state.snapshot.printers[0].equipment.feeds[0];s.colorName='自定义黑';f.color='';a.$('[data-sync-spool="external"]').click();await settle();const b=JSON.parse(writes(a)[0].options.body);assert.equal(b.material,'PETG');assert.equal(b.color,s.color);assert.equal(b.colorName,'自定义黑');
+});
+test('English sync is explicit and a lost save response does not automatically retry',async t=>{
+ const a=await syncSpoolApp(t,'en');assert.match(a.$('[data-sync-spool="external"]').textContent,/Update from printer/);a.state.failWrite=true;a.$('[data-sync-spool="external"]').click();await settle();assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/spools');
 });

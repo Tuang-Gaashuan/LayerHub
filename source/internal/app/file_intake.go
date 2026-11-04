@@ -157,10 +157,17 @@ func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
 		fail(w, e)
 		return
 	}
-	defer func() { f.Close(); os.Remove(f.Name()) }()
+	keep := false
+	defer func() {
+		f.Close()
+		if !keep {
+			os.Remove(f.Name())
+		}
+	}()
 	h := sha256.New()
 	var size int64
 	found := false
+	filename := ""
 	for {
 		part, err := mr.NextPart()
 		if err == io.EOF {
@@ -176,6 +183,7 @@ func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		found = true
+		filename = filepath.Base(strings.ReplaceAll(part.FileName(), "\\", "/"))
 		size, e = io.Copy(io.MultiWriter(f, h), io.LimitReader(part, limit+1))
 		part.Close()
 		if e != nil || size == 0 || size > limit {
@@ -189,6 +197,21 @@ func (s *Service) inspectFile(w http.ResponseWriter, r *http.Request) {
 	}
 	if e = f.Close(); e != nil {
 		fail(w, e)
+		return
+	}
+	if r.URL.Query().Get("background") == "1" {
+		u, _, err := s.session(r)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		id, err := s.queueInspection(u, filename, f.Name(), hex.EncodeToString(h.Sum(nil)), size)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		keep = true
+		reply(w, 202, map[string]any{"ok": true, "inspectionId": id})
 		return
 	}
 	result, e := inspectPrintFile(r.Context(), f.Name(), hex.EncodeToString(h.Sum(nil)), size)

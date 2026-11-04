@@ -115,6 +115,9 @@ func (s *Service) SetEquipment(u User, in SettingInput) error {
 		if in.Value < setting.Min || in.Value > setting.Max {
 			return invalid("设置值超出允许范围")
 		}
+		if in.Value%EquipmentSettingStep(in.Key) != 0 {
+			return invalid("请选择 10% 的整数倍风速，例如 20%、50% 或 80%")
+		}
 		if in.Key == "speed" && t.State != "printing" && t.State != "pause" {
 			return conflict("速度档位在打印任务中调整")
 		}

@@ -129,3 +129,51 @@ func TestHomeWaitsForLateXAxisInsteadOfCompletingAt25Seconds(t *testing.T) {
 		t.Fatal("old home completed new action")
 	}
 }
+
+func TestMotionAcceptsUnchangedFieldsBetweenThirtySecondSnapshotsButNeverZeroMask(t *testing.T) {
+	now := time.Now()
+	mask := 7
+	tel := app.Telemetry{Connected: true, RawState: "IDLE", Updated: now, StateUpdated: now.Add(-30 * time.Second), Equipment: app.Equipment{Motion: app.MotionReading{NativeHome: true, NativeJog: true, CapabilitiesAt: now.Add(-30 * time.Second), HomeAt: now.Add(-30 * time.Second), HomeMask: &mask}}}
+	if e := app.ValidateMotion(tel, app.MotionInput{Action: "jog"}); e != nil {
+		t.Fatal(e)
+	}
+	mask = 0
+	if e := app.ValidateMotion(tel, app.MotionInput{Action: "jog"}); e == nil {
+		t.Fatal("zero mask bypassed")
+	}
+	mask = 7
+	tel.Equipment.Motion.HomeAt = now.Add(-46 * time.Second)
+	if e := app.ValidateMotion(tel, app.MotionInput{Action: "jog"}); e == nil {
+		t.Fatal("stale homing accepted")
+	}
+}
+func TestMotionRefreshPublishesOnlyReadOnlySnapshot(t *testing.T) {
+	p := app.Printer{ID: 1, ModelID: "x2d", Serial: "TEST"}
+	m, _ := New("live")
+	l := &listener{config: p, raw: map[string]any{}, connected: true}
+	m.items[1] = l
+	count := 0
+	l.client = motionClient{publish: func(_ string, qos byte, _ bool, body interface{}) mqtt.Token {
+		count++
+		var v map[string]map[string]any
+		json.Unmarshal([]byte(body.(string)), &v)
+		if qos != 0 || v["pushing"]["command"] != "pushall" || v["print"] != nil {
+			t.Fatal("refresh sent control")
+		}
+		go func() {
+			time.Sleep(10 * time.Millisecond)
+			m.mu.Lock()
+			applyReport(l, map[string]any{"gcode_state": "IDLE", "home_flag": 0})
+			m.mu.Unlock()
+		}()
+		return motionToken{}
+	}}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if e := m.RefreshMotion(ctx, p); e != nil || count != 1 {
+		t.Fatal(e, count)
+	}
+	if *m.Status(1).Equipment.Motion.HomeMask != 0 {
+		t.Fatal("refresh invented homing")
+	}
+}

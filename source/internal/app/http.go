@@ -93,6 +93,12 @@ func (s *Service) Handler() http.Handler {
 				}
 				result = LocalizeDiagnosticReport(report, requestLanguage(r.Header.Get("Accept-Language")))
 			}
+		case "GET /api/files/inspections":
+			result, err = s.inspections(u, r.URL.Query().Get("id"))
+		case "DELETE /api/files/inspections":
+			err = s.deleteInspection(u, r.URL.Query().Get("id"))
+		case "POST /api/files/inspections/import":
+			result, err = s.importInspection(u, r)
 		case "POST /api/files/inspect":
 			s.inspectFile(w, r)
 			return
@@ -210,6 +216,18 @@ func (s *Service) Handler() http.Handler {
 			err = decode(r, &in)
 			if err == nil {
 				err = s.ControlPrinter(u, in)
+			}
+		case "POST /api/printers/motion/status":
+			var in struct {
+				PrinterID int64 `json:"printerId"`
+			}
+			if err = decode(r, &in); err == nil {
+				err = s.RefreshMotion(u, in.PrinterID)
+			}
+		case "POST /api/printers/filament":
+			var in FilamentInput
+			if err = decode(r, &in); err == nil {
+				err = s.ChangeFilament(u, in)
 			}
 		case "POST /api/printers/motion":
 			var in MotionInput
@@ -331,6 +349,14 @@ func (s *Service) Handler() http.Handler {
 			err = decode(r, &in)
 			if err == nil {
 				err = s.SavePrinter(u, in)
+			}
+		case "POST /api/spools/delete":
+			var in struct {
+				ID       string `json:"id"`
+				Revision int64  `json:"revision"`
+			}
+			if err = decode(r, &in); err == nil {
+				err = s.DeleteSpool(u, in.ID, in.Revision)
 			}
 		case "POST /api/spools":
 			var in Spool

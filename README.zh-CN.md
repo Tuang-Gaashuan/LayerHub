@@ -13,6 +13,12 @@ LayerHub 是面向多人共用 3D 打印机的自部署网页应用。成员使�
 
 **推荐组合：LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio)。** 在电脑上完成模型准备与切片，再将已切片 3MF 上传到 LayerHub，进行团队排队、设备控制和通知。
 
+## 最新源码进展（`main`）
+
+新增中英文[图文使用指南](USAGE.zh-CN.md)，介绍 Studio 切片、导出、LayerHub 上传及立即打印/排队。近期源码同时补充后台持久化解析、设备 IP 修改、主题个性化、耗材删除保护、AMS 烘干状态与更完整的告警记录，以及“按打印机更新”材质和颜色；A1 温度显示调整为整数。详见[源码更新记录](CHANGELOG.md)。
+
+**源码与安装包有区别：** 本节内容新于现有 `v0.1.2-beta` 发布附件；上传 GitHub 源码不会自动升级 NAS 或替换旧安装包。X2D 外置料架/软 TPU 启动路径已经实现并完成离线验证，仍待真实打印验收。“按打印机更新”目前校正同一卷的记录，尚未实现实际换卷后的原卷卸载、新卷挂载流程。
+
 ## v0.1.2-beta 更新
 
 以下内容已纳入 **v0.1.2-beta Windows/Linux 应用包和下载/更新工具包**。旧版标签与附件继续保留。
@@ -55,22 +61,23 @@ Beta 持续优先完善团队协作、队列、耗材、控制与通知，已移
 
 ## 使用流程
 
-![Beta 切片 3MF 检查](validation/beta-intake-zh.png)
+**Bambu Studio 切片 → 导出切片 3MF → LayerHub 上传 → 确认打印盘、设备和料卷 → 立即打印或加入队列。**
 
-离线演示工作区：直接查看打印盘、颜色和预计值。[英文看板截图](validation/beta-dashboard-en.png)。
+1. **在 Studio 准备模型。** 打开模型或工程，选择实际打印机、喷嘴、打印板和耗材预设。
 
-```mermaid
-flowchart LR
-    Studio[Bambu Studio 准备与切片] --> File[导出切片盘 3MF]
-    File --> Inspect[LayerHub 校验文件]
-    Inspect --> Queue[确认设备与实际料卷]
-    Queue --> Print[打印前准备、传输与启动]
-    Print --> Finish[通知本人、取件与用量结算]
-```
+![在 Bambu Studio 打开模型或工程](docs/images/workflow/zh-01-open-studio.png)
 
-上传**只接受已经切片的 `.3mf`**，包括 `.gcode.3mf`。按内容识别，重命名 STL、原始 G-code 或未切片工程不能通过校验。检查不会创建任务、预留库存或发送设备指令。单盘自动预填预计值；多盘与缺失项留空，由用户确认。[文件导入说明](IMPORTING.md)。
+2. **完成切片并导出。** 检查预览，选择“导出单盘切片文件”或“导出所有切片文件”，得到已切片的 `.3mf` / `.gcode.3mf`，不要上传未切片工程。
 
-检查文件不会启动打印。设备、队首、机型、喷嘴、打印板、材质、供料映射和授权校验继续保留，未知结果的启动指令不会因重连自动重发。设备完工即可通知任务所有者，人工取件与实际用量结算分别登记。
+![在 Bambu Studio 导出切片盘文件](docs/images/workflow/zh-02-export-sliced.png)
+
+3. **上传并确认。** 在 LayerHub 选择打印盘、目标设备与实际装载的料卷。设备就绪且打印板已清空时，可“确认并开始打印”；也可以只入队，稍后在对应设备的队列中确认开始。图中设备忙碌，且尚未选料，需要先选料再确认入队。
+
+![在 LayerHub 确认打印盘、设备和实际料卷](docs/images/workflow/zh-03-confirm-print.png)
+
+每盘独立打印；立即开始只启动指定首盘，其余盘排队。下一盘仍需取件、清空打印板并确认开始。设备完工通知与人工实际用量结算分别处理。
+
+[查看完整图文使用指南](USAGE.zh-CN.md) · [English guide](USAGE.md)
 
 ## 云服务器 → NAS → 打印机
 

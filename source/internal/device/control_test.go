@@ -202,3 +202,14 @@ func TestSimulatedPauseResumeAndStop(t *testing.T) {
 		t.Fatal("stop status incorrect")
 	}
 }
+
+func TestX2DExternalSourceUsesVirtualMappingWithoutAMSMovement(t *testing.T) {
+	for _, source := range []int{254, 255} {
+		payload := printPayload(app.PrintRequest{Remote: "external.3mf", TaskName: "job-fixture", ExternalSource: source, Options: &app.PrintOptions{Plate: 1, UseAMS: false, Mapping: []app.AMSTarget{{Filament: 2}}}})
+		flat := payload["ams_mapping"].([]int)
+		modern := payload["ams_mapping2"].([]map[string]int)
+		if payload["use_ams"] != false || flat[2] != -1 || modern[2]["ams_id"] != source || modern[2]["slot_id"] != 0 || modern[0]["slot_id"] != 255 {
+			t.Fatal(payload)
+		}
+	}
+}

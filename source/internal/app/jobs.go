@@ -323,6 +323,9 @@ func (s *Service) executable(tx *sql.Tx, u User, id int64, expected string) (Job
 	if missingCompletion != nil {
 		return j, conflict("上一任务记录缺失，请先补登记取件与实际用量")
 	}
+	if t.State == "drying" {
+		return j, conflict("AMS 烘干流程进行中，暂不可启动打印；结束后请核对供料状态。")
+	}
 	if t.State != "idle" && !settledStopReady(jobs, j.Printer, t) {
 		return j, conflict("设备尚未空闲")
 	}
@@ -507,8 +510,20 @@ func (s *Service) startJob(u User, id int64, expected *Job) error {
 			request := PrintRequest{Remote: job.Remote, TaskName: fmt.Sprintf("job-%d", job.ID), Options: job.PrintOptions}
 			if p.ModelID == "x2d" {
 				request.BedType = "pte"
+				if job.PrintOptions != nil && !job.PrintOptions.UseAMS {
+					_, plate, routeErr := x2dPrintSlice(job, *job.PrintOptions)
+					if routeErr != nil {
+						err = routeErr
+					} else if plate.Nozzle.Physical == 1 {
+						request.ExternalSource = 254
+					} else {
+						request.ExternalSource = 255
+					}
+				}
 			}
-			if driver, ok := s.Device.(PrinterController); ok {
+			if err != nil {
+				// A changed file must never fall through to a physical start.
+			} else if driver, ok := s.Device.(PrinterController); ok {
 				err = driver.StartPrint(ctx, p, request)
 			} else if job.PrintOptions != nil {
 				err = fmt.Errorf("project driver unavailable")
@@ -569,6 +584,9 @@ func (s *Service) validateStart(tx *sql.Tx, job Job) error {
 	for _, sp := range spools {
 		if _, used := jobUses(job)[sp.ID]; used && sp.Mount != nil {
 			slot := sp.Mount.Slot
+			if slot == "external:1" && model == "x2d" && job.PrintOptions != nil && !job.PrintOptions.UseAMS {
+				continue
+			}
 			if slot != "external" && slot != "1" && slot != "2" && slot != "3" && slot != "4" {
 				return conflict("扩展供料位置尚未通过启动适配，请先使用 Studio 启动")
 			}

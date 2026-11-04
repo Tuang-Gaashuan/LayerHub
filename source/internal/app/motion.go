@@ -33,7 +33,9 @@ type MotionController interface {
 }
 
 func motionFresh(t time.Time) bool {
-	return !t.IsZero() && time.Since(t) >= -time.Second && time.Since(t) < 5*time.Second
+	// Full device snapshots are requested every 30s; unchanged fields need not
+	// arrive in intervening deltas. A disconnect still clears all observations.
+	return !t.IsZero() && time.Since(t) >= -time.Second && time.Since(t) < 45*time.Second
 }
 func ValidateMotion(t Telemetry, in MotionInput) error {
 	if !t.Connected || !motionFresh(t.StateUpdated) || !motionFresh(t.Updated) || !motionFresh(t.Equipment.Motion.CapabilitiesAt) {

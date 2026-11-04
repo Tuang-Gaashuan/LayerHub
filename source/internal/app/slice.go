@@ -422,6 +422,9 @@ func validatePreparationOptions(tx *sql.Tx, u User, j Job, p Printer, o PrintOpt
 			return conflict("多 AMS 的启动映射仍需实机适配；当前只允许第一组四槽")
 		}
 		slot := "external"
+		if !o.UseAMS && p.ModelID == "x2d" {
+			slot = x2dExternalSlot(*plate)
+		}
 		if o.UseAMS {
 			slot = strconv.Itoa(m.AMSID*4 + m.SlotID + 1)
 			if !validSlot(p, slot) {

@@ -1,5 +1,7 @@
 # 手动移动 / Manual movement
 
+2026-10-29 复验及 A1 适配研究 / Recheck and A1 adapter research: [CONTROL_VALIDATION.md](CONTROL_VALIDATION.md)。A1 移动仍未开放 / A1 motion remains unavailable.
+
 Beta 维护控制的首版范围：**X2D、原生归位、XYZ 单次 1 mm 点动**。推荐使用 Bambu Studio 切片，LayerHub 管理团队、文件、排队及设备维护。
 
 打开设备控制台的「手动移动」页。仅管理员可操作；先完成本机任务的取件和用量登记，在现场确认打印板和运动路径清空，再勾选确认。没有可靠坐标时显示未提供，不把坐标写成 0。
@@ -24,3 +26,11 @@ One click sends one non-retained QoS 0 native request. Request IDs persist in th
 Hardware evidence on October 28, 2026: X2D firmware 01.02.00.00 accepted native homing; all three homing flags eventually arrived. One positive-direction small-step request on each axis was accepted and individually confirmed onsite as visible motion, stopped, without issues. Exact millimetres were not measured. 10 mm, extrusion, travel limits and other models have not been validated. Negative-direction encoding is checked offline without claiming every physical direction or condition has been tested.
 
 Protocol references: [official axis controls](https://github.com/bambulab/BambuStudio/blob/79df7ae309be398ed30c9f397c13c9911c2edc57/src/slic3r/GUI/DeviceCore/DevAxisCtrl.cpp), [official axis status](https://github.com/bambulab/BambuStudio/blob/79df7ae309be398ed30c9f397c13c9911c2edc57/src/slic3r/GUI/DeviceCore/DevAxis.h).
+
+## 归位后仍无法点动 / Jogging remains unavailable after homing
+
+本次更新将移动字段有效期对齐到 30 秒完整状态刷新周期（45 秒窗口），新增“重新读取移动状态”只读按钮。按钮只请求 pushall，不触发归位或点动。
+
+界面会明确显示未确认回零的具体轴、过期状态、现场安全勾选及待核对指令。归位或点动后现场确认会重置；再次点动需重新勾选。旧控制记录显示归位成功，不能替代当前机器上报的 XYZ 标记。0 仍表示未确认，不会强行视为已回零；断线清空观察值。
+
+Motion fields now use a 45-second freshness window aligned with the 30-second full-snapshot request interval. Refresh motion status requests read-only pushall, never homing or jogging. The UI explains missing axes, stale state, onsite clearance and unresolved commands. Clearance resets after an operation. An old successful homing record never substitutes for current XYZ flags; zero remains unconfirmed, and disconnect clears observations.

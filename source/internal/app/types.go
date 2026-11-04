@@ -143,6 +143,8 @@ type PrintRequest struct {
 	Remote, TaskName string
 	Options          *PrintOptions
 	BedType          string
+	// Set only by the server after validating an X2D file's physical route.
+	ExternalSource int
 }
 type PrinterController interface {
 	StartPrint(context.Context, Printer, PrintRequest) error

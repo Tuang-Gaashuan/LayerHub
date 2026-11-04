@@ -8,7 +8,7 @@ Use disposable offline workspaces before production. Record version, OS/architec
 | Team/roles/sessions | Owner/admin/member boundaries, rename, disable, session isolation and audit records |
 | Removed workbench | No editor navigation/assets, old APIs 410, old bookmarks return to dashboard, no engine worker |
 | File intake | Actual sliced 3MF only; STL, raw G-code, renamed invalid or unsliced project rejected before job/reservation |
-| Preparation | Colors and plate metadata readable; single-plate estimates rounded, multi-plate/unknown estimates blank; explicit spool choice |
+| Preparation | Colors and plate metadata readable; selected plates carry their own sliced estimates; unknown estimates require review; explicit spool choice |
 | Queues/inventory | Per-printer order, shared/private stock isolation, reservations separate from actual usage |
 | Notifications | Owner-specific, deduplicated start/finish events, optional verified email; device finish independent of collection |
 | Backup/restore | Owner-only, offline restore; core and legacy alpha rows retained, restored devices disabled |

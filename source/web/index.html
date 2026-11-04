@@ -1,6 +1,33 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3159ed"><title>共印空间 · LayerHub</title><meta name="description" content="连接每一位创作者的 3D 打印协作工作台。上传切片、共享设备、协同管理打印任务。"><link rel="icon" href="./favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./app.css"><link rel="stylesheet" href="./workspace.css"><link rel="stylesheet" href="./finish.css"><link rel="stylesheet" href="./sidebar-nav.css"><link rel="stylesheet" href="./i18n.css"><script src="./locales/en.generated.js"></script><script src="./i18n.js"></script><script src="./sidebar-nav.js"></script></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#3159ed"><title>共印空间 · LayerHub</title><meta name="description" content="连接每一位创作者的 3D 打印协作工作台。上传切片、共享设备、协同管理打印任务。"><script src="./theme-startup.js"></script><link rel="icon" href="./favicon.svg" type="image/svg+xml"><script src="./locales/en.generated.js"></script><script src="./i18n.js"></script><script src="./sidebar-nav.js"></script>
+<link rel="stylesheet" href="./app.css">
+<link rel="stylesheet" href="./workspace.css">
+<link rel="stylesheet" href="./finish.css">
+<link rel="stylesheet" href="./sidebar-nav.css">
+<link rel="stylesheet" href="./i18n.css">
+<link rel="stylesheet" href="./spool-picker.css">
+<link rel="stylesheet" href="./roles.css">
+<link rel="stylesheet" href="./diagnostics.css">
+<link rel="stylesheet" href="./account-security.css">
+<link rel="stylesheet" href="./print-flow.css">
+<link rel="stylesheet" href="./control.css">
+<link rel="stylesheet" href="./settlement.css">
+<link rel="stylesheet" href="./equipment.css">
+<link rel="stylesheet" href="./control-layout.css">
+<link rel="stylesheet" href="./filament.css">
+<link rel="stylesheet" href="./motion.css">
+<link rel="stylesheet" href="./print-prepare.css">
+<link rel="stylesheet" href="./team-tools.css">
+<link rel="stylesheet" href="./file-intake.css">
+<link rel="stylesheet" href="./upload-preparation.css">
+<link rel="stylesheet" href="./board-ui.css">
+<link rel="stylesheet" href="./appearance.css">
+<link rel="stylesheet" href="./viewport-fit.css">
+<link rel="stylesheet" href="./studio-shortcut.css">
+<link rel="stylesheet" href="./themes.generated.css">
+<link rel="stylesheet" href="./themes.css">
+</head>
 <body>
 <aside class="sidebar" id="sidebar">
   <a class="brand" href="#board"><span class="brand-mark" data-icon="layers"></span><span>共印空间<small>LAYERHUB</small></span></a>
@@ -32,51 +59,55 @@
 <input id="fileInput" type="file" accept=".3mf" hidden>
 <script src="./printer-catalog.js"></script>
 <script src="./workspace-model.js"></script>
-<link rel="stylesheet" href="./spool-picker.css">
+
 <script src="./spool-picker.js"></script>
 <script src="./workspace-ui.js"></script>
 <script src="./mount-ui.js"></script>
 <script src="./transport.js"></script>
-<link rel="stylesheet" href="./roles.css">
+
 <script src="./roles.js"></script>
 <script src="./remote.js"></script>
-<link rel="stylesheet" href="./diagnostics.css">
+
 <script src="./diagnostics.js"></script>
-<link rel="stylesheet" href="./account-security.css">
+
 <script src="./account-security.js"></script>
-<link rel="stylesheet" href="./print-flow.css">
+
 <script src="./print-flow.js"></script>
 <script src="./finish.js"></script>
-<link rel="stylesheet" href="./control.css">
+
 <script src="./camera.js"></script>
 <script src="./control.js"></script>
-<link rel="stylesheet" href="./settlement.css">
+
 <script src="./settlement-ui.js"></script>
-<link rel="stylesheet" href="./equipment.css">
+
 <script src="./equipment-ui.js"></script>
-<link rel="stylesheet" href="./control-layout.css">
+
 <script src="./control-layout.js"></script>
-<link rel="stylesheet" href="./motion.css">
+
+<script src="./filament-ui.js"></script>
+
 <script src="./motion-ui.js"></script>
 <script src="./orphan-ui.js"></script>
-<link rel="stylesheet" href="./print-prepare.css">
+
 <script src="./print-prepare.js"></script>
 <script src="./machine-materials.js"></script>
 <script src="./email.js"></script>
-<link rel="stylesheet" href="./team-tools.css">
+
 <script src="./team-tools.js"></script>
-<link rel="stylesheet" href="./file-intake.css">
+
 <script src="./file-intake.js"></script>
 <script src="./batch-queue.js"></script>
-<link rel="stylesheet" href="./upload-preparation.css">
+
 <script src="./upload-preparation.js"></script>
 <script src="./queue-order.js"></script>
-<link rel="stylesheet" href="./board-ui.css">
+
 <script src="./board-ui.js"></script>
-<link rel="stylesheet" href="./appearance.css">
+
 <script src="./appearance.js"></script>
-<link rel="stylesheet" href="./viewport-fit.css">
-<link rel="stylesheet" href="./studio-shortcut.css">
+
+
 <script src="./studio-shortcut.js"></script>
+
+
 <script src="./app.js"></script>
 </body></html>

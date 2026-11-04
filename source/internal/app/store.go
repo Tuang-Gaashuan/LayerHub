@@ -233,6 +233,10 @@ func Open(cfg Config, device Device) (*Service, error) {
 		s.Close()
 		return nil, err
 	}
+	if err = s.initInspections(); err != nil {
+		s.Close()
+		return nil, err
+	}
 	keepLock = true
 	return s, nil
 }

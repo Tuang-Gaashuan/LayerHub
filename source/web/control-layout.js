@@ -9,6 +9,7 @@ const ControlLayout=(()=>{
   if(old.nodeType!==1){if(old.nodeValue!==next.nodeValue)old.nodeValue=next.nodeValue;return}
   for(const a of [...old.attributes])if(!next.hasAttribute(a.name))old.removeAttribute(a.name);
   for(const a of [...next.attributes])if(old.getAttribute(a.name)!==a.value)old.setAttribute(a.name,a.value);
+  if(old.nodeName==='INPUT'&&['checkbox','radio'].includes(old.type))old.checked=next.checked;
   for(const event of ['onclick','onchange','onkeydown','oninput'])old[event]=next[event];
   const previous=[...old.childNodes],incoming=[...next.childNodes];
   incoming.forEach((node,i)=>previous[i]?patch(previous[i],node):old.append(node));

@@ -19,9 +19,15 @@ func observeModernFields(l *listener, r map[string]any, now time.Time) {
 	if ext == nil {
 		ext = object(r["extruder"])
 	}
+	if _, ok := ext["state"]; ok {
+		l.fields["extruder.state"] = now
+	}
 	for _, v := range list(ext["info"]) {
 		x := object(v)
 		if id, ok := integer(x["id"]); ok {
+			if x["info"] != nil && x["stat"] != nil && x["snow"] != nil && x["star"] != nil {
+				l.fields[fmt.Sprintf("extruder.feed.%d", id)] = now
+			}
 			if _, present := x["temp"]; present {
 				l.fields[fmt.Sprintf("nozzle.%d", id)] = now
 			}
@@ -59,6 +65,9 @@ func observeModernFields(l *listener, r map[string]any, now time.Time) {
 			slot, ok := integer(t["id"])
 			if ok && len(t) > 1 {
 				l.fields["feed."+app.SourceSlot(id, slot)] = now
+			}
+			if ok && t["tray_type"] != nil && t["tray_color"] != nil && t["nozzle_temp_min"] != nil && t["nozzle_temp_max"] != nil {
+				l.fields["feed.control."+app.SourceSlot(id, slot)] = now
 			}
 		}
 	}

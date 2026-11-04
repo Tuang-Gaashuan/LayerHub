@@ -585,6 +585,8 @@ func (s *Service) collectMail(at time.Time) error {
 				delay = 180
 			} else if t.PrintError != 0 {
 				state = fmt.Sprintf("fault:%d", t.PrintError)
+			} else if len(t.Equipment.HMS) > 0 {
+				state = "hms:" + strings.Join(t.Equipment.HMS, ",")
 			}
 			seq, changed, err := observeMail(tx, fmt.Sprintf("printer:%d", p.ID), state, now, delay)
 			if err != nil {
@@ -618,7 +620,7 @@ func (s *Service) collectMail(at time.Time) error {
 			for _, uid := range ids {
 				language := accountLanguage(tx, uid)
 				localizedLabel := languageText(language, label)
-				if err = s.notifyUser(tx, uid, fmt.Sprintf("printer:%d:%d", p.ID, seq), "LayerHub · "+localizedLabel, localizedFormat(language, "%s\n设备：%s\n请检查设备与 NAS 连接。邮件仅报告状态，不会重发打印或控制命令。", localizedLabel, p.Name), now); err != nil {
+				if err = s.notifyUser(tx, uid, fmt.Sprintf("printer:%d:%d", p.ID, seq), "LayerHub · "+localizedLabel, localizedFormat(language, "%s\n设备：%s\n请检查设备与 NAS 连接。邮件仅报告状态，不会重发打印或控制命令。", localizedLabel, p.Name)+fmt.Sprintf("\nprint_error: %08X\nHMS: %s\nObserved: %s", t.PrintError, strings.Join(t.Equipment.HMS, ", "), time.Unix(now, 0).UTC().Format(time.RFC3339)), now); err != nil {
 					return err
 				}
 			}

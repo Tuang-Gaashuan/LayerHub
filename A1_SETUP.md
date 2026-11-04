@@ -1,5 +1,9 @@
 # A1 without AMS / A1 无 AMS 接入准备
 
+控制指令研究（只读，不是实机验收） / Control research (no hardware tests): [中文](A1_CONTROLS.zh-CN.md) · [English](A1_CONTROLS.md).
+
+2026-10-29 控制复验、待发布风扇修复及移动适配边界 / Updated control checks, pending fan fix and motion limitations: [CONTROL_VALIDATION.md](CONTROL_VALIDATION.md).
+
 Updated 2026-10-28: one A1 was connected for live telemetry/camera observation. Light on/off was confirmed onsite, and the cloud control path returned an acceptance receipt. The firmware kept reporting the light as on after physical switch-off, so the UI reports the last request. **This is partial validation:** A1 XYZ movement and the full print → collection → actual-material settlement cycle are not signed off. Test your own printer/firmware using the checklist below.
 
 2026-10-28 更新：已有一台 A1 接入遥测和相机观察，灯光亮灭由现场确认，云端控制链路收到接受回执。固件关灯后仍上报灯亮，因此界面显示上次请求。**这是部分验证**：A1 XYZ 移动以及打印、取件、实际用量结算的完整闭环仍未验收。独立部署需按下方清单检查自己的机型和固件。

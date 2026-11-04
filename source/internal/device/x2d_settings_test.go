@@ -52,8 +52,8 @@ func TestX2DSettingsUseIndependentFreshFieldsAndFanModePermissions(t *testing.T)
 	if section != "print" || payload["command"] != "set_nozzle_temp" || payload["extruder_index"] != 0 || payload["target_temp"] != 180 {
 		t.Fatal("incorrect explicit nozzle command")
 	}
-	_, payload = settingPayload(app.SettingInput{Key: "fan:10", Value: 25})
-	if payload["command"] != "set_fan" || payload["fan_index"] != 10 || payload["speed"] != 25 {
+	_, payload = settingPayload(app.SettingInput{Key: "fan:10", Value: 20})
+	if payload["command"] != "set_fan" || payload["fan_index"] != 10 || payload["speed"] != 20 {
 		t.Fatal("incorrect new fan command")
 	}
 	_, payload = settingPayload(app.SettingInput{Key: "fan:0", Value: 50})

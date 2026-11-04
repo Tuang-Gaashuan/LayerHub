@@ -94,7 +94,11 @@ func readEquipment(l *listener) app.Equipment {
 			if !ok || id < 0 || id >= count {
 				continue
 			}
-			e := app.ExtruderReading{ID: id, Name: fmt.Sprintf("喷嘴 · 设备编号 %d", id), CurrentSource: packedSource(x["snow"]), TargetSource: packedSource(x["star"])}
+			e := app.ExtruderReading{Updated: l.fields[fmt.Sprintf("extruder.feed.%d", id)], ID: id, Name: fmt.Sprintf("喷嘴 · 设备编号 %d", id), CurrentSource: packedSource(x["snow"]), TargetSource: packedSource(x["star"])}
+			if bits, valid := integer(x["info"]); valid {
+				has := bits&2 != 0
+				e.HasFilament = &has
+			}
 			if t, ok := integer(x["temp"]); ok {
 				e.Temperature = intPtr(t&65535, 0, 500)
 				e.Target = intPtr((t>>16)&65535, 0, 500)
@@ -182,7 +186,9 @@ func readEquipment(l *listener) app.Equipment {
 	out.Camera = cameraReading(l.config, r)
 	for i := range out.Feeds {
 		out.Feeds[i].Updated = l.fields["feed."+out.Feeds[i].Slot]
+		out.Feeds[i].ControlUpdated = l.fields["feed.control."+out.Feeds[i].Slot]
 	}
+	readFilament(l, &out)
 	if l.config.ModelID == "x2d" {
 		readX2DSettings(l, &out)
 		return out
@@ -320,6 +326,8 @@ func legacySource(v any) string {
 }
 func feedReading(t map[string]any, slot, label string) app.FeedReading {
 	f := app.FeedReading{Slot: slot, Label: label, Material: text(t["tray_type"]), ProfileID: text(t["tray_info_idx"]), Color: text(t["tray_color"])}
+	f.NozzleMin = intPtr(t["nozzle_temp_min"], 0, 500)
+	f.NozzleMax = intPtr(t["nozzle_temp_max"], 0, 500)
 	if g := intPtr(t["remain_g"], 0, 10000); g != nil {
 		f.Remaining = g
 		f.RemainingUnit = "g"
@@ -373,11 +381,19 @@ func settingMatches(t app.Telemetry, in app.SettingInput, sent time.Time) bool {
 	if !ok || !r.Updated.After(sent) {
 		return false
 	}
+	if in.Value%app.EquipmentSettingStep(in.Key) != 0 {
+		return false
+	}
 	tolerance := 0
 	if strings.HasPrefix(in.Key, "fan:") {
 		tolerance = 1
 	} else if strings.HasSuffix(in.Key, "fan") {
 		tolerance = 10
+	}
+	// A low nonzero fan reading must never confirm a request to turn it off,
+	// nor may a zero report confirm that a fan has started.
+	if tolerance > 0 && (in.Value == 0 || r.Value == 0) {
+		return r.Value == in.Value
 	}
 	return abs(r.Value-in.Value) <= tolerance
 }
@@ -388,6 +404,9 @@ func abs(n int) int {
 	return n
 }
 func settingPayload(in app.SettingInput) (string, map[string]any) {
+	if in.Value%app.EquipmentSettingStep(in.Key) != 0 {
+		return "", nil
+	}
 	p := map[string]any{"command": "gcode_line"}
 	switch in.Key {
 	case "nozzle:0", "nozzle:1":
@@ -422,6 +441,9 @@ func (m *Manager) SetEquipment(ctx context.Context, p app.Printer, in app.Settin
 	r, ok := findSetting(m.Status(p.ID), in.Key)
 	if !ok || in.Value < r.Min || in.Value > r.Max {
 		return errors.New("setting unavailable or out of range")
+	}
+	if in.Value%app.EquipmentSettingStep(in.Key) != 0 {
+		return errors.New("fan speed must be a multiple of 10 percent")
 	}
 	if m.mode == "simulated" {
 		m.mu.Lock()

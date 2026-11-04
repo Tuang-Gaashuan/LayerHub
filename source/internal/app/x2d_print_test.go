@@ -155,3 +155,128 @@ func TestX2DSingleNozzleLifecycleAndLivePreflight(t *testing.T) {
 		})
 	}
 }
+
+func TestX2DExternalTPURouteAndLivePreflight(t *testing.T) {
+	s, u, driver := setup(t)
+	p, sp := fixture(t, s, u)
+	if err := s.SavePrinter(u, PrinterInput{ID: p.ID, ModelID: "x2d"}); err != nil {
+		t.Fatal(err)
+	}
+	sp.Material = "TPU"
+	sp.Mount = &Mount{p.ID, "external:1"}
+	if err := s.SaveSpool(u, sp); err != nil {
+		t.Fatal(err)
+	}
+	raw := sliceFixture(t, map[string]string{
+		"Metadata/project_settings.config": `{"printer_model":"Bambu Lab X2D","nozzle_diameter":["0.4","0.4"],"physical_extruder_map":["1","0"],"curr_bed_type":"Textured PEI Plate"}`,
+		"Metadata/plate_1.gcode":           "; TEST ONLY",
+		"Metadata/slice_info.config":       `<config><plate><metadata key="index" value="1"/><filament id="1" group_id="0" tray_info_idx="GFU03" type="TPU" used_g="134.07"/><nozzle id="0" extruder_id="1" nozzle_diameter="0.4" volume_type="Standard"/></plate></config>`,
+	})
+	file := filepath.Join(s.Config.DataDir, "uploads", "external.3mf")
+	if err := os.WriteFile(file, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	hash := sha256.Sum256(raw)
+	id, err := s.CreateJob(u, Schedule{Printer: p.ID, Estimate: 878, Grams: 135, SpoolID: sp.ID}, "external.3mf", file, hex.EncodeToString(hash[:]), "", int64(len(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := PrintOptions{Plate: 1, UseAMS: false, BedLeveling: true, Mapping: []AMSTarget{{Filament: 0, SpoolID: sp.ID, Grams: 135}}}
+	if err = s.SavePrintOptions(u, id, o); err != nil {
+		t.Fatal(err)
+	}
+	jobs, _ := readJobs(s.DB)
+	job := jobs[0]
+	ready := func() Telemetry {
+		v := x2dReadyTelemetry()
+		yes := true
+		now := time.Now()
+		v.Equipment.Feeds = []FeedReading{{Slot: "external:1", Material: "TPU", ProfileID: "GFU03", Present: &yes, Updated: now}}
+		v.Equipment.AMSUnits = nil
+		v.Equipment.Extruders = []ExtruderReading{{ID: 1, Updated: now, HasFilament: &yes, CurrentSource: "external:1"}}
+		v.Equipment.Filament.Updated = now
+		return v
+	}
+	if err = x2dPrintReady(job, ready()); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []struct {
+		name   string
+		mutate func(*Telemetry)
+	}{
+		{"TPU for AMS is not TPU 90A", func(v *Telemetry) {
+			v.Equipment.Feeds[0].Material = "TPU-AMS"
+			v.Equipment.Feeds[0].ProfileID = "GFU02"
+		}},
+		{"wrong hardness preset", func(v *Telemetry) { v.Equipment.Feeds[0].ProfileID = "GFU01" }},
+		{"wrong physical source", func(v *Telemetry) { v.Equipment.Feeds[0].Slot = "external" }},
+		{"stale external report", func(v *Telemetry) { v.Equipment.Feeds[0].Updated = time.Time{} }},
+		{"not manually loaded", func(v *Telemetry) { v.Equipment.Extruders[0].HasFilament = nil }},
+		{"still loaded from AMS", func(v *Telemetry) { v.Equipment.Extruders[0].CurrentSource = "4" }},
+		{"stale extruder report", func(v *Telemetry) { v.Equipment.Extruders[0].Updated = time.Time{} }},
+	} {
+		v := ready()
+		bad.mutate(&v)
+		if x2dPrintReady(job, v) == nil {
+			t.Fatal("unsafe external route accepted", bad.name)
+		}
+	}
+	ams := o
+	ams.UseAMS = true
+	if _, _, err = x2dPrintSlice(job, ams); err == nil {
+		t.Fatal("soft TPU allowed through AMS")
+	}
+	// The other external port cannot satisfy this file's physical mapping.
+	freshSpools, _ := readSpools(s.DB)
+	sp = freshSpools[0]
+	sp.Mount = &Mount{p.ID, "external"}
+	if err = s.SaveSpool(u, sp); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.SavePrintOptions(u, id, o); err == nil {
+		t.Fatal("wrong external mount accepted")
+	}
+	freshSpools, _ = readSpools(s.DB)
+	sp = freshSpools[0]
+	sp.Mount = &Mount{p.ID, "external:1"}
+	if err = s.SaveSpool(u, sp); err != nil {
+		t.Fatal(err)
+	}
+	driver.mu.Lock()
+	driver.statuses[p.ID] = ready()
+	driver.mu.Unlock()
+	fake := &x2dProjectFake{fakeDevice: driver}
+	s.Device = fake
+	wrong := ready()
+	wrong.Equipment.Feeds[0].ProfileID = "GFU02"
+	driver.mu.Lock()
+	driver.statuses[p.ID] = wrong
+	driver.mu.Unlock()
+	if err = s.DispatchJob(u, id); err == nil {
+		t.Fatal("wrong TPU preset reached dispatch")
+	}
+	driver.mu.Lock()
+	uploadsBefore := driver.uploads
+	driver.statuses[p.ID] = ready()
+	driver.mu.Unlock()
+	var commandsBefore int
+	s.DB.QueryRow("SELECT COUNT(*) FROM printer_commands WHERE job_id=?", id).Scan(&commandsBefore)
+	if uploadsBefore != 0 || commandsBefore != 0 {
+		t.Fatal("blocked preparation caused side effects")
+	}
+	if err = s.DispatchJob(u, id); err != nil {
+		t.Fatal(err)
+	}
+	waitState(t, s, id, "printing")
+	fake.mu.Lock()
+	request := fake.request
+	uploads := fake.uploads
+	fake.mu.Unlock()
+	if request.ExternalSource != 254 || request.Options.UseAMS || uploads != 1 {
+		t.Fatal("wrong external envelope", request, uploads)
+	}
+	spools, _ := readSpools(s.DB)
+	if spools[0].Remaining != 1000 {
+		t.Fatal("start deducted stock")
+	}
+}

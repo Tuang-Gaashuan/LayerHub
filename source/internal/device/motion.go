@@ -128,5 +128,5 @@ func (m *Manager) Move(ctx context.Context, p app.Printer, in app.MotionInput) e
 	}
 }
 func motionHomeComplete(r app.MotionReading, sent, now time.Time) bool {
-	return r.HomeMask != nil && *r.HomeMask == 7 && r.HomeAt.After(sent) && now.Sub(sent) > 60*time.Second && now.Sub(r.HomeAt) < 5*time.Second
+	return r.HomeMask != nil && *r.HomeMask == 7 && r.HomeAt.After(sent) && now.Sub(sent) > 60*time.Second && now.Sub(r.HomeAt) < 45*time.Second
 }

@@ -1,6 +1,6 @@
 'use strict';
 const FileIntake=(()=>{
- let epoch=0,controller=null;
+ let epoch=0,controller=null,waiting=null;
  const reports=new WeakMap();
  const color=value=>/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(value||'')?value.slice(0,7):null;
  function printPlan(count){
@@ -36,7 +36,7 @@ const FileIntake=(()=>{
  function decorateJobs(){
   $$('[data-job]').forEach(button=>{const j=data.jobs.find(j=>j.id===Number(button.dataset.job)),plate=j?.selectedPlate||j?.printOptions?.plate,row=button.closest('.job-row,.device-queue-job');if(!plate||!row)return;let tag=row.querySelector('[data-job-plate]');if(!tag){const title=row.querySelector('.job-main h3,.device-queue-copy strong');if(!title)return;tag=document.createElement('small');tag.dataset.jobPlate='';tag.className='job-plate-label';title.append(tag)}tag.textContent=I18n.msg`打印盘 ${plate}`});
  }
- function close(){epoch++;controller?.abort();controller=null;const panel=$('#fileIntakePanel');if(panel){panel.remove();$('#modal').close()}}
+ function close(){waiting=null;epoch++;controller?.abort();controller=null;const panel=$('#fileIntakePanel');if(panel){panel.remove();$('#modal').close()}}
  function forFile(file){const r=reports.get(file);return r?.uid===data.user?.id?r.review:null}
  function paint(file){
   const host=$('#fileReview');if(!host)return;const r=forFile(file);if(!r){host.replaceChildren();return}
@@ -59,9 +59,14 @@ const FileIntake=(()=>{
   const active=new AbortController();controller=active;const timeout=setTimeout(()=>active.abort(),600000);
   try{
    const body=new FormData();body.append('file',file);
-   const response=await fetch('/api/files/inspect',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':Remote.csrfToken(),'Accept-Language':I18n.language()},body,signal:active.signal});
+   const response=await fetch('/api/files/inspect'+(data.capabilities?.backgroundFileInspect?'?background=1':''),{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':Remote.csrfToken(),'Accept-Language':I18n.language()},body,signal:active.signal});
    const result=await response.json();if(!current())return;
    if(!response.ok||result?.ok!==true)throw Error(result.error||I18n.t('检查结果无效，请重新选择文件。'));
+   if(result.inspectionId){
+    modal(I18n.t('后台解析切片文件'),I18n.html`<div id="fileIntakePanel" class="file-intake"><strong class="intake-filename">${esc(file.name)}</strong><p role="status" id="inspectionWaitStatus">文件已上传，正在后台解析。完成后会自动进入打印确认。</p><p class="form-help">可以离开此页面，解析仍会继续；回来后可从后台文件列表恢复。</p></div>`,I18n.html('<button class="button" data-cancel>后台处理，稍后安排</button>'),{onDismiss:close});
+    waiting={id:result.inspectionId,uid,serial,origin,busy:false};
+    if($('#boardUpload'))$('#boardUpload').open=true;await background(true);return
+   }
    const r=result.review;if(r?.schema!==2||r.kind!=='sliced-3mf'||!r.sliced?.available||!r.sliced.info?.plates?.length)throw Error(I18n.t('检查结果无效，请重新选择文件。'));
    reports.set(file,{uid,review:r,selected:new Set(r.sliced.info.plates.length===1?[r.sliced.info.plates[0].id]:[])});close();pickFile(file,{reviewed:true});toast(I18n.t('切片已校验，请确认设备与耗材。'));
   }catch(e){
@@ -69,6 +74,40 @@ const FileIntake=(()=>{
    modal(I18n.t('文件暂不能安排打印'),I18n.html`<div id="fileIntakePanel" class="file-intake"><strong class="intake-filename">${esc(file.name)}</strong><p role="alert">${esc(e.name==='AbortError'?I18n.t('检查已超时，请检查连接后重新选择文件。'):I18n.system(e.message))}</p><p>请在 Bambu Studio 选择正确机型与耗材，完成切片并导出切片盘 3MF。STL、未切片工程和原始 G-code 均不接受。</p><p class="form-help">现有任务和耗材保持原样。</p></div>`,I18n.html('<button class="button" data-cancel>返回</button>'),{onDismiss:close});
   }finally{clearTimeout(timeout);if(controller===active)controller=null}
  }
+
+ let taskRows=[],taskOwner=0,taskLoading=false,taskTimer=null;
+ function waitingCurrent(w){return waiting===w&&w.serial===epoch&&w.uid===data.user?.id&&w.origin?.isConnected&&$('#modal')?.open&&!!$('#inspectionWaitStatus')}
+ async function resumeInspection(id,valid=()=>true){
+  const uid=data.user?.id,result=await Remote.request('/api/files/inspections?id='+encodeURIComponent(id));
+  if(data.user?.id!==uid||!valid())return;
+  const t=result.inspections[0],r=t?.review;
+  if(!t||t.state!=='ready'||r?.schema!==2||r.kind!=='sliced-3mf'||!r.sliced?.available||!r.sliced.info?.plates?.length)throw Error(I18n.t('文件尚未解析完成'));
+  const file={name:t.filename,size:t.bytes,inspectionId:t.id};close();reports.set(file,{uid,review:r,selected:new Set(r.sliced.info.plates.length===1?[r.sliced.info.plates[0].id]:[])});pickFile(file,{reviewed:true});
+ }
+ async function advanceWaiting(){
+  const w=waiting;if(!w||!waitingCurrent(w)||w.busy)return;
+  const task=taskRows.find(t=>t.id===w.id),status=$('#inspectionWaitStatus');
+  if(task?.state==='failed'){status.textContent=I18n.system(task.error||I18n.t('解析失败'));waiting=null;return}
+  if(task?.state!=='ready'||document.visibilityState==='hidden')return;
+  w.busy=true;try{await resumeInspection(w.id,()=>waitingCurrent(w))}catch(e){if(waitingCurrent(w)){status.textContent=I18n.t('解析结果暂时无法读取，请稍后从后台文件列表继续。');waiting=null}}finally{w.busy=false}
+ }
+ function drawTasks(){
+  const board=$('#boardUpload');if(!board||taskOwner!==data.user?.id)return;
+  let host=$('#backgroundInspections');if(!host){host=document.createElement('section');host.id='backgroundInspections';host.style.padding='18px';board.append(host)}
+  const labels={queued:I18n.t('等待解析'),parsing:I18n.t('后台解析中'),ready:I18n.t('解析完成'),failed:I18n.t('解析失败')};
+  host.innerHTML=`<strong>${I18n.t('后台文件')}</strong><p class="form-help">${I18n.t('上传完成后可以离开；返回后继续安排，不会自动打印。')}</p>`+taskRows.map(t=>`<div class="detail-row"><span style="min-width:0;overflow-wrap:anywhere">${esc(t.filename)}<small style="display:block">${esc(labels[t.state]||t.state)} · ${(t.bytes/1024/1024).toFixed(1)} MB ${esc(t.error||'')}</small></span><span>${t.state==='ready'?`<button class="button small" data-resume-inspection="${esc(t.id)}">${I18n.t('继续安排')}</button>`:''}${t.state!=='parsing'?`<button class="text-link" data-delete-inspection="${esc(t.id)}">${I18n.t('删除文件')}</button>`:''}</span></div>`).join('');
+  host.hidden=!taskRows.length;
+  host.querySelectorAll('[data-resume-inspection]').forEach(b=>b.onclick=async()=>{b.disabled=true;const uid=data.user?.id;try{await resumeInspection(b.dataset.resumeInspection,()=>b.isConnected&&data.user?.id===uid)}catch(e){toast(I18n.system(e.message))}finally{b.disabled=false}});
+  host.querySelectorAll('[data-delete-inspection]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const res=await fetch('/api/files/inspections?id='+encodeURIComponent(b.dataset.deleteInspection),{method:'DELETE',credentials:'same-origin',headers:{'X-CSRF-Token':Remote.csrfToken()}});if(!res.ok)throw Error(I18n.t('文件暂不能删除'));await background(true)}catch(e){toast(I18n.system(e.message));b.disabled=false}});
+ }
+ async function background(force=false){
+  if(!data.user||!data.capabilities?.backgroundFileInspect)return;
+  if(!taskTimer)taskTimer=setInterval(()=>background(true),3000);
+  if(taskOwner!==data.user.id){taskRows=[];taskOwner=data.user.id;if(waiting&&waiting.uid!==data.user.id)waiting=null}
+  drawTasks();if(!force&&taskRows.length||taskLoading)return;
+  const uid=data.user.id;taskLoading=true;try{const result=await Remote.request('/api/files/inspections');if(uid===data.user?.id){taskRows=result.inspections;taskOwner=uid;drawTasks();await advanceWaiting()}}catch{}finally{taskLoading=false}
+ }
+
  function estimates(file){const r=forFile(file);if(!r)return {};const ps=selection(file);if(ps.length!==1)return {estimate:null,grams:null};const p=ps[0],total=p.filaments.reduce((n,f)=>n+Number(f.usedGrams||f.grams||0),0),bound=(n,max)=>Number.isFinite(n)&&n>0&&n<=max?Math.ceil(n):null;return {estimate:bound(p.seconds/60,100000),grams:bound(total,10000)}}
- return {open,close,forFile,paint,estimates,selection,select,choose,scheduleSummary,decorateJobs,plateBadge};
+ return {open,close,forFile,paint,estimates,selection,select,choose,scheduleSummary,decorateJobs,plateBadge,background};
 })();

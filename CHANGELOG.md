@@ -1,3 +1,37 @@
+# Unreleased / 未发布
+
+## 2026-11-04 source update / 源码更新
+
+- Add English and Simplified Chinese illustrated usage guides with six user-provided screenshots; expand the README workflow from Studio export to immediate start or per-printer queueing.
+- 新增六张截图的中英文图文使用指南，明确已切片3MF格式、后台解析、实际料卷选择、立即开始与仅入队、多盘逐次打印和完工结算。
+- Add durable background inspections with automatic handoff to print confirmation; cancellation and ambiguous-result recovery retain explicit start semantics. Add printer IP editing and Studio single-instance launching.
+- 新增持久化后台解析、解析后进入确认、上传取消与结果核对；增加设备IP修改与Studio单实例打开。
+- Add AMS drying visibility/start guards, PrintError/HMS observation details, protected spool deletion, integer A1 temperature display and broader appearance preferences.
+- 补充AMS烘干展示与启动检查、PrintError/HMS告警详情、耗材删除保护、A1整数温度及主题字体设置。
+- Fix material selectors falling back to PLA for TPU-AMS or unlisted materials. Add explicit printer-report material/color sync preserving grams and ownership. This corrects an existing record; replacement-roll unmount/remount remains pending.
+- 修复TPU-AMS等未列出材质误选PLA，增加按机器更新材质颜色并保留克数与归属；换卷后的原卷卸载与新卷挂载仍待实现。
+- Add X2D external-spool routing with exact physical nozzle/source and fresh profile checks. Offline and fixture-browser tests passed; live print acceptance and production deployment of this route remain pending.
+- 新增X2D外置单料卷路径和物理喷嘴/料位、新鲜预设检查；离线与模拟浏览器验证通过，实机打印验收和这部分生产切换仍待完成。
+- These are main-branch source changes, not replacements for existing version tags or download archives. 本次仅更新main源码，不重写旧版本标签或安装包。
+
+## Earlier development notes / 先前开发记录
+
+The notes below retain their original dated validation/deployment scope. They do not describe all later hardware checks. 以下保留原日期的验证和部署范围，不代表后续所有实测状态。
+
+- Add guarded X2D + AMS 2 Pro PETG load/change/unload controls with actual colour slots, confirmation, one-shot sending and sensor-based completion. Add read-only motion refresh and explicit missing-axis/clearance reasons; align motion freshness to the full-snapshot cadence.
+- 新增 X2D + AMS 2 Pro 的 PETG 进换退料界面，实际颜色选槽、独立确认、单次发送与传感器完成检查；新增只读移动状态刷新和明确的回零/现场确认提示，调整状态有效期以匹配完整快照周期。
+
+- Add ten local font choices from the requested reference, including STZhongsong, STSong, STXihei, STKaiti, YouYuan, LiSu, STHupo, Bahnschrift, a themed combination and monospace; keep old font preferences and defaults. Use installed system fonts with fallbacks rather than bundling font files.
+- 按参考图新增十个本机字体选项，总计 20 种；保留原字体偏好和默认值，未安装字体时使用后备字形，不打包本机字体文件。
+
+- Add six accent presets and validated custom colours, light/dark/system modes, independent layout density, whole-workspace previews with reversible cancel/reset, and account-scoped browser storage. Preserve existing font preferences, semantic device states and actual filament colours. The appearance UI was deployed to the existing cloud and NAS on 2026-10-29 without a service restart; no new GitHub release has been published. See [appearance settings](APPEARANCE.md).
+- 新增六种主题色与自定义颜色、浅色/深色/跟随系统、独立页面密度及全工作区实时预览；取消/重置可还原，偏好按账户保存在浏览器。保留旧字体设置及设备状态和实际耗材颜色。个性化界面已于 2026-10-29 无重启上线至现有云端与 NAS，尚未发布新的 GitHub 版本，见[个性化说明](APPEARANCE.md)。
+
+- Use ten-percent fan controls (0, 10, …, 100) with 20/50/80 presets. Reject off-level input before creating a command; do not silently round or resend. Fan-off confirmation requires a fresh zero report; a zero report cannot confirm fan start.
+- 风扇按整十档调整，快捷值改为 20/50/80%；非整档输入在创建指令前拒绝，不静默改值或重发。关闭必须收到新鲜的零值回报，零值也不能确认风扇已启动。
+- Record the October 29 control checks and the remaining A1 motion work in [CONTROL_VALIDATION.md](CONTROL_VALIDATION.md). These changes are local and have not been deployed or included in a new release.
+- 整理 10 月 29 日控制实测及 A1 移动适配边界，见[控制验证记录](CONTROL_VALIDATION.md)。本项为本地待发布修改，尚未部署或发布新版本。
+
 # 0.1.2-beta — Print preparation, maintenance and Studio / 打印准备、维护与 Studio
 
 - A combined upload-to-print preparation view, per-plate queue order, explicit next-job selection, and cancellation of never-started tasks. Later plates never start automatically.

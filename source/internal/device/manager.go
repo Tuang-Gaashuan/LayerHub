@@ -316,12 +316,17 @@ func (m *Manager) Status(id int64) app.Telemetry {
 	if state == "" {
 		state = "offline"
 	}
+	errText := l.err
+	if state == "idle" && amsDrying(raw) {
+		state = "drying"
+		errText = "AMS 烘干流程进行中，暂不可启动打印；结束后请核对供料状态。"
+	}
 	var ams any
 	if raw["ams"] != nil {
 		encoded, _ := json.Marshal(raw["ams"])
 		_ = json.Unmarshal(encoded, &ams)
 	}
-	return app.Telemetry{Connected: l.connected, Updated: updated, State: state, File: text(raw["subtask_name"]), Percent: number(raw["mc_percent"]), Remaining: number(raw["mc_remaining_time"]), Layer: number(raw["layer_num"]), Layers: number(raw["total_layer_num"]), Nozzle: float64(number(raw["nozzle_temper"])), Bed: float64(number(raw["bed_temper"])), AMS: ams, Equipment: readEquipment(l), Error: l.err, RawState: text(raw["gcode_state"]), GcodeFile: text(raw["gcode_file"]), PrintError: number(raw["print_error"]), StateUpdated: l.stateUpdated, TaskUpdated: l.taskUpdated}
+	return app.Telemetry{Connected: l.connected, Updated: updated, State: state, File: text(raw["subtask_name"]), Percent: number(raw["mc_percent"]), Remaining: number(raw["mc_remaining_time"]), Layer: number(raw["layer_num"]), Layers: number(raw["total_layer_num"]), Nozzle: float64(number(raw["nozzle_temper"])), Bed: float64(number(raw["bed_temper"])), AMS: ams, Equipment: readEquipment(l), Error: errText, RawState: text(raw["gcode_state"]), GcodeFile: text(raw["gcode_file"]), PrintError: number(raw["print_error"]), StateUpdated: l.stateUpdated, TaskUpdated: l.taskUpdated}
 }
 
 type reuseCache struct{ tls.ClientSessionCache }

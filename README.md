@@ -15,6 +15,12 @@ LayerHub is a self-hosted workspace for teams sharing 3D printers. Prepare and s
 
 **Recommended setup: LayerHub Beta + [Bambu Studio](https://github.com/bambulab/BambuStudio).** Prepare and slice on your computer, then upload the sliced 3MF for team scheduling, printer control and notifications.
 
+## Latest development updates (`main`)
+
+The illustrated [usage guide](USAGE.md) explains the complete Studio → sliced 3MF → LayerHub → start/queue workflow. Recent source updates add persistent background parsing, printer IP editing, appearance themes, spool deletion safeguards, AMS drying status and more detailed device alerts, and an **Update from printer** action for material/color corrections. A1 temperatures now display whole degrees. See [current source changes](CHANGELOG.md).
+
+**Source versus downloads:** the changes below this development heading are newer than the existing `v0.1.2-beta` download assets. GitHub source publication does not automatically update an installed NAS or replace a release package. X2D external-spool/soft-TPU startup is implemented in source and tested offline, but still awaits a real print acceptance test. The material update action edits the existing spool; physical spool replacement and automatic unmount/reassignment are not implemented.
+
 ## New in v0.1.2-beta
 
 These updates are included in the **v0.1.2-beta Windows/Linux applications and Download / Update Kit**. Earlier tags and assets remain available.
@@ -57,22 +63,23 @@ Beta is the mainline for ongoing feature refinement. Its model workbench, geomet
 
 ## The workflow
 
-![Sliced 3MF inspection in Beta](validation/beta-intake-zh.png)
+**Bambu Studio → export sliced 3MF → upload to LayerHub → confirm plates, printer and spools → start now or queue.**
 
-This offline demo shows sliced plates and material colors in a compact file review. [English dashboard](validation/beta-dashboard-en.png).
+1. **Prepare in Studio.** Open the model/project and choose the actual printer, nozzle, plate and filament settings.
 
-```mermaid
-flowchart LR
-    Studio[Bambu Studio: prepare and slice] --> File[Export sliced plate 3MF]
-    File --> Inspect[LayerHub: inspect file]
-    Inspect --> Queue[Confirm printer and spool]
-    Queue --> Print[Prepare, transfer and start]
-    Print --> Finish[Notify owner, collect and settle usage]
-```
+![Open a project in Bambu Studio](docs/images/workflow/en-01-open-studio.png)
 
-Only **already-sliced `.3mf` files**, including `.gcode.3mf`, are accepted. Detection uses archive contents; renaming an STL, raw G-code or unsliced project does not make it printable. Inspection creates no job, material reservation or printer command. Single-plate estimates prefill the queue form; missing and multi-plate values stay blank for deliberate confirmation. [File guidance](IMPORTING.md).
+2. **Slice and export.** Check Preview and select **Export plate sliced file** (or export all sliced plates). Upload the sliced `.3mf` / `.gcode.3mf`, rather than the unsliced project.
 
-Printing does not start from file inspection. Device, queue, model, nozzle, build plate, material/feed mapping and authorization checks remain. Reconnection never silently repeats an uncertain start. Device completion can email the owner immediately, while physical collection and actual material settlement remain separate actions.
+![Export a sliced 3MF from Bambu Studio](docs/images/workflow/en-02-export-sliced.png)
+
+3. **Upload and confirm.** Select the plates, target printer and real loaded spools. When the printer is ready and the bed is clear, choose **Confirm and start printing**; otherwise choose **Confirm & queue** and start later from the printer queue. The screenshot shows a busy printer, so it offers queueing.
+
+![Confirm the printer and spool in LayerHub](docs/images/workflow/en-03-confirm-print.png)
+
+Each plate is a separate run. Only the selected first plate can start immediately; later plates require pickup, bed clearance and another explicit start. Device-finished notifications and actual material settlement are separate.
+
+[Read the complete illustrated guide](USAGE.md) · [简体中文图文流程](USAGE.zh-CN.md)
 
 ## Cloud → NAS → printer
 
