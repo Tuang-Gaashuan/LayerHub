@@ -1,7 +1,7 @@
 {
   "version": "0.1.4-beta",
   "status": "passed",
-  "frontend_tests": 198,
+  "frontend_tests": 200,
   "go_tests_all_packages": "passed",
   "go_vet": "passed",
   "generated_locales_and_themes": "current",

@@ -47,7 +47,7 @@ const Remote=(()=>{
     catch(error){if(operation&&!error.unconfirmed)OperationRecovery.done(operation);if(error.unavailable)linkError=I18n.system(error.message);if(pid&&error.unconfirmed){reviews.set(pid,{printerId:pid,at:Date.now(),path});persistReviews()}if(error.status===401&&path!=='/api/login'){expired=true;data.user=null;login()}throw error}
     finally{if(pid)inflight.delete(pid);paintConnection()}
   }
-  async function refresh({renderPage=true}={}){if(refreshing)return refreshing;const task=(async()=>{const snapshot=await request('/api/workspace');csrf=snapshot.csrf;EquipmentUI.decorateDrying(snapshot);data=snapshot;I18n.syncAccount(snapshot.user);data.receivedAt=Date.now();expired=false;if(renderPage)render();paintConnection();return snapshot})();refreshing=task;try{return await task}finally{if(refreshing===task)refreshing=null}}
+  async function refresh({renderPage=true}={}){if(refreshing)return refreshing;const task=(async()=>{const snapshot=await request('/api/workspace');csrf=snapshot.csrf;EquipmentUI.decorateDrying(snapshot);data=snapshot;I18n.syncAccount(snapshot.user);data.receivedAt=Date.now();expired=false;if(renderPage)render();paintConnection();return snapshot})();refreshing=task;try{const snapshot=await task;if(typeof OperationRecovery!=='undefined'){OperationRecovery.paint();void OperationRecovery.check()}return snapshot}finally{if(refreshing===task)refreshing=null}}
   async function reviewDevice(id){
     await refresh({renderPage:false});const {commands}=await request('/api/printers/commands?printerId='+id);
     const p=data.printers.find(p=>p.id===id),job=data.jobs.find(j=>j.printer===id&&['uploading','starting'].includes(j.state));

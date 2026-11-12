@@ -1580,3 +1580,17 @@ test('an unknown generic inventory save remains disabled and never posts twice',
 test('English completion and activity entry points contain no untranslated Chinese UI',async t=>{
  const a=await app(t,{language:'en'});a.state.snapshot.capabilities.settlement=true;a.state.snapshot.jobs[0].finishedAt=Math.floor(Date.now()/1000);await a.Remote.refresh();a.$('#completionCenterButton').click();assert.match(a.$('#completionCenterRoot').textContent,/collection and settlement/);assert.doesNotMatch(a.$('#completionCenterRoot').textContent,/[取件结算设备]/);assert.equal(writes(a).length,0);
 });
+
+test('committed recovery keeps its receipt pending when workspace refresh fails, then recovers read-only',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();const base=a.w.fetch;a.w.fetch=async(url,o={})=>url.startsWith('/api/operations/result')?reply(200,{ok:true,state:'committed'}):base(url,o);
+ const op=a.OperationRecovery.begin('/api/spools',{id:'white'});op.at=Date.now()-2000;a.state.failWorkspace=true;await a.OperationRecovery.check(true);assert.equal(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')).length,1);assert.ok(a.$('#operationRecoveryBanner'));assert.equal(writes(a).length,0);
+ a.state.failWorkspace=false;await a.Remote.refresh({renderPage:false});await a.OperationRecovery.check(true);await settle();assert.deepEqual(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')),[]);assert.equal(a.$('#operationRecoveryBanner'),null);assert.equal(writes(a).length,0);
+});
+
+test('normal workspace polling automatically reads pending receipts without another submit or recovery click',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();const base=a.w.fetch;const reads=[];a.w.fetch=async(url,o={})=>{if(url.startsWith('/api/operations/result')){reads.push(url);return reply(200,{ok:true,state:'committed'})}return base(url,o)};
+ const op=a.OperationRecovery.begin('/api/spools',{id:'white'});op.at=Date.now()-2000;await new Promise(r=>setTimeout(r,5));await a.Remote.refresh({renderPage:false});await settle();
+ // A fresh capability snapshot may have just initiated the 5s rate limit; invoke the normal polling interval after it elapses.
+ if(!reads.length){const old=a.w.Date.now;a.w.Date.now=()=>old()+6000;await a.Remote.refresh({renderPage:false});await settle();a.w.Date.now=old}
+ assert.equal(reads.length,1);assert.deepEqual(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')),[]);assert.equal(writes(a).length,0);
+});
