@@ -218,7 +218,8 @@ func (s *Service) completeJobUsesTx(tx *sql.Tx, u User, id int64, used int, actu
 	}
 	if s.Config.DeviceMode == "live" {
 		t := s.Device.Status(job.Printer)
-		if !t.Connected || !timeFresh(t.Updated) || t.State != "idle" && t.State != "failed" {
+		finishedWhileOffline := job.FinishedAt > 0 && (!t.Connected || !timeFresh(t.Updated))
+		if !finishedWhileOffline && (!t.Connected || !timeFresh(t.Updated) || t.State != "idle" && t.State != "failed") {
 			return conflict("设备尚未确认结束，请先完成或停止打印")
 		}
 	}
@@ -246,6 +247,12 @@ func (s *Service) completeJobUsesTx(tx *sql.Tx, u User, id int64, used int, actu
 			}
 			_, err = tx.Exec("UPDATE spools SET remaining=remaining-?,state=CASE WHEN remaining-?=0 THEN 'empty' ELSE state END WHERE id=?", grams, grams, sp.ID)
 			if err != nil {
+				return err
+			}
+			if err = bumpSpoolRevision(tx, sp.ID); err != nil {
+				return err
+			}
+			if err = recordedSpool(tx, u.ID, "consume", &sp, sp.ID, id); err != nil {
 				return err
 			}
 			total += grams
@@ -510,6 +517,24 @@ func (s *Service) startJob(u User, id int64, expected *Job) error {
 			request := PrintRequest{Remote: job.Remote, TaskName: fmt.Sprintf("job-%d", job.ID), Options: job.PrintOptions}
 			if p.ModelID == "x2d" {
 				request.BedType = "pte"
+				if job.PrintOptions != nil {
+					_, plate, routeErr := x2dPrintSlice(job, *job.PrintOptions)
+					if routeErr != nil {
+						err = routeErr
+					} else if plate.MultiNozzle {
+						request.ExternalSources = map[int]int{}
+						for _, m := range job.PrintOptions.Mapping {
+							if m.Source != "external" {
+								continue
+							}
+							for _, f := range plate.Filaments {
+								if f.Index == m.Filament {
+									request.ExternalSources[f.Index] = 255 - f.Nozzle.Physical
+								}
+							}
+						}
+					}
+				}
 				if job.PrintOptions != nil && !job.PrintOptions.UseAMS {
 					_, plate, routeErr := x2dPrintSlice(job, *job.PrintOptions)
 					if routeErr != nil {

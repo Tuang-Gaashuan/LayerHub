@@ -191,7 +191,7 @@ func TestSliceMappingReservesEverySpoolAndDeductsOnce(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	opts := PrintOptions{Plate: 2, UseAMS: true, Mapping: []AMSTarget{{0, 0, 0, sp.ID, 13}, {2, 0, 1, blue.ID, 7}}, BedLeveling: true}
+	opts := PrintOptions{Plate: 2, UseAMS: true, Mapping: []AMSTarget{{Filament: 0, SpoolID: sp.ID, Grams: 13}, {Filament: 2, SlotID: 1, SpoolID: blue.ID, Grams: 7}}, BedLeveling: true}
 	if e = s.SavePrintOptions(u, id, opts); e != nil {
 		t.Fatal(e)
 	}

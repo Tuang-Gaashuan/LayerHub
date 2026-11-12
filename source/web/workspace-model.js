@@ -7,11 +7,12 @@ const Workspace = (()=>{
   const editable=(spool,data)=>spool.owner===username(data)||(spool.owner==='team'&&data.user?.admin);
   const reserved=(data,id,exclude)=>data.jobs.filter(j=>j.id!==exclude&&live.includes(j.state)).reduce((n,j)=>n+(j.printOptions?.mapping?.length?j.printOptions.mapping.filter(m=>m.spoolId===id).reduce((s,m)=>s+m.grams,0):j.spoolId===id?Number(j.grams)||0:0),0);
   const available=(data,spool,exclude)=>Math.max(0,spool.remaining-reserved(data,spool.id,exclude));
+  const feedLabel=f=>{const label=f?.label||sourceLabel(f?.slot||'');return globalThis.I18n?.system?.(label)??label};
   function slots(printer){
     const model=printerModel(printer),combo=model&&(printer.configuration==='ams'||!printer.configuration&&/AMS/i.test(printer.model||''));
     const dual=['h2d','h2d-pro','h2c','x2d'].includes(printer.modelId),out=[{id:'external',label:dual?(globalThis.I18n?.t('外挂料 · 主供料位置')??'外挂料 · 主供料位置'):(globalThis.I18n?.t('外置料架')??'外置料架')},...(dual?[{id:'external:1',label:(globalThis.I18n?.t('外挂料 · 第二供料位置')??'外挂料 · 第二供料位置')}]:[]),...(combo?Array.from({length:model.id==='h2d-pro'?5:4},(_,i)=>({id:String(i+1),label:i===4?(globalThis.I18n?.t('AMS HT · 原登记位置')??'AMS HT · 原登记位置'):model.ams.split(' + ')[0]+(globalThis.I18n?.t(' 槽位 ')??' 槽位 ')+(i+1)})):[])];
-    const additions=[...(printer.equipment?.feeds||[]).map(f=>({id:f.slot,label:f.label})),...((typeof data!=='undefined'?data.spools:[])||[]).filter(s=>s.mount?.printerId===printer.id).map(s=>({id:s.mount.slot,label:sourceLabel(s.mount.slot)}))];
-    out.forEach(s=>{if(s.id==='5'){s.id='ams:128:0';s.label=(globalThis.I18n?.t('AMS HT · 单元 128')??'AMS HT · 单元 128')}});additions.forEach(s=>{const found=out.find(x=>x.id===s.id);if(!found)out.push(s);else{const feed=printer.equipment?.feeds?.find(f=>f.slot===s.id);if(feed)found.label=feed.label}});return out;
+    const additions=[...(printer.equipment?.feeds||[]).map(f=>({id:f.slot,label:feedLabel(f)})),...((typeof data!=='undefined'?data.spools:[])||[]).filter(s=>s.mount?.printerId===printer.id).map(s=>({id:s.mount.slot,label:sourceLabel(s.mount.slot)}))];
+    out.forEach(s=>{if(s.id==='5'){s.id='ams:128:0';s.label=(globalThis.I18n?.t('AMS HT · 单元 128')??'AMS HT · 单元 128')}});additions.forEach(s=>{const found=out.find(x=>x.id===s.id);if(!found)out.push(s);else{const feed=printer.equipment?.feeds?.find(f=>f.slot===s.id);if(feed)found.label=feedLabel(feed)}});return out;
   }
   function sourceLabel(id){const m=/^ams:(\d+):(\d+)$/.exec(id);return m?(globalThis.I18n?.msg||((s,...v)=>s.reduce((r,p,i)=>r+p+(i<v.length?v[i]:''),'')))`AMS 单元 ${m[1]} · 槽 ${+m[2]+1}`:id==='external:1'?(globalThis.I18n?.t('外挂料 · 第二供料位置')??'外挂料 · 第二供料位置'):id}
   function mountLabel(data,spool){
@@ -83,5 +84,5 @@ const Workspace = (()=>{
     return '';
   }
   const nextOrder=data=>Math.max(0,...data.jobs.map(j=>Number(j.order)||0))+1;
-  return {jobState,username,visible,editable,reserved,available,slots,sourceLabel,mountLabel,mountIssue,configurationIssue,printMountIssue,spoolIssue,migrate,minutes,queue,recommend,canTransfer,nextOrder};
+  return {jobState,username,visible,editable,reserved,available,slots,sourceLabel,feedLabel,mountLabel,mountIssue,configurationIssue,printMountIssue,spoolIssue,migrate,minutes,queue,recommend,canTransfer,nextOrder};
 })();

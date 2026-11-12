@@ -16,8 +16,9 @@ CREATE TABLE IF NOT EXISTS job_import_batches(user_id INTEGER NOT NULL REFERENCE
 `
 
 type ImportBatch struct {
-	RequestID string     `json:"requestId"`
-	Items     []Schedule `json:"items"`
+	RequestID string         `json:"requestId"`
+	Items     []Schedule     `json:"items"`
+	Options   []PrintOptions `json:"options,omitempty"`
 }
 
 type ImportReceipt struct {
@@ -84,24 +85,31 @@ func (s *Service) CreateImportBatch(u User, in ImportBatch, filename, path, dige
 		return out, err
 	}
 	seen := map[int]bool{}
-	for _, item := range in.Items {
+	if len(in.Options) != 0 && len(in.Options) != len(in.Items) {
+		return out, invalid("请为每个打印盘提供完整准备")
+	}
+	for n, item := range in.Items {
 		plate, e := selectedImportPlate(info, item.Plate)
 		if e != nil || item.Plate <= 0 || seen[item.Plate] {
 			return out, invalid("打印盘缺失、重复或不在此文件中")
 		}
 		seen[item.Plate] = true
-		if plate.MultiNozzle || len(plate.Filaments) != 1 {
+		if (plate.MultiNozzle || len(plate.Filaments) != 1) && len(in.Options) == 0 {
 			return out, invalid("批量入队仅接受单耗材盘；多耗材盘请单独创建并完成供料准备")
 		}
 		if item.Grams < plate.Filaments[0].Grams {
 			return out, invalid("预留用量不能低于所选盘的切片用量")
 		}
+		if len(in.Options) > 0 && (in.Options[n].Plate != item.Plate || len(in.Options[n].Mapping) == 0 || in.Options[n].Mapping[0].SpoolID != item.SpoolID || in.Options[n].Mapping[0].Grams != item.Grams) {
+			return out, invalid("打印盘准备与入队预留不一致")
+		}
 	}
 	input, _ := json.Marshal(struct {
 		Items          []Schedule
+		Options        []PrintOptions `json:",omitempty"`
 		Filename, Hash string
 		Note           string
-	}{in.Items, filename, digest, trim(note, 200)})
+	}{in.Items, in.Options, filename, digest, trim(note, 200)})
 	h := sha256.Sum256(input)
 	fingerprint := hex.EncodeToString(h[:])
 	err = s.transaction(func(tx *sql.Tx) error {
@@ -129,7 +137,7 @@ func (s *Service) CreateImportBatch(u User, in ImportBatch, filename, path, dige
 		if e = tx.QueryRow("SELECT COALESCE(MAX(queue_order),0) FROM jobs").Scan(&order); e != nil {
 			return e
 		}
-		for _, item := range in.Items {
+		for n, item := range in.Items {
 			if e = validateSchedule(tx, u, item, 0); e != nil {
 				return e
 			}
@@ -163,6 +171,27 @@ func (s *Service) CreateImportBatch(u User, in ImportBatch, filename, path, dige
 			}
 			if e = recordSelectedPlate(tx, id, item.Plate); e != nil {
 				return e
+			}
+			if len(in.Options) > 0 {
+				o := in.Options[n]
+				var printer Printer
+				for _, p := range printers {
+					if p.ID == item.Printer {
+						printer = p
+					}
+				}
+				j := Job{ID: id, UserID: u.ID, Filename: filename, Path: path, Printer: item.Printer, SelectedPlate: item.Plate}
+				if e = validatePreparationOptions(tx, u, j, printer, o); e != nil {
+					return e
+				}
+				raw, _ := json.Marshal(o)
+				total := 0
+				for _, v := range o.Mapping {
+					total += v.Grams
+				}
+				if _, e = tx.Exec("UPDATE jobs SET print_options=?,grams=? WHERE id=?", string(raw), total, id); e != nil {
+					return e
+				}
 			}
 			out.JobIDs = append(out.JobIDs, id)
 		}

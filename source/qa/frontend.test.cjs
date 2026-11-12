@@ -79,7 +79,40 @@ const reply=(status,value)=>({status,ok:status>=200&&status<300,json:async()=>va
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function settle(){for(let i=0;i<8;i++)await tick()}
 
+test('finished job keeps a settlement entry while the printer is offline without enabling device commands',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];Object.assign(p,{connected:false,state:'offline',updated:0});
+ const j=a.state.snapshot.jobs.find(j=>j.id===1);Object.assign(j,{state:'printing',finishedAt:Math.floor(Date.now()/1000)-60});a.state.snapshot.capabilities.settlement=true;
+ await a.Remote.refresh({renderPage:false});a.PrinterControl.open(1);await settle();assert.ok(a.$('#controlComplete'));assert.equal(a.$('#controlComplete').disabled,false);
+ a.$('#controlComplete').click();await settle();assert.ok(a.$('#settlementRoot'));assert.equal(writes(a).length,0);
+});
+
 function diagnosticFixture(){return {ok:true,schema:1,version:'0.3.0-alpha',platform:'linux/amd64',checkedAt:Date.now(),mode:'runtime',privateToken:'NEVER-EXPORT-THIS',checks:[{id:'printer',group:'printers',status:'ok',label:'打印机',detail:'已有连接与遥测新鲜；不等于所有控制或打印均获授权。',printerId:1,observedAt:Date.now(),ip:'NEVER-EXPORT-IP',serial:'NEVER-EXPORT-SERIAL'},{id:'data_directory',group:'storage',status:'unknown',label:'数据目录',detail:'目录存在；没有执行写入测试。',fix:'可由服务账户运行 --doctor --probe-write 检查临时文件读写。'}]}}
+
+test('maintenance expiry refreshes its status without a write or leaving the page',async t=>{
+ const a=await app(t),{w,$}=a,base=w.fetch;let now=Math.floor(Date.now()/1000),reads=0;
+ const until=now+30;
+ w.fetch=(url,o)=>url==='/api/maintenance'?(reads++,Promise.resolve(reply(200,{ok:true,maintenance:{revision:1,ackRevision:1,ackAt:now,until},serverNow:now}))):url==='/api/diagnostics'?Promise.resolve(reply(200,diagnosticFixture())):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();assert.match($('#maintenanceBadge').textContent,/已暂停/);
+ const before=reads,old=w.Date.now;now+=31;w.Date.now=()=>old()+31000;a.Remote.paintConnection();await settle();
+ assert.ok(reads>before,'BUG: maintenance badge remained paused after expiry');assert.match($('#maintenanceBadge').textContent,/正常/);assert.equal($('#maintenanceEnd').hidden,true);assert.equal(writes(a).length,0);
+});
+
+test('maintenance needs explicit action, reads back uncertain writes and distinguishes gateway confirmation',async t=>{
+ const a=await app(t),{$,w}=a,base=w.fetch;let revision=0,until=0,ackRevision=0,ackAt=0,posts=[];
+ w.fetch=(url,o)=>{
+  if(url==='/api/maintenance'){
+   if(o?.method==='POST'){const body=JSON.parse(o.body);posts.push(body);revision++;until=body.minutes?Math.floor(Date.now()/1000)+body.minutes*60:0;return Promise.resolve(reply(503,{ok:false,error:'response lost'}))}
+   return Promise.resolve(reply(200,{ok:true,maintenance:{revision,until,ackRevision,ackAt},serverNow:Math.floor(Date.now()/1000)}));
+  }
+  if(url==='/api/diagnostics')return Promise.resolve(reply(200,diagnosticFixture()));
+  return base(url,o);
+ };
+ $('[data-page="diagnostics"]').click();await settle();assert.equal(posts.length,0);
+ $('#maintenanceStart').click();$('#maintenanceStart').click();await settle();assert.deepEqual(posts,[{minutes:60,revision:0}]);
+ assert.match($('#maintenanceStatus').textContent,/等待云端确认/);assert.equal($('#maintenanceEnd').disabled,false);
+ ackRevision=revision;ackAt=Math.floor(Date.now()/1000);$('#maintenanceRead').click();await settle();assert.match($('#maintenanceStatus').textContent,/云端已确认/);
+ $('#maintenanceEnd').click();await settle();assert.equal(posts.length,2);assert.equal(posts[1].minutes,0);assert.match($('#maintenanceStatus').textContent,/正常启用/);assert.match($('#maintenanceStatus').textContent,/等待云端确认/);
+});
 
 test('diagnostics separate the gateway and application, export only safe fields and never write',async t=>{
  const a=await app(t),{$,w,state}=a,base=w.fetch;
@@ -89,6 +122,18 @@ test('diagnostics separate the gateway and application, export only safe fields 
  assert.equal(report.gatewayMarker,'ok');assert.equal(report.stale,false);assert.doesNotMatch(raw,/NEVER-EXPORT|localhost|csrf/);
  assert.equal(writes(a).length,0);const root=$('#diagnosticsRoot');await stateTick(a,3000);assert.equal($('#diagnosticsRoot'),root);assert.equal(state.calls.filter(c=>c.url==='/api/diagnostics').length,1);
  const now=w.Date.now;w.Date.now=()=>now()+61000;w.testing.Remote.paintConnection();assert.match($('#diagnosticSummary').textContent,/已过期/);assert.equal($('#diagnosticChecks .diagnostic-status.ok'),null);assert.equal(w.testing.Diagnostics.exportReport().stale,true);
+});
+
+test('diagnostics keep maintenance separate and collapse healthy categories in the full result list',async t=>{
+ const a=await app(t),{$,w}=a,base=w.fetch;
+ w.fetch=(url,o)=>url==='/api/diagnostics'?Promise.resolve(reply(200,diagnosticFixture())):base(url,o);
+ $('[data-page="diagnostics"]').click();await settle();
+ assert.equal($('#diagnosticChain').children.length,4);assert.ok($('#diagnosticAside #maintenancePanel'));assert.equal($('#maintenancePanel').open,false);
+ $('[data-diagnostic-filter="all"]').click();await settle();
+ const groups=[...w.document.querySelectorAll('#diagnosticChecks details.diagnostic-group')];assert.equal(groups.length,2);
+ assert.equal(groups.find(g=>g.textContent.includes('数据目录')).open,true);assert.equal(groups.find(g=>g.textContent.includes('打印机')).open,false);
+ groups.find(g=>g.textContent.includes('打印机')).open=true;
+ a.Remote.paintConnection();assert.equal(groups.find(g=>g.textContent.includes('打印机')).open,true);assert.equal(writes(a).length,0);
 });
 test('gateway success with NAS failure stays distinct, and failed checks can be exported without raw errors',async t=>{
  const a=await app(t),{$,w}=a,base=w.fetch;
@@ -296,7 +341,7 @@ async function app(t,{pendingReview,sidebarPreference,appearancePreference,viewe
  };
  const scripts=[...w.document.querySelectorAll('script[src]')].map(s=>read(s.getAttribute('src').replace('./','')));
  const source=scripts.join('\n');
- w.eval(source+'\nwindow.testing={UploadPreparation,PrintFlow,BatchQueue,FileIntake,Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,get data(){return data}};');
+ w.eval(source+'\nwindow.testing={SpoolHistory,CompletionCenter,OperationRecovery,UploadPreparation,PrintFlow,BatchQueue,FileIntake,Diagnostics,Remote,PrinterControl,EquipmentUI,Finish,EmailUI,TeamTools,Workspace,get data(){return data}};');
  await settle();assert.equal(w.testing.Remote.ready(),true);
  return {w,...w.testing,state,intervals,$:selector=>w.document.querySelector(selector)};
 }
@@ -322,6 +367,28 @@ async function unifiedPreparation(t,{multi=false,busy=false,language='zh-CN'}={}
 
 test('unified preparation cancel exits to queues without creating jobs or reserving stock',async t=>{
  const a=await unifiedPreparation(t),before=structuredClone(a.state.snapshot.spools);assert.ok(a.$('#uploadPreparation'));a.$('#upCancel').click();assert.equal(a.$('#modal').open,false);assert.equal(a.w.location.hash,'#queues');assert.equal(a.state.snapshot.jobs.length,0);assert.deepEqual(a.state.snapshot.spools,before);assert.deepEqual(writes(a).map(c=>c.url),['/api/files/inspect']);
+});
+
+for(const background of [false,true])test('X2D dual upload maps both sources directly, including background reference '+background,async t=>{
+ const a=await unifiedPreparation(t),{state,w,$}=a,p=state.snapshot.printers[0];Object.assign(p,{modelId:'x2d',model:'X2D',configuration:'ams'});Object.assign(state.snapshot.capabilities,{x2dSingleNozzlePrint:true,x2dDualNozzlePrint:true});
+ state.snapshot.spools.find(s=>s.id==='external').color='#000000';state.snapshot.spools.find(s=>s.id==='petg').color='#ffffff';
+ Object.assign(a.review.sliced.info,{model:'Bambu Lab X2D',bedType:'Textured PEI Plate'});
+ Object.assign(a.review.sliced.info.plates[0],{multiNozzle:true,nozzle:null,seconds:4952,filaments:[{index:0,material:'PLA',color:'#000000',grams:5,nozzle:{logical:1,physical:0,diameter:'0.4',volume:'Standard'}},{index:1,material:'PETG',color:'#ffffff',grams:34,nozzle:{logical:0,physical:1,diameter:'0.4',volume:'Standard'}}]});
+ if(background){a.file.inspectionId='background-dual-reference';a.review.sliced.info.plates[0].filaments.reverse();a.review.sliced.info.plates[0].filaments.forEach((f,i)=>f.index=i)}
+ const base=w.fetch;let batch;
+ w.fetch=async(url,o={})=>{
+  if(url==='/api/upload/batch'||url==='/api/files/inspections/import'){
+   state.calls.push({url,options:o});batch=background?JSON.parse(o.body).batch:JSON.parse(o.body.get('batch'));
+   state.snapshot.jobs.push({id:21,user:state.snapshot.user.name,userId:1,state:'queued',order:1,filename:a.file.name,...batch.items[0],printOptions:batch.options[0]});
+   return reply(200,{ok:true,receipt:{jobIds:[21]}});
+  }return base(url,o);
+ };
+ await a.Remote.refresh({renderPage:false});a.UploadPreparation.open(a.file);
+ assert.equal($('#upAdvanced').hidden,true);assert.match($('#upMaterials').textContent,/主热端.*AMS/);assert.match($('#upMaterials').textContent,/辅助热端/);
+ assert.equal($('[data-up-spool="1:0"][value="white"]'),null);assert.equal($('#upStart').disabled,true);change(w,$('#upClear'),true);assert.equal($('#upStart').disabled,false,$('#upChecks').textContent);
+ $('#upStart').click();$('#upStart').click();await settle();
+ assert.equal(batch.items[0].grams,background?34:5);const expected=[['external','external',5],['ams','petg',34]];if(background)expected.reverse();assert.deepEqual(batch.options[0].mapping.map(m=>[m.source,m.spoolId,m.grams]),expected);
+ assert.equal(writes(a).filter(c=>/\/api\/(upload\/batch|files\/inspections\/import)$/.test(c.url)).length,1);assert.equal(writes(a).filter(c=>c.url==='/api/jobs/options').length,0);assert.equal(writes(a).filter(c=>c.url==='/api/jobs/dispatch').length,1);
 });
 
 test('unified one confirmation creates once, saves exact material mapping, and dispatches once',async t=>{
@@ -492,6 +559,15 @@ test('preparation rereads device and stock without discarding color choices or w
  a.$('[data-prepare-step="2"]').click();a.state.snapshot.spools.find(s=>s.id==='white').remaining=1;
  a.$('#prepareRecheck').click();await settle();
  assert.equal(a.$('input[name="spool-0"][value="white"]').checked,true);assert.match(a.$('#prepareChecklist').textContent,/余量不足/);assert.equal(a.$('#prepareSave').disabled,true);assert.equal(writes(a).length,0);
+});
+
+test('X2D dual preparation keeps per-nozzle sources and reserves each stock separately',async t=>{
+ const a=await app(t),p=a.state.snapshot.printers[0];Object.assign(p,{modelId:'x2d',model:'X2D',state:'idle'});Object.assign(a.state.snapshot.capabilities,{x2dSingleNozzlePrint:true,x2dDualNozzlePrint:true});a.state.snapshot.jobs=a.state.snapshot.jobs.filter(j=>j.id===4);
+ const white=a.state.snapshot.spools.find(s=>s.id==='petg');white.color='#ffffff';
+ a.state.slice={model:'Bambu Lab X2D',bedType:'Textured PEI Plate',nozzleDiameters:['0.4','0.4'],plates:[{id:1,multiNozzle:true,seconds:4952,filaments:[{index:0,material:'PLA',color:'#000000',grams:5,nozzle:{logical:1,physical:0,diameter:'0.4',volume:'Standard'}},{index:1,material:'PETG',color:'#ffffff',grams:34,nozzle:{logical:0,physical:1,diameter:'0.4',volume:'Standard'}}]}]};await a.Remote.refresh({renderPage:false});
+ await a.PrinterControl.options(a.data.jobs.find(j=>j.id===4));assert.equal(a.$('#projectAMS').closest('label').hidden,true);assert.ok(a.$('input[name="spool-0"][value="external"]'));assert.equal(a.$('input[name="spool-0"][value="white"]'),null);assert.ok(a.$('input[name="spool-1"][value="petg"]'));
+ choose(a.w,a.$('input[name="spool-0"][value="external"]'));choose(a.w,a.$('input[name="spool-1"][value="petg"]'));a.$('[data-prepare-step="2"]').click();assert.equal(a.$('#prepareSave').disabled,false);assert.match(a.$('#prepareChecklist').textContent,/双喷嘴测试/);assert.equal(writes(a).length,0);
+ submitForm(a.w,a.$('#projectOptions'));await settle();const post=writes(a).find(c=>c.url==='/api/jobs/options'),o=JSON.parse(post.options.body).options;assert.equal(o.useAMS,true);assert.equal(o.mapping[0].source,'external');assert.equal(o.mapping[0].grams,5);assert.equal(o.mapping[1].source,'ams');assert.equal(o.mapping[1].slotId,3);assert.equal(o.mapping[1].grams,34);assert.equal(writes(a).filter(c=>/dispatch|start|send/.test(c.url)).length,0);
 });
 
 test('adapted X2D single-nozzle preparation explains the physical route and keeps unverified options off',async t=>{
@@ -807,21 +883,21 @@ test('admin corrects a display name without sending password or access changes; 
 });
 
 function discoveredFeed(a,overrides={}){
- a.state.snapshot.capabilities.deviceMode='live';a.state.snapshot.printers[0].state='idle';a.state.snapshot.spools=[];
+ a.state.snapshot.capabilities.deviceMode='live';a.state.snapshot.capabilities.spoolReplace=true;a.state.snapshot.printers[0].state='idle';a.state.snapshot.spools=[];
  a.state.snapshot.printers[0].equipment.feeds=[{slot:'1',label:'AMS 2 Pro · 单元 0 / 槽 1',kind:'AMS 2 Pro',material:'PETG-CF',color:'FCE300FF',remaining:73,remainingUnit:'%',present:true,updated:new Date().toISOString(),...overrides}];
 }
 test('machine discovery prefills material/color/mount, requires stock confirmation, and saves a new spool once',async t=>{
  const a=await app(t);discoveredFeed(a);const original=a.w.fetch;
- a.w.fetch=async(url,options={})=>{if(url==='/api/spools'){const spool=JSON.parse(options.body);a.state.snapshot.spools.push({...spool,id:'registered-from-machine'})}return original(url,options)};
+ a.w.fetch=async(url,options={})=>{if(url==='/api/spools/replace'){const spool=JSON.parse(options.body).spool;a.state.snapshot.spools.push({...spool,id:'registered-from-machine'})}return original(url,options)};
  await a.Remote.refresh({renderPage:false});a.$('[data-page="materials"]').click();
  assert.match(a.$('.machine-discovery').textContent,/1 个装载位置待登记/);a.$('[data-register-feed]').click();await settle();
- assert.equal(writes(a).length,0);const form=a.$('#spoolForm');assert.ok(form);assert.equal(form.elements.material.value,'PETG-CF');assert.equal(form.elements.color.value,'#fce300');
+ assert.equal(writes(a).length,0);assert.ok(a.$('#replaceExistingForm'));assert.equal(a.$('#spoolForm'),null);a.$('#replacementNew').click();await settle();const form=a.$('#spoolForm');assert.ok(form);assert.equal(form.elements.material.value,'PETG-CF');assert.equal(form.elements.color.value,'#fce300');
  assert.equal(form.elements.brand.value,'');assert.equal(form.elements.capacity.value,'');assert.equal(form.elements.remaining.value,'');assert.equal(form.elements.owner.value,'admin');
  assert.equal(a.$('#mountPrinter').value,'1');assert.equal(a.$('#mountSlot').value,'1');
  form.elements.brand.value='实际品牌';form.elements.capacity.value='1000';form.elements.capacity.dispatchEvent(new a.w.Event('input',{bubbles:true}));a.$('[data-estimate-remaining]').click();assert.equal(form.elements.remaining.value,'730');
  change(a.w,form.elements.owner,'team');assert.equal(a.$('#sharingField').hidden,true);
  form.dispatchEvent(new a.w.Event('submit',{bubbles:true,cancelable:true}));await settle();
- const saved=JSON.parse(writes(a)[0].options.body);assert.equal(writes(a).length,1);assert.equal(saved.id,'');assert.equal(saved.owner,'team');assert.equal(saved.shared,false);assert.equal(saved.capacity,1000);assert.equal(saved.remaining,730);assert.deepEqual(saved.mount,{printerId:1,slot:'1'});
+ const saved=JSON.parse(writes(a)[0].options.body).spool;assert.equal(writes(a).length,1);assert.equal(saved.id,undefined);assert.equal(saved.owner,'team');assert.equal(saved.shared,false);assert.equal(saved.capacity,1000);assert.equal(saved.remaining,730);assert.deepEqual(saved.mount,{printerId:1,slot:'1'});
  assert.equal(a.$('.machine-discovery'),null);assert.match(a.$('.filament-grid').textContent,/730/);
  a.PrinterControl.open(1);await settle();assert.equal(a.$('[data-register-feed]'),null);assert.ok(a.$('[data-machine-spool="registered-from-machine"]'));
 });
@@ -1247,8 +1323,8 @@ test('Studio setup translates its instructions and does not require a NAS connec
 
 
 test('IP replacement is available offline, validates before writing and only sends id and IP',async t=>{
- const a=await app(t),p=a.state.snapshot.printers[0];p.connected=false;p.ip='192.168.1.121';await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();
- const f=a.$('#printerIPForm');assert.equal(f.elements.code,undefined);assert.match(a.$('#modalContent').textContent,/192.168.1.121/);
+ const a=await app(t),p=a.state.snapshot.printers[0];p.connected=false;p.ip='192.0.2.121';await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();
+ const f=a.$('#printerIPForm');assert.equal(f.elements.code,undefined);assert.match(a.$('#modalContent').textContent,/192.0.2.121/);
  f.elements.ip.value='192.168.1.999';submitForm(a.w,f);await settle();assert.equal(writes(a).length,0);assert.match(a.$('#printerIPError').textContent,/有效/);
  f.elements.ip.value=p.ip;submitForm(a.w,f);await settle();assert.equal(writes(a).length,0);
  const base=a.w.fetch;a.w.fetch=async(url,o={})=>{if(url==='/api/printers'&&o.method==='POST'){p.ip=JSON.parse(o.body).ip;p.connected=false}return base(url,o)};
@@ -1258,7 +1334,7 @@ test('IP replacement is available offline, validates before writing and only sen
 });
 
 test('IP replacement never retries uncertain writes; reread recovers a saved address',async t=>{
- const a=await app(t),p=a.state.snapshot.printers[0];p.ip='192.168.1.121';await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();const f=a.$('#printerIPForm');f.elements.ip.value='192.168.1.100';a.state.failWrite=true;submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);assert.equal(a.$('#printerIPSave').disabled,true);assert.match(a.$('#printerIPError').textContent,/尚未确认/);
+ const a=await app(t),p=a.state.snapshot.printers[0];p.ip='192.0.2.121';await a.Remote.refresh();a.$('[data-page="admin"]').click();a.$('[data-change-ip="1"]').click();const f=a.$('#printerIPForm');f.elements.ip.value='192.168.1.100';a.state.failWrite=true;submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);assert.equal(a.$('#printerIPSave').disabled,true);assert.match(a.$('#printerIPError').textContent,/尚未确认/);
  submitForm(a.w,f);await settle();assert.equal(writes(a).length,1);p.ip='192.168.1.100';p.connected=true;p.updated=Date.now()/1000+1;a.$('#printerIPRead').click();await settle();assert.match(a.$('#printerIPStatus').textContent,/已连接/);assert.equal(writes(a).length,1);
 });
 
@@ -1295,7 +1371,7 @@ async function mismatchApp(t,language='zh-CN'){
 }
 
 test('mount mismatch keeps printer feedback primary and never replaces library stock or sends commands',async t=>{
- const a=await mismatchApp(t);const card=a.$('[data-machine-slot="external"]');assert.match(card.querySelector('.machine-feed-material').textContent,/PETG/);assert.match(card.querySelector('[data-mount-mismatch]').textContent,/材质不同.*颜色不同/);assert.match(card.querySelector('[data-mount-mismatch]').textContent,/库中登记：PLA/);assert.match(a.$('.control-supply').textContent,/PLA.*黑色/);assert.equal(writes(a).length,0);
+ const a=await mismatchApp(t);const card=a.$('[data-machine-slot="external"]');assert.match(card.querySelector('.machine-feed-material').textContent,/PETG/);assert.match(card.querySelector('[data-mount-mismatch]').textContent,/材质不同/);assert.match(card.querySelector('[data-mount-mismatch]').textContent,/库中登记：PLA/);assert.match(a.$('.control-supply').textContent,/PLA.*黑色/);assert.equal(writes(a).length,0);
  a.$('#modal').close();a.$('[data-page="materials"]').click();assert.ok(a.$('.filament-card [data-mount-mismatch]'));assert.equal(a.state.snapshot.spools.find(s=>s.id==='external').remaining,800);
 });
 
@@ -1375,6 +1451,23 @@ test('English material editing preserves protocol values including unknown and O
 });
 
 
+test('English material mounts localize reported AMS and external labels without changing raw readings or custom spool names',async t=>{
+ const a=await app(t,{language:'en'}),p=a.state.snapshot.printers[0];p.modelId='x2d';p.equipment.feeds=[{slot:'1',label:'AMS 2 Pro · 单元 0 / 槽 1',material:'PLA',present:true,updated:new Date().toISOString()},{slot:'external',label:'外挂料',material:'PLA',present:true,updated:new Date().toISOString()},{slot:'external:1',label:'外挂料 · 设备编号 254',material:'PLA',present:true,updated:new Date().toISOString()}];a.state.snapshot.spools[0].label='自定义料卷';await a.Remote.refresh();a.$('[data-page="materials"]').click();await settle();const locations=[...a.w.document.querySelectorAll('.filament-location')].map(e=>e.textContent).join(' ');assert.match(locations,/AMS 2 Pro · Unit 0 \/ Slot 1/);assert.match(locations,/External spool/);assert.doesNotMatch(locations,/单元|槽|外挂料/);assert.equal(p.equipment.feeds[0].label,'AMS 2 Pro · 单元 0 / 槽 1');assert.match(a.$('#pageContent').textContent,/自定义料卷/);assert.equal(writes(a).length,0);
+ a.PrinterControl.open(1);await settle();const headers=[...a.w.document.querySelectorAll('.machine-feed-head')].map(e=>e.textContent).join(' ');assert.doesNotMatch(headers,/单元|槽|外挂料/);
+});
+
+test('replacement selects returning inventory spool by identity without posting new spool details',async t=>{
+ const a=await syncSpoolApp(t);await settle();a.state.snapshot.capabilities.spoolReplace=true;const candidate=a.state.snapshot.spools.find(s=>s.id==='petg'),feed=a.state.snapshot.printers[0].equipment.feeds[0];Object.assign(candidate,{mount:null,color:'#'+feed.color.slice(0,6),revision:7,remaining:427});await a.Remote.refresh();a.$('[data-page="materials"]').click();await settle();a.$('#pageContent [data-replace-spool="external"]').click();await settle();assert.ok(a.$('#replaceExistingForm'));assert.equal(a.$('#spoolForm'),null);assert.match(a.$('#replaceExistingForm').textContent,/不新增库存记录/);const radio=a.$('input[name="existingSpool"][value="petg"]');assert.ok(radio);choose(a.w,radio);assert.equal(writes(a).length,0);submitForm(a.w,a.$('#replaceExistingForm'));await settle();assert.equal(writes(a).length,1);const b=JSON.parse(writes(a)[0].options.body);assert.equal(b.existingId,'petg');assert.equal(b.existingRevision,7);assert.equal(b.spool,undefined);assert.equal(b.oldId,'external');
+});
+
+test('physical replacement creates a new spool and never carries old weight into its form',async t=>{
+ const a=await syncSpoolApp(t),old=structuredClone(a.state.snapshot.spools.find(s=>s.id==='external'));await settle();a.state.snapshot.capabilities.spoolReplace=true;await a.Remote.refresh();await settle();a.$('[data-page="materials"]').click();await settle();
+ assert.equal(a.$('#pageContent [data-sync-spool="external"]'),null);a.$('#pageContent [data-replace-spool="external"]').click();await settle();a.$('#replacementNew').click();await settle();const f=a.$('#spoolForm');assert.ok(f);assert.equal(f.elements.capacity.value,'');assert.equal(f.elements.remaining.value,'');assert.equal(f.elements.brand.value,'');assert.match(f.textContent,/旧卷保留原资料和余量/);assert.equal(writes(a).length,0);
+ f.elements.brand.value='New brand';f.elements.capacity.value='1000';f.elements.remaining.value='900';const base=a.w.fetch;
+ a.w.fetch=async(url,o={})=>{if(url==='/api/spools/replace'){const payload=JSON.parse(o.body),sp=a.state.snapshot.spools.find(s=>s.id===old.id);sp.mount=null;sp.revision++;a.state.snapshot.spools.push({...payload.spool,id:'new-replacement',revision:1});a.state.calls.push({url,options:o});return reply(200,{ok:true,newId:'new-replacement'})}return base(url,o)};
+ submitForm(a.w,f);await settle();const post=writes(a)[0];assert.equal(post.url,'/api/spools/replace');const b=JSON.parse(post.options.body);assert.equal(b.oldId,old.id);assert.equal(b.revision,old.revision);assert.equal(b.spool.remaining,900);assert.equal(b.spool.id,undefined);assert.deepEqual(b.spool.mount,old.mount);assert.equal(a.state.snapshot.spools.find(s=>s.id===old.id).remaining,old.remaining);assert.equal(a.state.snapshot.spools.find(s=>s.id===old.id).material,old.material);
+});
+
 async function syncSpoolApp(t,language='zh-CN'){
  const a=await mismatchApp(t,language),s=a.state.snapshot.spools.find(s=>s.id==='external');s.revision=4;await a.Remote.refresh({renderPage:false});a.$('#modal').close();a.$('[data-page="materials"]').click();return a;
 }
@@ -1397,4 +1490,93 @@ test('printer sync preserves a named colour when RGB matches and does not invent
 });
 test('English sync is explicit and a lost save response does not automatically retry',async t=>{
  const a=await syncSpoolApp(t,'en');assert.match(a.$('[data-sync-spool="external"]').textContent,/Update from printer/);a.state.failWrite=true;a.$('[data-sync-spool="external"]').click();await settle();assert.equal(writes(a).length,1);assert.equal(writes(a)[0].url,'/api/spools');
+});
+
+
+test('different device colors neither warn nor require confirmation and retain inventory RGB',async t=>{
+ const a=await syncSpoolApp(t);await settle();a.state.snapshot.capabilities.spoolReplace=true;const target=a.state.snapshot.spools.find(s=>s.id==='petg');Object.assign(target,{mount:null,color:'#fce300',revision:7,remaining:427});const mounted=a.state.snapshot.spools.find(s=>s.id==='external');mounted.material='PETG';
+ await a.Remote.refresh();a.PrinterControl.open(1);await settle();assert.equal(a.$('[data-machine-slot="external"] [data-mount-mismatch]'),null);a.$('#modal').close();a.$('[data-page="materials"]').click();a.$('[data-replace-spool="external"]').click();await settle();
+ const radio=a.$('[name="existingSpool"][value="petg"]');assert.ok(radio);choose(a.w,radio);assert.equal(a.$('#replaceColorDifference'),null);submitForm(a.w,a.$('#replaceExistingForm'));await settle();const b=JSON.parse(writes(a)[0].options.body);assert.equal(b.existingId,'petg');assert.equal(b.confirmColorDifference,undefined);assert.equal(b.spool,undefined);assert.equal(target.color,'#fce300');
+});
+
+test('unregistered feed offers existing inventory before any new spool form',async t=>{
+ const a=await app(t);discoveredFeed(a);a.state.snapshot.spools=[{id:'returning',revision:3,label:'Original roll',brand:'Bambu',material:'PETG-CF',color:'#fce300',colorName:'Yellow',state:'available',remaining:427,capacity:1000,owner:'team',shared:false,mount:null}];
+ await a.Remote.refresh();a.$('[data-page="materials"]').click();a.$('[data-register-feed]').click();await settle();assert.ok(a.$('#replaceExistingForm'));assert.equal(a.$('#spoolForm'),null);
+ const radio=a.$('[name="existingSpool"][value="returning"]');assert.ok(radio);choose(a.w,radio);submitForm(a.w,a.$('#replaceExistingForm'));await settle();const b=JSON.parse(writes(a)[0].options.body);assert.equal(b.existingId,'returning');assert.equal(b.existingRevision,3);assert.deepEqual(b.mount,{printerId:1,slot:'1'});assert.equal(b.oldId,undefined);assert.equal(b.spool,undefined);
+});
+
+test('unavailable returning spools explain why and never force creation or allow invalid reuse',async t=>{
+ const a=await syncSpoolApp(t);await settle();a.state.snapshot.capabilities.spoolReplace=true;const candidate=a.state.snapshot.spools.find(s=>s.id==='petg');candidate.mount={printerId:1,slot:'2'};await a.Remote.refresh();a.$('[data-page="materials"]').click();a.$('[data-replace-spool="external"]').click();await settle();const radio=a.$('[name="existingSpool"][value="petg"]');assert.ok(radio);assert.equal(radio.disabled,true);assert.match(a.$('#replaceExistingForm').textContent,/仍登记在其他装载位置/);assert.equal(a.$('#spoolForm'),null);assert.equal(writes(a).length,0);
+});
+
+
+test('stock card mounts through the same chooser with the original spool preselected',async t=>{
+ const a=await app(t);discoveredFeed(a);a.state.snapshot.spools=[{id:'returning',revision:3,label:'Original roll',brand:'Bambu',material:'PETG-CF',color:'#fce300',colorName:'Yellow',state:'available',remaining:427,capacity:1000,owner:'team',shared:false,mount:null}];
+ await a.Remote.refresh();a.$('[data-page="materials"]').click();a.$('[data-stock-mount="returning"]').click();await settle();const form=a.$('#stockMountForm');assert.ok(form);form.elements.target.value='0';submitForm(a.w,form);await settle();assert.equal(a.$('[name="existingSpool"][value="returning"]').checked,true);assert.equal(a.$('#spoolForm'),null);assert.equal(writes(a).length,0);
+});
+
+
+async function materialReturnApp(t){
+ const a=await syncSpoolApp(t);await settle();a.state.snapshot.capabilities.spoolReplace=true;const candidate=a.state.snapshot.spools.find(s=>s.id==='petg');Object.assign(candidate,{mount:null,revision:7,remaining:427});await a.Remote.refresh();a.PrinterControl.open(1);await settle();a.$('[data-control-tab="materials"]').click();a.$('#modal .modal-body').scrollTop=120;return a;
+}
+test('spool replacement returns to the same printer material tab and scroll position',async t=>{
+ const a=await materialReturnApp(t);a.$('#controlRoot [data-replace-spool="external"]').click();await settle();const radio=a.$('[name="existingSpool"][value="petg"]');choose(a.w,radio);submitForm(a.w,a.$('#replaceExistingForm'));await settle();assert.equal(a.$('#modal').open,true);assert.equal(a.$('#controlRoot').dataset.printerId,'1');assert.equal(a.$('[data-control-tab="materials"]').getAttribute('aria-selected'),'true');assert.equal(a.$('#modal .modal-body').scrollTop,120);assert.equal(writes(a).length,1);
+});
+test('cancel editing and nested new-spool entry returns to the console without a write',async t=>{
+ const a=await materialReturnApp(t);a.$('#controlRoot [data-machine-spool="external"]').click();assert.ok(a.$('#spoolForm'));a.$('[data-cancel]').click();await settle();assert.ok(a.$('#controlRoot'));assert.equal(a.$('#modal .modal-body').scrollTop,120);
+ a.$('#controlRoot [data-replace-spool="external"]').click();await settle();a.$('#replacementNew').click();await settle();assert.ok(a.$('#spoolForm'));a.$('#modal').dispatchEvent(new a.w.Event('cancel',{cancelable:true}));await settle();assert.ok(a.$('#controlRoot'));assert.equal(a.$('[data-control-tab="materials"]').getAttribute('aria-selected'),'true');assert.equal(writes(a).length,0);
+});
+test('a failed spool mutation keeps its form and cancel returns without another write',async t=>{
+ const a=await materialReturnApp(t);a.$('#controlRoot [data-replace-spool="external"]').click();await settle();choose(a.w,a.$('[name="existingSpool"][value="petg"]'));a.state.failWrite=true;submitForm(a.w,a.$('#replaceExistingForm'));await settle();assert.ok(a.$('#replaceExistingForm'));assert.equal(a.$('#controlRoot'),null);assert.match(a.$('#replaceExistingError').textContent,/尚未确认/);a.$('[data-close]').click();await settle();assert.ok(a.$('#controlRoot'));assert.equal(writes(a).length,1);
+});
+test('saving a spool edit from the printer console resumes its material tab',async t=>{
+ const a=await materialReturnApp(t);a.$('#controlRoot [data-machine-spool="external"]').click();const form=a.$('#spoolForm');submitForm(a.w,form);await settle();assert.ok(a.$('#controlRoot'));assert.equal(a.$('[data-control-tab="materials"]').getAttribute('aria-selected'),'true');assert.equal(a.$('#modal .modal-body').scrollTop,120);assert.equal(writes(a).length,1);
+});
+
+
+test('a late material save never reopens a console after the user leaves it',async t=>{
+ const a=await materialReturnApp(t),base=a.w.fetch;let resolveSave;
+ a.w.fetch=async(url,o={})=>{if(url==='/api/spools/replace'){a.state.calls.push({url,options:o});return new Promise(resolve=>{resolveSave=()=>resolve(reply(200,{ok:true}))})}return base(url,o)};
+ a.$('#controlRoot [data-replace-spool="external"]').click();await settle();choose(a.w,a.$('[name="existingSpool"][value="petg"]'));submitForm(a.w,a.$('#replaceExistingForm'));await settle();assert.ok(resolveSave);a.$('[data-close]').click();await settle();assert.ok(a.$('#controlRoot'));a.$('[data-close]').click();assert.equal(a.$('#modal').open,false);resolveSave();await settle();assert.equal(a.$('#modal').open,false);assert.equal(writes(a).length,1);
+});
+
+
+test('spool history reads escaped immutable records without inventory writes',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.spoolHistory=true;await a.Remote.refresh();const base=a.w.fetch;a.w.fetch=async(url,o={})=>url.startsWith('/api/spools/history')?reply(200,{ok:true,next:0,events:[{id:1,action:'adjust',actor:'<img src=x onerror=alert(1)>',created:Date.now(),before:{label:'Test',remaining:800,mount:null},after:{label:'Test',remaining:700,mount:null}}]}):base(url,o);
+ a.$('[data-page="materials"]').click();a.$('[data-spool-history="white"]').click();await settle();assert.match(a.$('#spoolHistoryRoot').textContent,/800 g.*700 g/);assert.equal(a.$('#spoolHistoryRoot img'),null);assert.match(a.$('#spoolHistoryRoot').textContent,/<img/);assert.equal(writes(a).length,0);
+});
+
+test('completion center lists only actionable owned finished tasks without settling on entry',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.settlement=true;const j=a.state.snapshot.jobs[0];j.finishedAt=Math.floor(Date.now()/1000);a.state.snapshot.jobs.push({...j,id:77,finishedAt:0,state:'printing',filename:'Still printing'});await a.Remote.refresh();a.$('#completionCenterButton').click();assert.equal(a.$('#completionCenterRoot').querySelectorAll('[data-finish-job]').length,1);assert.match(a.$('#completionCenterRoot').textContent,/设备已结束/);assert.doesNotMatch(a.$('#completionCenterRoot').textContent,/Still printing/);assert.equal(writes(a).length,0);
+});
+
+test('operation recovery checks a committed receipt with GET and never resends the mutation',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();const base=a.w.fetch;const reads=[];a.w.fetch=async(url,o={})=>{if(url.startsWith('/api/operations/result')){reads.push(url);return reply(200,{ok:true,state:'committed',kind:'/api/spools'})}return base(url,o)};
+ const op=a.OperationRecovery.begin('/api/spools',{id:'white'});op.at=Date.now()-2000;await a.OperationRecovery.check(true);assert.equal(reads.length,1);assert.equal(writes(a).length,0);assert.equal(a.$('#operationRecoveryBanner'),null);assert.match(a.$('#toast').textContent,/成功保存/);assert.deepEqual(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')),[]);
+});
+
+test('unknown recovery stays uncertain and printer controls never receive a recovery mutation ID',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();const base=a.w.fetch;a.w.fetch=async(url,o={})=>url.startsWith('/api/operations/result')?reply(200,{ok:true,state:'unknown'}):base(url,o);
+ const op=a.OperationRecovery.begin('/api/spools/replace',{existingId:'white'});op.at=Date.now()-2000;await a.OperationRecovery.check(true);assert.ok(a.$('#operationRecoveryBanner'));assert.equal(a.OperationRecovery.begin('/api/printers/control',{action:'start',printerId:1}),null);assert.equal(writes(a).length,0);assert.equal(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')).length,1);
+});
+
+test('tracked material writes send only an opaque operation header and clear it after success',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();await a.Remote.request('/api/spools',{id:'white',revision:1});const post=writes(a)[0];assert.match(post.options.headers['X-LayerHub-Operation'],/^[a-f0-9]{32}$/);assert.deepEqual(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')),[]);
+});
+
+
+test('completion center also routes missing-record completion to the guarded printer console',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.settlement=true;a.state.snapshot.jobs=[];a.state.snapshot.printers[0].completionReview={jobId:77,commandId:80};await a.Remote.refresh();a.$('#completionCenterButton').click();assert.ok(a.$('[data-finish-printer="1"]'));a.$('[data-finish-printer="1"]').click();await settle();assert.ok(a.$('#controlRoot'));assert.equal(writes(a).length,0);
+});
+
+test('uncertain notices require an explicit acknowledgement and dismissing them only reads workspace',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();const op=a.OperationRecovery.begin('/api/spools',{label:'private draft never persisted'});op.at=Date.now()-2000;a.OperationRecovery.paint();assert.doesNotMatch(a.w.sessionStorage.getItem('layerhub.operations.v1'),/private draft/);a.$('[data-review-operations]').click();const root=a.$('#operationReviewRoot');assert.equal(root.querySelector('button').disabled,true);root.querySelector('input').checked=true;root.querySelector('input').dispatchEvent(new a.w.Event('change',{bubbles:true}));root.querySelector('button').click();await settle();assert.deepEqual(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')),[]);assert.equal(writes(a).length,0);
+});
+
+test('an unknown generic inventory save remains disabled and never posts twice',async t=>{
+ const a=await app(t);a.state.snapshot.capabilities.operationRecovery=true;await a.Remote.refresh();a.Remote.spoolForm(a.w.testing.data.spools[0]);const form=a.$('#spoolForm');a.state.failWrite=true;submitForm(a.w,form);await settle();assert.equal(form.dataset.uncertain,'true');assert.equal(a.$('[form="spoolForm"][type="submit"]').disabled,true);submitForm(a.w,form);await settle();assert.equal(writes(a).length,1);assert.equal(JSON.parse(a.w.sessionStorage.getItem('layerhub.operations.v1')).length,1);
+});
+
+test('English completion and activity entry points contain no untranslated Chinese UI',async t=>{
+ const a=await app(t,{language:'en'});a.state.snapshot.capabilities.settlement=true;a.state.snapshot.jobs[0].finishedAt=Math.floor(Date.now()/1000);await a.Remote.refresh();a.$('#completionCenterButton').click();assert.match(a.$('#completionCenterRoot').textContent,/collection and settlement/);assert.doesNotMatch(a.$('#completionCenterRoot').textContent,/[取件结算设备]/);assert.equal(writes(a).length,0);
 });

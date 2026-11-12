@@ -1,3 +1,16 @@
+# 0.1.4-beta — Inventory traceability and completion recovery / 库存流水与完工恢复
+
+- Add transaction-backed spool activity: starting balance, registration, metadata/stock edits, mount/unmount and normal/orphan usage settlement. History begins at activation; earlier changes are not reconstructed. Current spool visibility rules apply.
+- 新增与库存事务一起提交的耗材流水，记录启用库存、登记、资料/余量修改、挂载卸载和任务/补登记消耗；启用前的操作不补造，沿用耗材可见性限制。
+- Add a single completion entry for finished/stopped actionable tasks. Collection and usage still require explicit confirmation; entering the list never settles a task or starts a print.
+- 新增完工处理入口，集中显示已结束/已停止的待登记任务；取件与用量仍需明确确认，打开列表不扣库存或启动任务。
+- Add account-scoped durable receipts for inventory writes and job settlement. After a lost response, query the receipt using GET; an absent receipt remains unknown. No automatic resend or printer-control retry.
+- 新增按账户隔离的库存/结算操作回执，丢失响应后只读核对；未查到回执继续保持未知，不自动重发库存修改或打印指令。
+- Include recent fixes for empty-slot stock reuse, keeping spool identity/weight, color metadata without mismatch warnings, and returning to the printer console after material edits. Include maintenance mode, dual-nozzle imports and prior inventory revision protection.
+- 合并近期空槽位复用库存、保留原卷身份余量、取消色号差异提醒、耗材操作返回控制台，以及检修暂停汇报、双喷嘴导入和库存版本保护。
+- ARM64 remains preliminary: a prior build was exercised on Jetson Orin Nano 8GB / Ubuntu 22.04. Printer connectivity, camera and long-term production acceptance on ARM64 are not claimed.
+- ARM64 仍属初步验证：此前构建已在 Jetson Orin Nano 8GB / Ubuntu 22.04 验证基础运行；不宣称已通过 ARM64 实机控制、摄像头或长期生产验收。
+
 # 0.1.3-beta — Background uploads, materials and personalization / 后台上传、耗材与个性化
 
 ## 2026-11-04 source update / 源码更新

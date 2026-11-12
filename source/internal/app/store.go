@@ -229,6 +229,14 @@ func Open(cfg Config, device Device) (*Service, error) {
 		s.Close()
 		return nil, err
 	}
+	if _, err = s.DB.Exec(operationSchema); err != nil {
+		s.Close()
+		return nil, err
+	}
+	if err = s.initSpoolHistory(); err != nil {
+		s.Close()
+		return nil, err
+	}
 	if err = s.initMail(); err != nil {
 		s.Close()
 		return nil, err

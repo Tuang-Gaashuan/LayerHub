@@ -125,6 +125,8 @@ type Telemetry struct {
 	StateUpdated, TaskUpdated         time.Time
 }
 type AMSTarget struct {
+	// Empty for legacy single-source jobs; dual-nozzle jobs require an explicit source.
+	Source   string `json:"source,omitempty"`
 	Filament int    `json:"filament"`
 	AMSID    int    `json:"amsId"`
 	SlotID   int    `json:"slotId"`
@@ -144,7 +146,8 @@ type PrintRequest struct {
 	Options          *PrintOptions
 	BedType          string
 	// Set only by the server after validating an X2D file's physical route.
-	ExternalSource int
+	ExternalSource  int
+	ExternalSources map[int]int // Server-derived virtual source per filament, never client nozzle overrides.
 }
 type PrinterController interface {
 	StartPrint(context.Context, Printer, PrintRequest) error

@@ -19,12 +19,13 @@ import (
 )
 
 type SliceFilament struct {
-	Index     int     `json:"index"`
-	Material  string  `json:"material"`
-	Color     string  `json:"color"`
-	Grams     int     `json:"grams"`
-	UsedGrams float64 `json:"usedGrams,omitempty"`
-	ProfileID string  `json:"profileId,omitempty"`
+	Index     int          `json:"index"`
+	Material  string       `json:"material"`
+	Color     string       `json:"color"`
+	Grams     int          `json:"grams"`
+	UsedGrams float64      `json:"usedGrams,omitempty"`
+	ProfileID string       `json:"profileId,omitempty"`
+	Nozzle    *SliceNozzle `json:"nozzle,omitempty"`
 }
 type SliceNozzle struct {
 	Logical  int    `json:"logical"`
@@ -230,6 +231,22 @@ func inspectSlice(filename string) (SliceInfo, error) {
 			}
 		}
 		used := map[int]bool{}
+		// Keep per-filament routes even when a plate uses both physical nozzles.
+		// An ambiguous group is left unresolved, never inferred by array order.
+		routes := map[int]*SliceNozzle{}
+		groups := map[int]int{}
+		for _, n := range p.Nozzles {
+			groups[n.Group]++
+		}
+		if len(physical) == 2 && len(p.Mixed) == 0 {
+			for _, n := range p.Nozzles {
+				logical := n.Extruder - 1
+				diameter, e := strconv.ParseFloat(n.Diameter, 64)
+				if groups[n.Group] == 1 && logical >= 0 && logical < 2 && e == nil && diameter > 0 && diameter <= 2 {
+					routes[n.Group] = &SliceNozzle{Logical: logical, Physical: physical[logical], Diameter: strconv.FormatFloat(diameter, 'f', -1, 64), Volume: n.Volume}
+				}
+			}
+		}
 		for _, f := range p.Filaments {
 			if f.ID < 1 || f.ID > 32 || used[f.ID] || math.IsNaN(f.Used) || math.IsInf(f.Used, 0) || f.Used < 0 || f.Used > 10000 {
 				return out, invalid("3MF 耗材信息无效")
@@ -238,7 +255,7 @@ func inspectSlice(filename string) (SliceInfo, error) {
 			if f.Used == 0 {
 				continue
 			}
-			plate.Filaments = append(plate.Filaments, SliceFilament{Index: f.ID - 1, Material: f.Type, Color: f.Color, Grams: int(math.Ceil(f.Used)), UsedGrams: f.Used, ProfileID: trim(f.ProfileID, 40)})
+			plate.Filaments = append(plate.Filaments, SliceFilament{Index: f.ID - 1, Material: f.Type, Color: f.Color, Grams: int(math.Ceil(f.Used)), UsedGrams: f.Used, ProfileID: trim(f.ProfileID, 40), Nozzle: routes[f.Group]})
 		}
 		if len(plate.Filaments) == 0 {
 			return out, invalid("打印盘缺少可验证的耗材用量")
@@ -381,8 +398,14 @@ func validatePreparationOptions(tx *sql.Tx, u User, j Job, p Printer, o PrintOpt
 	if plate == nil {
 		return invalid("请选择文件中存在的打印盘")
 	}
-	if plate.MultiNozzle {
+	dual := p.ModelID == "x2d" && plate.MultiNozzle
+	if plate.MultiNozzle && !dual {
 		return conflict("多喷嘴或混料切片暂不能直接启动")
+	}
+	if dual {
+		if _, _, err := x2dPrintSlice(j, o); err != nil {
+			return err
+		}
 	}
 	if len(o.Mapping) != len(plate.Filaments) {
 		return invalid("请为当前打印盘的每种耗材确认供料位置")
@@ -415,6 +438,9 @@ func validatePreparationOptions(tx *sql.Tx, u User, j Job, p Printer, o PrintOpt
 			return invalid("耗材索引重复、用量过低或映射无效")
 		}
 		seen[m.Filament] = true
+		if m.Source != "" && !dual {
+			return invalid("逐耗材供料来源仅用于已适配的 X2D 双喷嘴盘")
+		}
 		if m.AMSID < 0 || m.AMSID > 15 || m.SlotID < 0 || m.SlotID > 3 {
 			return invalid("AMS 单元或槽位编号无效")
 		}
@@ -429,6 +455,14 @@ func validatePreparationOptions(tx *sql.Tx, u User, j Job, p Printer, o PrintOpt
 			slot = strconv.Itoa(m.AMSID*4 + m.SlotID + 1)
 			if !validSlot(p, slot) {
 				return conflict("该供料位置尚未登记，请先在耗材库装载对应耗材")
+			}
+		}
+		if dual {
+			if m.Source == "external" {
+				slot = externalNozzleSlot(f.Nozzle.Physical)
+			}
+			if m.Source == "ams" {
+				slot = strconv.Itoa(m.SlotID + 1)
 			}
 		}
 		if other, ok := slots[slot]; ok && other != m.SpoolID {

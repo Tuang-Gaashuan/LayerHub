@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS mail_outbox(id TEXT PRIMARY KEY,user_id INTEGER NOT N
 CREATE INDEX IF NOT EXISTS mail_outbox_pending ON mail_outbox(state,next_at);
 CREATE TABLE IF NOT EXISTS mail_observations(key TEXT PRIMARY KEY,value TEXT NOT NULL,candidate TEXT NOT NULL,since INTEGER NOT NULL,seq INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mail_worker(id INTEGER PRIMARY KEY CHECK(id=1),seen INTEGER NOT NULL,ready INTEGER NOT NULL);
-`
+` + maintenanceSchema
 
 type mailMessage struct {
 	ID      string `json:"id"`
@@ -319,7 +319,26 @@ func (s *Service) mailRelay(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
-		reply(w, 200, map[string]any{"ok": true, "message": message, "admins": admins})
+		maintenance, err := readMaintenance(s.DB)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		reply(w, 200, map[string]any{"ok": true, "message": message, "admins": admins, "maintenance": maintenance})
+	case "/internal/mail/maintenance-ack":
+		var in struct {
+			Revision int64 `json:"revision"`
+		}
+		if err := decode(r, &in); err != nil {
+			fail(w, err)
+			return
+		}
+		_, err := s.DB.Exec("UPDATE maintenance SET ack_revision=?,ack_at=? WHERE id=1 AND revision=?", in.Revision, time.Now().Unix(), in.Revision)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		reply(w, 200, map[string]any{"ok": true})
 	case "/internal/mail/ack":
 		var in struct {
 			ID    string `json:"id"`
@@ -574,6 +593,10 @@ func (s *Service) collectMail(at time.Time) error {
 		if err != nil {
 			return err
 		}
+		maintenance, err := readMaintenance(tx)
+		if err != nil {
+			return err
+		}
 		for _, p := range printers {
 			t := s.Device.Status(p.ID)
 			state := "ok"
@@ -587,6 +610,9 @@ func (s *Service) collectMail(at time.Time) error {
 				state = fmt.Sprintf("fault:%d", t.PrintError)
 			} else if len(t.Equipment.HMS) > 0 {
 				state = "hms:" + strings.Join(t.Equipment.HMS, ",")
+			}
+			if state == "offline" && now < maintenance.Until {
+				state = "ok"
 			}
 			seq, changed, err := observeMail(tx, fmt.Sprintf("printer:%d", p.ID), state, now, delay)
 			if err != nil {
@@ -644,5 +670,14 @@ func scrubMailBackup(db *sql.DB) error {
 		return nil
 	}
 	_, err := db.Exec("DELETE FROM mail_challenges; DELETE FROM mail_outbox; DELETE FROM mail_worker; DELETE FROM mail_observations; UPDATE mail_accounts SET enabled=0;")
+	if err != nil {
+		return err
+	}
+	if err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE name='maintenance' AND type='table'").Scan(&exists); err != nil {
+		return err
+	}
+	if exists != 0 {
+		_, err = db.Exec("UPDATE maintenance SET until_at=0,revision=revision+1,ack_revision=0,ack_at=0")
+	}
 	return err
 }

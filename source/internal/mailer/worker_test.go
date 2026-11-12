@@ -123,3 +123,48 @@ func TestRenderUTF8AndHeaderInjection(t *testing.T) {
 		}
 	}
 }
+
+func TestMaintenancePersistsBeforeAckAndSuppressesOfflineAcrossRestart(t *testing.T) {
+	w := workerTest(t)
+	now := time.Now().Unix()
+	sends := 0
+	acks := 0
+	w.Send = func(SMTPConfig, Message) error { sends++; return nil }
+	w.Client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.HasSuffix(r.URL.Path, "maintenance-ack") {
+			acks++
+			saved, e := New(w.Token, w.PublicURL, w.ConfigPath, w.StatePath)
+			if e != nil || saved.State.Maintenance.Until != now+1800 {
+				t.Fatal("ack before durable save", e)
+			}
+			return response(map[string]bool{"ok": true}), nil
+		}
+		return response(map[string]any{"ok": true, "admins": []string{"admin@example.com"}, "maintenance": map[string]int64{"until": now + 1800, "revision": 1}}), nil
+	})}
+	if e := w.Step(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	if acks != 1 {
+		t.Fatal("missing ack")
+	}
+	restarted, e := New(w.Token, w.PublicURL, w.ConfigPath, w.StatePath)
+	if e != nil {
+		t.Fatal(e)
+	}
+	restarted.Send = w.Send
+	restarted.Client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { return nil, errors.New("offline") })}
+	restarted.State.DownSince = now - 240
+	_ = restarted.Step(context.Background())
+	if sends != 0 {
+		t.Fatal("maintenance NAS outage mailed")
+	}
+	// Expiry must resume notifications even after a long planned outage.
+	restarted.State.Maintenance.Until = now - 181
+	restarted.State.Seen = now - 1800
+	restarted.State.DownSince = now - 181
+	_ = restarted.Step(context.Background())
+	_ = restarted.Step(context.Background())
+	if sends != 1 {
+		t.Fatal("expiry failed or duplicate", sends)
+	}
+}

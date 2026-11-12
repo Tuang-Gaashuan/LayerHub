@@ -1,0 +1,19 @@
+{
+  "version": "0.1.4-beta",
+  "status": "passed",
+  "frontend_tests": 198,
+  "go_tests_all_packages": "passed",
+  "go_vet": "passed",
+  "generated_locales_and_themes": "current",
+  "simulated_ui": ["Chinese completion entry", "English spool activity"],
+  "windows_offline_runtime": {
+    "atomic_history_and_receipt": "passed",
+    "receipt_after_restart": "passed",
+    "duplicate_save_rejected": "passed"
+  },
+  "packages": ["windows-amd64", "linux-amd64", "corresponding-source", "amd64-update-kit"],
+  "updater_source_binary_match": true,
+  "real_printer_commands_in_this_validation": 0,
+  "new_arm64_hardware_acceptance": false,
+  "production_validation": "recorded separately"
+}

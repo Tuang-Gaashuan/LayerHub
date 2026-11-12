@@ -203,6 +203,19 @@ func TestSimulatedPauseResumeAndStop(t *testing.T) {
 	}
 }
 
+func TestX2DDualExternalAndAMSMappingsStayIndependent(t *testing.T) {
+	request := app.PrintRequest{Remote: "dual.3mf", TaskName: "job-dual-fixture", ExternalSources: map[int]int{0: 255}, Options: &app.PrintOptions{Plate: 1, UseAMS: true, Mapping: []app.AMSTarget{{Filament: 0, Source: "external"}, {Filament: 1, Source: "ams", SlotID: 3}}}}
+	p := printPayload(request)
+	legacy := p["ams_mapping"].([]int)
+	modern := p["ams_mapping2"].([]map[string]int)
+	if len(legacy) != 2 || legacy[0] != -1 || legacy[1] != 3 || modern[0]["ams_id"] != 255 || modern[0]["slot_id"] != 0 || modern[1]["ams_id"] != 0 || modern[1]["slot_id"] != 3 || p["use_ams"] != true {
+		t.Fatal("mixed mapping incorrect", p)
+	}
+	if _, ok := p["nozzle_mapping"]; ok {
+		t.Fatal("slicer nozzle route was overridden")
+	}
+}
+
 func TestX2DExternalSourceUsesVirtualMappingWithoutAMSMovement(t *testing.T) {
 	for _, source := range []int{254, 255} {
 		payload := printPayload(app.PrintRequest{Remote: "external.3mf", TaskName: "job-fixture", ExternalSource: source, Options: &app.PrintOptions{Plate: 1, UseAMS: false, Mapping: []app.AMSTarget{{Filament: 2}}}})

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -139,8 +140,16 @@ func (s *Service) SavePrinter(actor User, in PrinterInput) error {
 			if e != nil {
 				return e
 			}
+			// Restoring a network address must not depend on first settling the
+			// completed job that is waiting for this same connection. Identity,
+			// credentials and capabilities must remain unchanged during recovery.
+			addressOnly := in.IP != old.IP && in.Name == old.Name && in.Serial == old.Serial && in.ModelID == old.ModelID && in.Configuration == old.Configuration && enabled == old.Enabled && in.Code == "" && strings.EqualFold(in.Fingerprint, old.Fingerprint)
+			telemetry := s.Device.Status(in.ID)
 			for _, j := range jobs {
 				if j.Printer == in.ID && j.State != "queued" && activeStates[j.State] {
+					if addressOnly && (j.State == "printing" || j.State == "paused" || j.State == "stopped") && (j.FinishedAt > 0 || printFinishedMatches(j, telemetry) || !telemetry.Connected || !timeFresh(telemetry.Updated)) {
+						continue
+					}
 					return conflict("设备有传输或执行中的任务，暂不能修改")
 				}
 			}
@@ -200,7 +209,10 @@ func (s *Service) SavePrinter(actor User, in PrinterInput) error {
 	}
 	return err
 }
-func (s *Service) SaveSpool(actor User, in Spool) error {
+func (s *Service) SaveSpool(actor User, in Spool, ops ...OperationKey) error {
+	return s.operationTransaction(actor, ops, func(tx *sql.Tx) error { return s.saveSpoolTx(tx, actor, in) })
+}
+func (s *Service) saveSpoolTx(tx *sql.Tx, actor User, in Spool) error {
 	if in.Mount != nil {
 		m := *in.Mount
 		m.Slot = normalizedSlot(m.Slot)
@@ -218,101 +230,114 @@ func (s *Service) SaveSpool(actor User, in Spool) error {
 	if in.State != "available" && in.State != "drying" && in.State != "reserved" && in.State != "empty" || in.State == "empty" && in.Remaining > 0 {
 		return invalid("耗材状态无效")
 	}
-	return s.transaction(func(tx *sql.Tx) error {
-		spools, err := readSpools(tx)
-		if err != nil {
-			return err
-		}
-		jobs, err := readJobs(tx)
-		if err != nil {
-			return err
-		}
-		var old *Spool
-		for i := range spools {
-			if spools[i].ID == in.ID {
-				old = &spools[i]
-			}
-		}
-		if in.ID != "" && old == nil {
-			return missing("耗材不存在")
-		}
-		if old != nil && !spoolEditable(*old, actor) {
-			return forbidden("只能修改本人耗材，公共耗材由管理员维护")
-		}
-		if old != nil && in.Revision > 0 && in.Revision != old.Revision {
-			return conflict("耗材记录已被其他成员更新，请重新打开后再保存")
-		}
-		if old != nil && old.LowThreshold > in.Capacity {
-			return conflict("提醒阈值大于新的标称净重，请先修改提醒设置")
-		}
-		var owner any
-		if in.Owner != "team" {
-			if in.Owner != actor.Username {
-				return forbidden("只能登记自己的个人耗材")
-			}
-			owner = actor.ID
-		} else {
-			if old != nil && old.OwnerID != 0 && !actor.Admin {
-				return forbidden("个人耗材转为公共耗材需要管理员处理")
-			}
-			in.Shared = false
-		}
-		if in.Remaining < reserve(jobs, in.ID, 0) {
-			return conflict("余量不能低于队列预留量")
-		}
-		for _, j := range jobs {
-			if jobUses(j)[in.ID] == 0 {
-				continue
-			}
-			if activeStates[j.State] && j.UserID != actor.ID && in.Owner != "team" && !in.Shared {
-				return conflict("其他成员仍在使用这卷耗材，暂不能设为私有")
-			}
-			if j.State != "queued" && activeStates[j.State] {
-				if in.Mount == nil || in.Mount.PrinterID != j.Printer || old != nil && old.Mount != nil && *old.Mount != *in.Mount {
-					return conflict("耗材正在使用，暂不能卸下或转移")
-				}
-			}
-		}
-		var pid, slot any
-		if in.Mount != nil {
-			printers, e := readPrinters(tx)
-			if e != nil {
-				return e
-			}
-			found := false
-			for _, p := range printers {
-				if p.ID == in.Mount.PrinterID && validSlot(p, in.Mount.Slot) {
-					found = true
-				}
-			}
-			if !found {
-				return invalid("打印机或槽位无效")
-			}
-			for _, sp := range spools {
-				if sp.ID != in.ID && sp.Mount != nil && *sp.Mount == *in.Mount {
-					return conflict("这个槽位已登记其他耗材，请先卸下原卷")
-				}
-			}
-			pid = in.Mount.PrinterID
-			slot = in.Mount.Slot
-		}
-		if old == nil {
-			in.ID = "s" + randomID(12)
-		}
-		_, err = tx.Exec(`INSERT INTO spools(id,label,brand,material,color_name,color,capacity,remaining,owner_id,shared,state,location,mount_printer,mount_slot) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET label=excluded.label,brand=excluded.brand,material=excluded.material,color_name=excluded.color_name,color=excluded.color,capacity=excluded.capacity,remaining=excluded.remaining,owner_id=excluded.owner_id,shared=excluded.shared,state=excluded.state,location=excluded.location,mount_printer=excluded.mount_printer,mount_slot=excluded.mount_slot`, in.ID, in.Label, trim(in.Brand, 40), trim(in.Material, 20), trim(in.ColorName, 30), in.Color, in.Capacity, in.Remaining, owner, in.Shared, in.State, trim(in.Location, 80), pid, slot)
-		if err != nil {
-			return err
-		}
-		next := int64(1)
-		if old != nil {
-			next = old.Revision + 1
-		}
-		_, err = tx.Exec("INSERT INTO record_versions(kind,record_id,revision) VALUES('spool',?,?) ON CONFLICT(kind,record_id) DO UPDATE SET revision=excluded.revision", in.ID, next)
-		if err == nil && in.Owner != "team" && !in.Shared {
-			_, err = tx.Exec(`UPDATE mail_outbox SET state='cancelled',body=X'' WHERE kind='notification' AND state IN ('queued','leased') AND user_id<>? AND event_key IN (SELECT event_key||':user:'||user_id FROM user_notifications WHERE entity_type='spool' AND entity_id=?)`, actor.ID, in.ID)
-		}
+	spools, err := readSpools(tx)
+	if err != nil {
 		return err
-	})
+	}
+	jobs, err := readJobs(tx)
+	if err != nil {
+		return err
+	}
+	var old *Spool
+	for i := range spools {
+		if spools[i].ID == in.ID {
+			old = &spools[i]
+		}
+	}
+	if in.ID != "" && old == nil {
+		return missing("耗材不存在")
+	}
+	if old != nil && !spoolEditable(*old, actor) {
+		return forbidden("只能修改本人耗材，公共耗材由管理员维护")
+	}
+	if old != nil && in.Revision > 0 && in.Revision != old.Revision {
+		return conflict("耗材记录已被其他成员更新，请重新打开后再保存")
+	}
+	if old != nil && old.LowThreshold > in.Capacity {
+		return conflict("提醒阈值大于新的标称净重，请先修改提醒设置")
+	}
+	var owner any
+	if in.Owner != "team" {
+		if in.Owner != actor.Username {
+			return forbidden("只能登记自己的个人耗材")
+		}
+		owner = actor.ID
+	} else {
+		if old != nil && old.OwnerID != 0 && !actor.Admin {
+			return forbidden("个人耗材转为公共耗材需要管理员处理")
+		}
+		in.Shared = false
+	}
+	if in.Remaining < reserve(jobs, in.ID, 0) {
+		return conflict("余量不能低于队列预留量")
+	}
+	for _, j := range jobs {
+		if jobUses(j)[in.ID] == 0 {
+			continue
+		}
+		if activeStates[j.State] && j.UserID != actor.ID && in.Owner != "team" && !in.Shared {
+			return conflict("其他成员仍在使用这卷耗材，暂不能设为私有")
+		}
+		if j.State != "queued" && activeStates[j.State] {
+			if in.Mount == nil || in.Mount.PrinterID != j.Printer || old != nil && old.Mount != nil && *old.Mount != *in.Mount {
+				return conflict("耗材正在使用，暂不能卸下或转移")
+			}
+		}
+	}
+	var pid, slot any
+	if in.Mount != nil {
+		printers, e := readPrinters(tx)
+		if e != nil {
+			return e
+		}
+		found := false
+		for _, p := range printers {
+			if p.ID == in.Mount.PrinterID && validSlot(p, in.Mount.Slot) {
+				found = true
+			}
+		}
+		if !found {
+			return invalid("打印机或槽位无效")
+		}
+		for _, sp := range spools {
+			if sp.ID != in.ID && sp.Mount != nil && *sp.Mount == *in.Mount {
+				return conflict("这个槽位已登记其他耗材，请先卸下原卷")
+			}
+		}
+		pid = in.Mount.PrinterID
+		slot = in.Mount.Slot
+	}
+	if old == nil {
+		in.ID = "s" + randomID(12)
+	}
+	_, err = tx.Exec(`INSERT INTO spools(id,label,brand,material,color_name,color,capacity,remaining,owner_id,shared,state,location,mount_printer,mount_slot) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET label=excluded.label,brand=excluded.brand,material=excluded.material,color_name=excluded.color_name,color=excluded.color,capacity=excluded.capacity,remaining=excluded.remaining,owner_id=excluded.owner_id,shared=excluded.shared,state=excluded.state,location=excluded.location,mount_printer=excluded.mount_printer,mount_slot=excluded.mount_slot`, in.ID, in.Label, trim(in.Brand, 40), trim(in.Material, 20), trim(in.ColorName, 30), in.Color, in.Capacity, in.Remaining, owner, in.Shared, in.State, trim(in.Location, 80), pid, slot)
+	if err != nil {
+		return err
+	}
+	next := int64(1)
+	if old != nil {
+		next = old.Revision + 1
+	}
+	_, err = tx.Exec("INSERT INTO record_versions(kind,record_id,revision) VALUES('spool',?,?) ON CONFLICT(kind,record_id) DO UPDATE SET revision=excluded.revision", in.ID, next)
+	if err == nil && in.Owner != "team" && !in.Shared {
+		_, err = tx.Exec(`UPDATE mail_outbox SET state='cancelled',body=X'' WHERE kind='notification' AND state IN ('queued','leased') AND user_id<>? AND event_key IN (SELECT event_key||':user:'||user_id FROM user_notifications WHERE entity_type='spool' AND entity_id=?)`, actor.ID, in.ID)
+	}
+	if err == nil {
+		action := "edit"
+		if old == nil {
+			action = "create"
+		} else if old.Remaining != in.Remaining {
+			action = "adjust"
+		} else if !reflect.DeepEqual(old.Mount, in.Mount) {
+			if in.Mount == nil {
+				action = "unmount"
+			} else {
+				action = "mount"
+			}
+		}
+		err = recordedSpool(tx, actor.ID, action, old, in.ID, 0)
+	}
+	return err
 }
 func (s *Service) Snapshot(u User) (map[string]any, error) {
 	var e error
@@ -450,5 +475,5 @@ func (s *Service) Snapshot(u User) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"printers": printers, "spools": visible, "occupiedSlots": occupiedSlots, "jobs": jobs, "members": members, "user": u, "completed": completed, "notifications": []any{}, "notificationSummary": summary, "serverTime": time.Now().UnixMilli(), "capabilities": map[string]any{"deviceMode": s.Config.DeviceMode, "printStart": s.Config.EnablePrintStart, "restorePending": s.pendingRestore.Load(), "accountManagement": true, "backups": u.Owner, "ownerRoles": true, "accountSecurity": true, "printerControl": true, "settlement": true, "projectPrint": true, "x2dSingleNozzlePrint": true, "x2dExternalPrint": true, "notificationCenter": true, "stockAlerts": true, "queueOrder": true, "teamProjects": false, "modelWorkbench": false, "slicing": false, "spoolDelete": true, "backgroundFileInspect": true, "sliced3MFOnly": true, "releaseChannel": "beta"}}, nil
+	return map[string]any{"printers": printers, "spools": visible, "occupiedSlots": occupiedSlots, "jobs": jobs, "members": members, "user": u, "completed": completed, "notifications": []any{}, "notificationSummary": summary, "serverTime": time.Now().UnixMilli(), "capabilities": map[string]any{"deviceMode": s.Config.DeviceMode, "printStart": s.Config.EnablePrintStart, "restorePending": s.pendingRestore.Load(), "accountManagement": true, "backups": u.Owner, "ownerRoles": true, "accountSecurity": true, "printerControl": true, "settlement": true, "projectPrint": true, "x2dSingleNozzlePrint": true, "x2dExternalPrint": true, "x2dDualNozzlePrint": true, "notificationCenter": true, "stockAlerts": true, "queueOrder": true, "teamProjects": false, "modelWorkbench": false, "slicing": false, "spoolHistory": true, "operationRecovery": true, "spoolReplace": true, "spoolDelete": true, "backgroundFileInspect": true, "sliced3MFOnly": true, "releaseChannel": "beta"}}, nil
 }

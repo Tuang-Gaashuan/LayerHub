@@ -3,8 +3,8 @@ package app
 import "database/sql"
 
 // DeleteSpool removes only an unused, unmounted record. History is never rewritten.
-func (s *Service) DeleteSpool(actor User, id string, revision int64) error {
-	return s.transaction(func(tx *sql.Tx) error {
+func (s *Service) DeleteSpool(actor User, id string, revision int64, ops ...OperationKey) error {
+	return s.operationTransaction(actor, ops, func(tx *sql.Tx) error {
 		fresh, err := currentUser(tx, actor.ID)
 		if err != nil {
 			return err
@@ -52,6 +52,9 @@ func (s *Service) DeleteSpool(actor User, id string, revision int64) error {
 		}
 		// Unsent reminders for a removed record are no longer relevant.
 		if _, err = tx.Exec(`UPDATE mail_outbox SET state='cancelled',body=X'' WHERE kind='notification' AND state IN ('queued','leased') AND event_key IN (SELECT event_key||':user:'||user_id FROM user_notifications WHERE entity_type='spool' AND entity_id=?)`, id); err != nil {
+			return err
+		}
+		if err = spoolEvent(tx, fresh.ID, "delete", spool, nil, 0); err != nil {
 			return err
 		}
 		_, err = tx.Exec("DELETE FROM spools WHERE id=?", id)

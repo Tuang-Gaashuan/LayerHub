@@ -8,8 +8,8 @@
 
 | | Beta · recommended | Alpha · experimental workbench |
 |---|---|---|
-| Published version | [`v0.1.3-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.3-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
-| Download | [Beta release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) | [Alpha release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
+| Published version | [`v0.1.4-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.4-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
+| Download | [Beta release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.4-beta) | [Alpha release and checksums](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 | Development branch | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main), the repository default | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha), based on the last workbench-enabled release |
 | Team, queues, spools, controls, email | Included; primary refinement path | Included in the Alpha baseline; relevant fixes may be adapted |
 | Model workbench and geometry import | Removed | Retained, including supported STL / geometry 3MF import |
@@ -39,8 +39,8 @@ Published download links above point to the named versions. A branch can contain
 
 | 对比项 | Beta · 推荐使用 | Alpha · 实验性内置工作台 |
 |---|---|---|
-| 已发布版本 | [`v0.1.3-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.3-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
-| 下载入口 | [Beta 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.3-beta) | [Alpha 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
+| 已发布版本 | [`v0.1.4-beta`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.1.4-beta) | [`v0.4.0-alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/v0.4.0-alpha) |
+| 下载入口 | [Beta 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.1.4-beta) | [Alpha 发布包与校验和](https://github.com/Tuang-Gaashuan/LayerHub/releases/tag/v0.4.0-alpha) |
 | 开发分支 | [`main`](https://github.com/Tuang-Gaashuan/LayerHub/tree/main)，仓库默认分支 | [`alpha`](https://github.com/Tuang-Gaashuan/LayerHub/tree/alpha)，基于最后一个含工作台的版本 |
 | 团队、队列、耗材、控制和邮件 | 保留，作为主要完善方向 | 保留 Alpha 原有能力，按需适配相关修复 |
 | 模型工作台与几何导入 | 已移除 | 保留，支持范围内可导入 STL / 几何 3MF |

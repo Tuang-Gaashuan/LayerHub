@@ -131,6 +131,12 @@ func (s *Service) SettleOrphanCompletion(actor User, in OrphanCompletionInput) e
 			if _, e = tx.Exec("UPDATE spools SET remaining=remaining-?,state=CASE WHEN remaining-?=0 THEN 'empty' ELSE state END WHERE id=?", booked, booked, sp.ID); e != nil {
 				return e
 			}
+			if e = bumpSpoolRevision(tx, sp.ID); e != nil {
+				return e
+			}
+			if e = recordedSpool(tx, u.ID, "orphan_consume", &sp, sp.ID, in.JobID); e != nil {
+				return e
+			}
 		}
 		if found != len(in.Uses) {
 			return missing("关联耗材不存在")

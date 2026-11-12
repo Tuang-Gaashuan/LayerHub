@@ -41,6 +41,10 @@ type Message struct {
 	Text    string `json:"text"`
 }
 type State struct {
+	Maintenance struct {
+		Until    int64 `json:"until"`
+		Revision int64 `json:"revision"`
+	} `json:"maintenance"`
 	Admins    []string         `json:"admins"`
 	Seen      int64            `json:"seen"`
 	DownSince int64            `json:"downSince"`
@@ -145,6 +149,10 @@ func (w *Worker) api(ctx context.Context, path string, in, out any) error {
 func (w *Worker) Step(ctx context.Context) error {
 	cfg, cfgErr := readConfig(w.ConfigPath)
 	var poll struct {
+		Maintenance struct {
+			Until    int64 `json:"until"`
+			Revision int64 `json:"revision"`
+		} `json:"maintenance"`
 		OK      bool     `json:"ok"`
 		Message *Message `json:"message"`
 		Admins  []string `json:"admins"`
@@ -152,12 +160,24 @@ func (w *Worker) Step(ctx context.Context) error {
 	err := w.api(ctx, "poll", map[string]bool{"ready": cfgErr == nil}, &poll)
 	now := time.Now().Unix()
 	if err != nil {
+		if now < w.State.Maintenance.Until {
+			w.State.DownSince = w.State.Maintenance.Until
+			w.State.DownSent = false
+			if saveErr := w.save(); saveErr != nil {
+				return saveErr
+			}
+			return err
+		}
 		if w.State.DownSince == 0 {
 			w.State.DownSince = now
 		}
 		// Use only a recent opt-in admin snapshot, once per outage. No unverified or
 		// stale address cache is used to retry an offline alert indefinitely.
-		if cfgErr == nil && !w.State.DownSent && now-w.State.DownSince >= 180 && now-w.State.Seen < 600 && w.State.Seen > 0 {
+		freshUntil := w.State.Seen + 600
+		if w.State.Maintenance.Until > w.State.Seen {
+			freshUntil = w.State.Maintenance.Until + 600
+		}
+		if cfgErr == nil && !w.State.DownSent && now-w.State.DownSince >= 180 && now < freshUntil && w.State.Seen > 0 {
 			all := true
 			for _, to := range w.State.Admins {
 				digest := sha256.Sum256([]byte(to))
@@ -177,6 +197,7 @@ func (w *Worker) Step(ctx context.Context) error {
 		return errors.New("invalid NAS mail response")
 	}
 	w.State.Admins = poll.Admins
+	w.State.Maintenance = poll.Maintenance
 	w.State.Seen = now
 	w.State.DownSince = 0
 	w.State.DownSent = false
@@ -187,6 +208,12 @@ func (w *Worker) Step(ctx context.Context) error {
 	}
 	if err = w.save(); err != nil {
 		return err
+	}
+	// Acknowledge only after persisting the window on the independent gateway.
+	if poll.Maintenance.Revision > 0 {
+		if err = w.api(ctx, "maintenance-ack", map[string]int64{"revision": poll.Maintenance.Revision}, nil); err != nil {
+			return err
+		}
 	}
 	if cfgErr != nil {
 		return errors.New("SMTP not configured")

@@ -132,11 +132,11 @@ func (s *Service) JobSettlement(u User, id int64) (Settlement, error) {
 	return out, err
 }
 
-func (s *Service) SettleJob(u User, in SettlementWrite) error {
+func (s *Service) SettleJob(u User, in SettlementWrite, ops ...OperationKey) error {
 	if !in.Collected {
 		return invalid("请先确认已取件并清空打印板")
 	}
-	return s.transaction(func(tx *sql.Tx) error {
+	return s.operationTransaction(u, ops, func(tx *sql.Tx) error {
 		j, _, err := settlementJob(tx, u, in.JobID)
 		if err != nil {
 			return err

@@ -78,6 +78,16 @@ func (s *Service) Handler() http.Handler {
 		}
 		var result any = map[string]any{"ok": true}
 		switch r.Method + " " + r.URL.Path {
+		case "GET /api/maintenance":
+			result, err = s.maintenanceStatus(u)
+		case "POST /api/maintenance":
+			var in struct {
+				Minutes  int   `json:"minutes"`
+				Revision int64 `json:"revision"`
+			}
+			if err = decode(r, &in); err == nil {
+				err = s.setMaintenance(u, in.Minutes, in.Revision)
+			}
 		case "GET /api/diagnostics":
 			var report DiagnosticReport
 			report, err = s.Diagnostics(r.Context(), u)
@@ -356,13 +366,27 @@ func (s *Service) Handler() http.Handler {
 				Revision int64  `json:"revision"`
 			}
 			if err = decode(r, &in); err == nil {
-				err = s.DeleteSpool(u, in.ID, in.Revision)
+				err = s.DeleteSpool(u, in.ID, in.Revision, requestOperation(r, in))
+			}
+		case "GET /api/operations/result":
+			result, err = s.OperationResult(u, r.URL.Query().Get("id"))
+		case "GET /api/spools/history":
+			before, _ := strconv.ParseInt(r.URL.Query().Get("before"), 10, 64)
+			result, err = s.SpoolHistory(u, r.URL.Query().Get("id"), before)
+		case "POST /api/spools/replace":
+			var in SpoolReplacement
+			if err = decode(r, &in); err == nil {
+				result, err = s.ReplaceSpool(u, in, requestOperation(r, in))
 			}
 		case "POST /api/spools":
 			var in Spool
 			err = decode(r, &in)
 			if err == nil {
-				err = s.SaveSpool(u, in)
+				if in.ID != "" && in.Revision <= 0 {
+					err = conflict("耗材记录缺少版本，请重新打开后再保存")
+				} else {
+					err = s.SaveSpool(u, in, requestOperation(r, in))
+				}
 			}
 		case "POST /api/jobs/reorder":
 			var in QueueMove
@@ -383,9 +407,11 @@ func (s *Service) Handler() http.Handler {
 		case "POST /api/jobs/settle":
 			var in SettlementWrite
 			if err = decode(r, &in); err == nil {
-				err = s.SettleJob(u, in)
+				err = s.SettleJob(u, in, requestOperation(r, in))
 			}
-		case "POST /api/jobs/dispatch", "POST /api/jobs/send", "POST /api/jobs/start", "POST /api/jobs/delete", "POST /api/jobs/cancel", "POST /api/jobs/complete":
+		case "POST /api/jobs/complete":
+			err = &apiError{Code: http.StatusGone, Message: "旧结算入口已停用，请刷新并使用取件与耗材结算"}
+		case "POST /api/jobs/dispatch", "POST /api/jobs/send", "POST /api/jobs/start", "POST /api/jobs/delete", "POST /api/jobs/cancel":
 			var in struct {
 				JobID  int64          `json:"jobId"`
 				Used   int            `json:"used"`
@@ -404,8 +430,6 @@ func (s *Service) Handler() http.Handler {
 					err = s.CancelJob(u, in.JobID)
 				case "/api/jobs/delete":
 					err = s.DeleteJob(u, in.JobID)
-				case "/api/jobs/complete":
-					err = s.CompleteJobUses(u, in.JobID, in.Used, in.Actual)
 				}
 			}
 		case "POST /api/upload":

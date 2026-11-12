@@ -140,7 +140,7 @@ const EquipmentUI=(()=>{
  function temperatureSummary(p){if(!p.connected)return '—';const eq=p.equipment,values=(eq?.extruders||[]).map(x=>temperatureDisplay(p,x.temperatureExact??x.temperature)+'°');return (values.length?values.join(' · '):'—')+' / '+temperatureDisplay(p,p.modelId==='a1'?(eq?.bedExact??eq?.bed):eq?.bed)+'°C'}
  const colorHex=v=>/^#?(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v||'')?'#'+v.replace('#','').slice(0,6).toLowerCase():null;
  function filamentChoices(j,p,f,ams,selected,grams,plate){
-  const original=colorHex(f.color),candidates=data.spools.filter(s=>Workspace.visible(s,data)&&s.mount?.printerId===p?.id&&s.state==='available'&&(ams?['1','2','3','4'].includes(s.mount.slot):s.mount.slot===PrintPrepare.externalSlot(p,plate))&&s.material.toLowerCase()===f.material.toLowerCase());
+  const original=colorHex(f.color),candidates=data.spools.filter(s=>Workspace.visible(s,data)&&s.mount?.printerId===p?.id&&s.state==='available'&&(ams?['1','2','3','4'].includes(s.mount.slot):s.mount.slot===PrintPrepare.externalSlot(p,plate,f))&&s.material.toLowerCase()===f.material.toLowerCase());
   candidates.sort((a,b)=>Number(colorHex(b.color)===original)-Number(colorHex(a.color)===original));
   const sameStock=data.spools.filter(s=>Workspace.visible(s,data)&&s.material.toLowerCase()===f.material.toLowerCase()&&s.state==='available'&&Workspace.available(data,s,j.id)>=f.grams);
   const actual=[...new Set((p?.equipment?.feeds||[]).filter(x=>x.present!==false&&x.material&&x.material!==I18n.t('个人耗材')).map(x=>x.material))];
